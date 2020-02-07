@@ -12,6 +12,7 @@ func CreateRouter() (router *mux.Router) {
 	router = mux.NewRouter()
 
 	router.HandleFunc("/login", app.Middleware(auth.LoginView)).Methods("POST")
+	router.HandleFunc("/logout", app.Middleware(auth.LogoutView)).Methods("POST")
 
 	return router
 }

@@ -37,6 +37,7 @@ func TestLoginViewsSuccess(t *testing.T) {
 	assert.Equal(t, user.ID, uint(returnedUser["id"].(float64)), "Wrong ID")
 	assert.Equal(t, "name", returnedUser["name"], "Wrong Name")
 	assert.Equal(t, "email", returnedUser["email"], "Wrong Email")
+	assert.Equal(t, req.GetSessionData(UserIDSessionKey), user.ID, "Session is not changed")
 }
 
 func TestLoginViewWrongUsername(t *testing.T) {
@@ -65,6 +66,7 @@ func TestLoginViewWrongUsername(t *testing.T) {
 
 	assert.Equal(t, errWrongUsernamePassword.Code, errMessage["code"], "Wrong Code")
 	assert.Equal(t, errWrongUsernamePassword.Message, errMessage["message"], "Wrong Message")
+	assert.Equal(t, req.GetSessionData(UserIDSessionKey), nil, "User is logged in")
 }
 
 func TestLoginViewWrongPassword(t *testing.T) {
@@ -93,4 +95,26 @@ func TestLoginViewWrongPassword(t *testing.T) {
 
 	assert.Equal(t, errWrongUsernamePassword.Code, errMessage["code"], "Wrong Code")
 	assert.Equal(t, errWrongUsernamePassword.Message, errMessage["message"], "Wrong Message")
+	assert.Equal(t, req.GetSessionData(UserIDSessionKey), nil, "User is logged in")
+}
+
+func TestLogoutViewsSuccess(t *testing.T) {
+	app.Charon.BeforeTest()
+
+	requestData := make(map[string]string)
+	requestData["email"] = "email"
+	requestData["password"] = "password"
+
+	sessionData := make(map[string]interface{})
+	sessionData[UserIDSessionKey] = 2
+
+	req := app.MockRequest{
+		RequestData: requestData,
+		SessionData: sessionData,
+	}
+
+	LogoutView(&req)
+
+	assert.Equal(t, http.StatusOK, req.StatusCode, "Unexpected status code")
+	assert.Equal(t, 0, sessionData[UserIDSessionKey], "User ID in session not changed")
 }

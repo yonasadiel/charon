@@ -15,7 +15,13 @@ func LoginView(req app.Request) {
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.StatusCode)
 	} else {
-		req.SetSessionData(UserIDSessionKey, user)
+		req.SetSessionData(UserIDSessionKey, user.ID)
 		req.SendJSON(user, http.StatusOK)
 	}
+}
+
+// LogoutView clear user session data
+func LogoutView(req app.Request) {
+	req.SetSessionData(UserIDSessionKey, 0)
+	req.SendJSON(nil, http.StatusOK)
 }
