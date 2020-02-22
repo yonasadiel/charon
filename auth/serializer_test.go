@@ -1,22 +1,21 @@
 package auth
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/yonasadiel/charon/app"
+	"github.com/yonasadiel/helios"
 )
 
-func TestDeserializeLoginRequest(t *testing.T) {
-	app.Charon.BeforeTest()
+func TestSerializeLoginRequest(t *testing.T) {
+	helios.App.BeforeTest()
 
-	requestData := make(map[string]string)
-	requestData["email"] = "abc"
-	requestData["password"] = "def"
-	requestData["other"] = "ghi"
+	var user User = NewUser("User 1", "user1", "abcd")
 
-	loginRequest := DeserializeLoginRequest(requestData)
-	expectedLoginRequest := LoginRequest{Email: "abc", Password: "def"}
-	assert.Equal(t, expectedLoginRequest, loginRequest, "Different deserialization")
+	expected := `{"name":"User 1","email":"user1"}`
+	actual, err := json.Marshal(SerializeUser(user))
+	assert.Nil(t, err, "Failed to marshalling user to json")
+	assert.Equal(t, expected, string(actual), "Different serialization")
 }

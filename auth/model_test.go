@@ -7,10 +7,7 @@ import (
 )
 
 func TestNewUser(t *testing.T) {
-	user, err := NewUser("john", "johndoe@gmail.com", "password")
-	if err != nil {
-		t.Fatalf("Fail on creating new user: %s", err)
-	}
+	user := NewUser("john", "johndoe@gmail.com", "password")
 
 	assert.Equal(t, "john", user.Name, "Different user name")
 	assert.Equal(t, "johndoe@gmail.com", user.Email, "Different user email")
@@ -18,10 +15,7 @@ func TestNewUser(t *testing.T) {
 }
 
 func TestNewUserErrorHash(t *testing.T) {
-	user, err := NewUser("john", "johndoe@gmail.com", "password")
-	if err != nil {
-		t.Fatalf("Fail on creating new user: %s", err)
-	}
+	user := NewUser("john", "johndoe@gmail.com", "password")
 
 	assert.Equal(t, "john", user.Name, "Different user name")
 	assert.Equal(t, "johndoe@gmail.com", user.Email, "Different user email")

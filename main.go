@@ -6,8 +6,7 @@ import (
 	"net/http"
 
 	"github.com/joho/godotenv"
-
-	"github.com/yonasadiel/charon/app"
+	"github.com/yonasadiel/helios"
 )
 
 func main() {
@@ -16,11 +15,11 @@ func main() {
 		panic("Error loading env")
 	}
 
-	app.Charon.Initialize()
+	helios.App.Initialize()
 
-	defer app.Charon.CloseDB()
+	defer helios.App.CloseDB()
 
-	app.Charon.Migrate()
+	helios.App.Migrate()
 
 	r := CreateRouter()
 	fmt.Println("Starting server on port 8100...")

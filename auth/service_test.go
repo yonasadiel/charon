@@ -5,18 +5,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/yonasadiel/charon/app"
+	"github.com/yonasadiel/helios"
 )
 
 func TestLoginSuccess(t *testing.T) {
-	app.Charon.BeforeTest()
+	helios.App.BeforeTest()
 
 	password := hashPassword("def")
 	user := User{Email: "abc", Password: password}
-	app.Charon.DB.Create(&User{Email: "def", Password: password})
-	app.Charon.DB.Create(&user)
-	app.Charon.DB.Create(&User{Email: "ghi", Password: password})
-	app.Charon.DB.Create(&User{Email: "jkl", Password: password})
+	helios.DB.Create(&User{Email: "def", Password: password})
+	helios.DB.Create(&user)
+	helios.DB.Create(&User{Email: "ghi", Password: password})
+	helios.DB.Create(&User{Email: "jkl", Password: password})
 
 	userLoggedIn, errLoggedIn := Login(LoginRequest{Email: "abc", Password: "def"})
 
@@ -25,14 +25,14 @@ func TestLoginSuccess(t *testing.T) {
 }
 
 func TestLoginWrongUsername(t *testing.T) {
-	app.Charon.BeforeTest()
+	helios.App.BeforeTest()
 
 	password := hashPassword("def")
 	user := User{Email: "abc", Password: password}
-	app.Charon.DB.Create(&User{Email: "def", Password: password})
-	app.Charon.DB.Create(&user)
-	app.Charon.DB.Create(&User{Email: "ghi", Password: password})
-	app.Charon.DB.Create(&User{Email: "jkl", Password: password})
+	helios.DB.Create(&User{Email: "def", Password: password})
+	helios.DB.Create(&user)
+	helios.DB.Create(&User{Email: "ghi", Password: password})
+	helios.DB.Create(&User{Email: "jkl", Password: password})
 
 	userLoggedIn, errLoggedIn := Login(LoginRequest{Email: "mno", Password: "def"})
 
@@ -41,14 +41,14 @@ func TestLoginWrongUsername(t *testing.T) {
 }
 
 func TestLoginWrongPassword(t *testing.T) {
-	app.Charon.BeforeTest()
+	helios.App.BeforeTest()
 
 	password := hashPassword("def")
 	user := User{Email: "abc", Password: password}
-	app.Charon.DB.Create(&User{Email: "def", Password: password})
-	app.Charon.DB.Create(&user)
-	app.Charon.DB.Create(&User{Email: "ghi", Password: password})
-	app.Charon.DB.Create(&User{Email: "jkl", Password: password})
+	helios.DB.Create(&User{Email: "def", Password: password})
+	helios.DB.Create(&user)
+	helios.DB.Create(&User{Email: "ghi", Password: password})
+	helios.DB.Create(&User{Email: "jkl", Password: password})
 
 	userLoggedIn, errLoggedIn := Login(LoginRequest{Email: "abc", Password: "abc"})
 
@@ -57,7 +57,7 @@ func TestLoginWrongPassword(t *testing.T) {
 }
 
 func TestHashPassword(t *testing.T) {
-	app.Charon.BeforeTest()
+	helios.App.BeforeTest()
 
 	passwordHashed := hashPassword("charon")
 	assert.NotEmpty(t, passwordHashed, "Hashed Password is empty")

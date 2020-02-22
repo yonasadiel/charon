@@ -7,19 +7,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/yonasadiel/charon/app"
+	"github.com/yonasadiel/helios"
 )
 
 func TestLoginViewsSuccess(t *testing.T) {
-	app.Charon.BeforeTest()
-	user, _ := NewUser("name", "email", "password")
-	app.Charon.DB.Create(user)
+	helios.App.BeforeTest()
+	var user User = NewUser("name", "email", "password")
+	helios.DB.Create(&user)
 
-	requestData := make(map[string]string)
-	requestData["email"] = "email"
-	requestData["password"] = "password"
-
-	req := app.MockRequest{
+	requestData := LoginRequest{Email: "email", Password: "password"}
+	req := helios.MockRequest{
 		RequestData: requestData,
 		SessionData: make(map[string]interface{}),
 	}
@@ -34,22 +31,18 @@ func TestLoginViewsSuccess(t *testing.T) {
 		t.Errorf("Error unmarshalling: %s", errUnmarshalling)
 	}
 
-	assert.Equal(t, user.ID, uint(returnedUser["id"].(float64)), "Wrong ID")
 	assert.Equal(t, "name", returnedUser["name"], "Wrong Name")
 	assert.Equal(t, "email", returnedUser["email"], "Wrong Email")
-	assert.Equal(t, req.GetSessionData(UserIDSessionKey), user.ID, "Session is not changed")
+	assert.Equal(t, req.GetSessionData(UserEmailSessionKey), user.Email, "Session is not changed")
 }
 
 func TestLoginViewWrongUsername(t *testing.T) {
-	app.Charon.BeforeTest()
-	user, _ := NewUser("name", "email", "password")
-	app.Charon.DB.Create(user)
+	helios.App.BeforeTest()
+	var user User = NewUser("name", "email", "password")
+	helios.DB.Create(&user)
 
-	requestData := make(map[string]string)
-	requestData["email"] = "wrong_email"
-	requestData["password"] = "password"
-
-	req := app.MockRequest{
+	requestData := LoginRequest{Email: "wrong_email", Password: "password"}
+	req := helios.MockRequest{
 		RequestData: requestData,
 		SessionData: make(map[string]interface{}),
 	}
@@ -66,19 +59,16 @@ func TestLoginViewWrongUsername(t *testing.T) {
 
 	assert.Equal(t, errWrongUsernamePassword.Code, errMessage["code"], "Wrong Code")
 	assert.Equal(t, errWrongUsernamePassword.Message, errMessage["message"], "Wrong Message")
-	assert.Equal(t, req.GetSessionData(UserIDSessionKey), nil, "User is logged in")
+	assert.Equal(t, req.GetSessionData(UserEmailSessionKey), nil, "User is logged in")
 }
 
 func TestLoginViewWrongPassword(t *testing.T) {
-	app.Charon.BeforeTest()
-	user, _ := NewUser("name", "email", "password")
-	app.Charon.DB.Create(user)
+	helios.App.BeforeTest()
+	var user User = NewUser("name", "email", "password")
+	helios.DB.Create(&user)
 
-	requestData := make(map[string]string)
-	requestData["email"] = "email"
-	requestData["password"] = "wrong_password"
-
-	req := app.MockRequest{
+	requestData := LoginRequest{Email: "email", Password: "wrong_password"}
+	req := helios.MockRequest{
 		RequestData: requestData,
 		SessionData: make(map[string]interface{}),
 	}
@@ -95,20 +85,17 @@ func TestLoginViewWrongPassword(t *testing.T) {
 
 	assert.Equal(t, errWrongUsernamePassword.Code, errMessage["code"], "Wrong Code")
 	assert.Equal(t, errWrongUsernamePassword.Message, errMessage["message"], "Wrong Message")
-	assert.Equal(t, req.GetSessionData(UserIDSessionKey), nil, "User is logged in")
+	assert.Equal(t, req.GetSessionData(UserEmailSessionKey), nil, "User is logged in")
 }
 
 func TestLogoutViewsSuccess(t *testing.T) {
-	app.Charon.BeforeTest()
+	helios.App.BeforeTest()
 
-	requestData := make(map[string]string)
-	requestData["email"] = "email"
-	requestData["password"] = "password"
-
+	requestData := LoginRequest{Email: "email", Password: "password"}
 	sessionData := make(map[string]interface{})
-	sessionData[UserIDSessionKey] = 2
+	sessionData[UserEmailSessionKey] = "abc"
 
-	req := app.MockRequest{
+	req := helios.MockRequest{
 		RequestData: requestData,
 		SessionData: sessionData,
 	}
@@ -116,5 +103,5 @@ func TestLogoutViewsSuccess(t *testing.T) {
 	LogoutView(&req)
 
 	assert.Equal(t, http.StatusOK, req.StatusCode, "Unexpected status code")
-	assert.Equal(t, 0, sessionData[UserIDSessionKey], "User ID in session not changed")
+	assert.Empty(t, sessionData[UserEmailSessionKey], "User Email in session not changed")
 }
