@@ -18,10 +18,17 @@ func TestLoginSuccess(t *testing.T) {
 	helios.DB.Create(&User{Email: "ghi", Password: password})
 	helios.DB.Create(&User{Email: "jkl", Password: password})
 
-	userLoggedIn, errLoggedIn := Login(LoginRequest{Email: "abc", Password: "def"})
+	userSession, errLoggedIn := Login(LoginRequest{Email: "abc", Password: "def"})
 
 	assert.Nil(t, errLoggedIn, "Expected success login, but get error: %s", errLoggedIn)
-	assert.Equal(t, user.ID, userLoggedIn.ID, "Wrong user returned")
+	assert.NotNil(t, userSession, "Empty session returned")
+	assert.Equal(t, userTokenLength, len(userSession.Token), "Different token length")
+	assert.Equal(t, user.ID, userSession.UserID, "Different user ID returned")
+
+	var userSessionDB Session
+	helios.DB.Where("token = ?", userSession.Token).First(&userSessionDB)
+	assert.NotEqual(t, 0, userSessionDB.ID, "User token not found")
+	assert.Equal(t, user.ID, userSessionDB.UserID, "Different user logged in")
 }
 
 func TestLoginWrongUsername(t *testing.T) {
@@ -37,7 +44,7 @@ func TestLoginWrongUsername(t *testing.T) {
 	userLoggedIn, errLoggedIn := Login(LoginRequest{Email: "mno", Password: "def"})
 
 	assert.Equal(t, errWrongUsernamePassword, *errLoggedIn, "Expected wrong username / password, but success logging in")
-	assert.Nil(t, userLoggedIn, "Not nil user")
+	assert.Nil(t, userLoggedIn, "Not nil user session")
 }
 
 func TestLoginWrongPassword(t *testing.T) {
@@ -53,7 +60,7 @@ func TestLoginWrongPassword(t *testing.T) {
 	userLoggedIn, errLoggedIn := Login(LoginRequest{Email: "abc", Password: "abc"})
 
 	assert.Equal(t, errWrongUsernamePassword, *errLoggedIn, "Expected wrong username / password, but success logging in")
-	assert.Nil(t, userLoggedIn, "Not nil user")
+	assert.Nil(t, userLoggedIn, "Not nil user session")
 }
 
 func TestHashPassword(t *testing.T) {

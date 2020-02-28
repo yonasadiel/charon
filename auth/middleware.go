@@ -1,20 +1,30 @@
 package auth
 
-import "github.com/yonasadiel/helios"
+import (
+	"github.com/yonasadiel/helios"
+)
 
 // LoggedInMiddleware check whether user is authenticated or not
 // and send errUnauthorized when user is not logged in.
 func LoggedInMiddleware(f helios.HTTPHandler) helios.HTTPHandler {
 	return func(req helios.Request) {
-		var userEmailSessionData interface{} = req.GetSessionData(UserEmailSessionKey)
+		var userToken string
+		var userSession Session
 
-		if userEmailSessionData == nil {
+		userToken, _ = req.GetSessionData(UserTokenSessionKey).(string)
+
+		if userToken == "" {
 			req.SendJSON(errUnauthorized.GetMessage(), errUnauthorized.StatusCode)
-		} else {
-			var user User
-			helios.DB.Where("email = ?", userEmailSessionData.(string)).First(&user)
-			req.SetContextData(UserContextKey, user)
-			f(req)
+			return
 		}
+
+		helios.DB.Where("token = ?", userToken).Preload("User").First(&userSession)
+		if userSession.ID == 0 {
+			req.SendJSON(errUnauthorized.GetMessage(), errUnauthorized.StatusCode)
+			return
+		}
+
+		req.SetContextData(UserContextKey, *userSession.User)
+		f(req)
 	}
 }

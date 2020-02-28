@@ -21,3 +21,13 @@ func TestNewUserErrorHash(t *testing.T) {
 	assert.Equal(t, "johndoe@gmail.com", user.Email, "Different user email")
 	assert.True(t, checkPasswordHash("password", user.Password), "Different user password")
 }
+
+func TestUserType(t *testing.T) {
+	userLocal := User{userType: userTypeLocal}
+	userParticipant := User{userType: userTypeParticipant}
+
+	assert.True(t, userLocal.IsLocal(), "userLocal should be local")
+	assert.False(t, userLocal.IsParticipant(), "userLocal should be local")
+	assert.True(t, userParticipant.IsParticipant(), "userParticipant should be participant")
+	assert.False(t, userLocal.IsParticipant(), "userLocal should be participant")
+}

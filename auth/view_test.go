@@ -31,9 +31,14 @@ func TestLoginViewsSuccess(t *testing.T) {
 		t.Errorf("Error unmarshalling: %s", errUnmarshalling)
 	}
 
+	var userSession Session
 	assert.Equal(t, "name", returnedUser["name"], "Wrong Name")
 	assert.Equal(t, "email", returnedUser["email"], "Wrong Email")
-	assert.Equal(t, req.GetSessionData(UserEmailSessionKey), user.Email, "Session is not changed")
+	userToken, ok := req.GetSessionData(UserTokenSessionKey).(string)
+	assert.True(t, ok, "Fail to convert user token")
+	assert.NotEmpty(t, userToken, "Session token is empty")
+	helios.DB.Where("token = ?", userToken).Find(&userSession)
+	assert.Equal(t, user.ID, userSession.UserID, "user ID is not equal")
 }
 
 func TestLoginViewWrongUsername(t *testing.T) {
@@ -59,7 +64,7 @@ func TestLoginViewWrongUsername(t *testing.T) {
 
 	assert.Equal(t, errWrongUsernamePassword.Code, errMessage["code"], "Wrong Code")
 	assert.Equal(t, errWrongUsernamePassword.Message, errMessage["message"], "Wrong Message")
-	assert.Equal(t, req.GetSessionData(UserEmailSessionKey), nil, "User is logged in")
+	assert.Empty(t, req.GetSessionData(UserTokenSessionKey), "User is logged in")
 }
 
 func TestLoginViewWrongPassword(t *testing.T) {
@@ -85,23 +90,36 @@ func TestLoginViewWrongPassword(t *testing.T) {
 
 	assert.Equal(t, errWrongUsernamePassword.Code, errMessage["code"], "Wrong Code")
 	assert.Equal(t, errWrongUsernamePassword.Message, errMessage["message"], "Wrong Message")
-	assert.Equal(t, req.GetSessionData(UserEmailSessionKey), nil, "User is logged in")
+	assert.Empty(t, req.GetSessionData(UserTokenSessionKey), "User is logged in")
 }
 
 func TestLogoutViewsSuccess(t *testing.T) {
 	helios.App.BeforeTest()
 
-	requestData := LoginRequest{Email: "email", Password: "password"}
+	token := "random_token"
+	user := User{Email: "email"}
+	helios.DB.Create(&user)
+
+	session := Session{Token: token, UserID: user.ID}
+	helios.DB.Create(&session)
+
 	sessionData := make(map[string]interface{})
-	sessionData[UserEmailSessionKey] = "abc"
+	sessionData[UserTokenSessionKey] = token
+	contextData := make(map[string]interface{})
+	contextData[UserContextKey] = user
 
 	req := helios.MockRequest{
-		RequestData: requestData,
+		RequestData: nil,
 		SessionData: sessionData,
+		ContextData: contextData,
 	}
 
 	LogoutView(&req)
 
 	assert.Equal(t, http.StatusOK, req.StatusCode, "Unexpected status code")
-	assert.Empty(t, sessionData[UserEmailSessionKey], "User Email in session not changed")
+	assert.Empty(t, sessionData[UserTokenSessionKey], "User token should be removed")
+
+	var userSession Session
+	helios.DB.Where("token = ?", token).First(&userSession)
+	assert.Equal(t, uint(0), userSession.ID, "User session should be deleted")
 }

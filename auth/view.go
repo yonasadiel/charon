@@ -10,18 +10,22 @@ import (
 func LoginView(req helios.Request) {
 	var loginRequest LoginRequest
 	req.DeserializeRequestData(&loginRequest)
-	user, err := Login(loginRequest)
+	userSession, err := Login(loginRequest)
 
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.StatusCode)
 	} else {
-		req.SetSessionData(UserEmailSessionKey, user.Email)
-		req.SendJSON(SerializeUser(*user), http.StatusOK)
+		req.SetSessionData(UserTokenSessionKey, userSession.Token)
+		req.SendJSON(SerializeUser(*userSession.User), http.StatusOK)
 	}
 }
 
 // LogoutView clear user session data
 func LogoutView(req helios.Request) {
-	req.SetSessionData(UserEmailSessionKey, "")
+	var user User
+
+	user = req.GetContextData(UserTokenSessionKey).(User)
+	Logout(user)
+	req.SetSessionData(UserTokenSessionKey, "")
 	req.SendJSON(nil, http.StatusOK)
 }
