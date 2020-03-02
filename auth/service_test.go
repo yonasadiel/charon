@@ -18,7 +18,7 @@ func TestLoginSuccess(t *testing.T) {
 	helios.DB.Create(&User{Email: "ghi", Password: password})
 	helios.DB.Create(&User{Email: "jkl", Password: password})
 
-	userSession, errLoggedIn := Login(LoginRequest{Email: "abc", Password: "def"})
+	userSession, errLoggedIn := Login("abc", "def", "1.2.3.4")
 
 	assert.Nil(t, errLoggedIn, "Expected success login, but get error: %s", errLoggedIn)
 	assert.NotNil(t, userSession, "Empty session returned")
@@ -41,7 +41,7 @@ func TestLoginWrongUsername(t *testing.T) {
 	helios.DB.Create(&User{Email: "ghi", Password: password})
 	helios.DB.Create(&User{Email: "jkl", Password: password})
 
-	userLoggedIn, errLoggedIn := Login(LoginRequest{Email: "mno", Password: "def"})
+	userLoggedIn, errLoggedIn := Login("mno", "def", "1.2.3.4")
 
 	assert.Equal(t, errWrongUsernamePassword, *errLoggedIn, "Expected wrong username / password, but success logging in")
 	assert.Nil(t, userLoggedIn, "Not nil user session")
@@ -57,7 +57,7 @@ func TestLoginWrongPassword(t *testing.T) {
 	helios.DB.Create(&User{Email: "ghi", Password: password})
 	helios.DB.Create(&User{Email: "jkl", Password: password})
 
-	userLoggedIn, errLoggedIn := Login(LoginRequest{Email: "abc", Password: "abc"})
+	userLoggedIn, errLoggedIn := Login("abc", "abc", "1.2.3.4")
 
 	assert.Equal(t, errWrongUsernamePassword, *errLoggedIn, "Expected wrong username / password, but success logging in")
 	assert.Nil(t, userLoggedIn, "Not nil user session")

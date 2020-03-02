@@ -18,7 +18,12 @@ func LoggedInMiddleware(f helios.HTTPHandler) helios.HTTPHandler {
 			return
 		}
 
-		helios.DB.Where("token = ?", userToken).Preload("User").First(&userSession)
+		helios.DB.
+			Where("token = ?", userToken).
+			Where("ip_address = ?", req.ClientIP()).
+			Preload("User").
+			First(&userSession)
+
 		if userSession.ID == 0 {
 			req.SendJSON(errUnauthorized.GetMessage(), errUnauthorized.StatusCode)
 			return

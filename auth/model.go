@@ -23,9 +23,10 @@ type User struct {
 
 // Session of user logged in
 type Session struct {
-	ID     uint `gorm:"primary_key"`
-	UserID uint
-	Token  string `gorm:"size:256;unique"`
+	ID        uint `gorm:"primary_key"`
+	UserID    uint
+	Token     string `gorm:"size:20;unique"`
+	IPAddress string `gorm:"size:20"`
 
 	User *User `gorm:"foreignkey:user_id"`
 
