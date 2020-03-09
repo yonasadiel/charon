@@ -1,4 +1,4 @@
-package problem
+package exam
 
 // QuestionResponse is JSON representation of question.
 // Answer is the user's answer of the question, equals to Submission.Answer

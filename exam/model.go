@@ -1,4 +1,4 @@
-package problem
+package exam
 
 import (
 	"time"
@@ -21,7 +21,7 @@ type Question struct {
 	DeletedAt *time.Time
 }
 
-// QuestionChoice is choice of problem with multiple choices type
+// QuestionChoice is choice of question with multiple choices type
 type QuestionChoice struct {
 	ID         uint `gorm:"primray_key"`
 	Text       string
@@ -50,7 +50,7 @@ type UserQuestion struct {
 	DeletedAt *time.Time
 }
 
-// Submission of user to the problem. This model should be insert only,
+// Submission of user to the question. This model should be insert only,
 // never deleted, for log purpose.
 type Submission struct {
 	ID         uint   `gorm:"primary_key"`

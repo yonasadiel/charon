@@ -1,4 +1,4 @@
-package problem
+package exam
 
 // isAnswerValidChoice returns true if the answer is exist in one of question choices.
 // Returns true if the choices are empty. It means that the question is not multiple choices type of question.

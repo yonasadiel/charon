@@ -1,4 +1,4 @@
-package problem
+package exam
 
 import (
 	"github.com/yonasadiel/charon/auth"
