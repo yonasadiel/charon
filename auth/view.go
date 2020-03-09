@@ -16,6 +16,7 @@ func LoginView(req helios.Request) {
 		req.SendJSON(err.GetMessage(), err.StatusCode)
 	} else {
 		req.SetSessionData(UserTokenSessionKey, userSession.Token)
+		req.SaveSession()
 		req.SendJSON(SerializeUser(*userSession.User), http.StatusOK)
 	}
 }

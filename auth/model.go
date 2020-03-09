@@ -51,12 +51,22 @@ func NewUser(name, email, password string) User {
 }
 
 // IsLocal returns true if the user is local
-func (user User) IsLocal() bool {
+func (user *User) IsLocal() bool {
 	return user.userType == userTypeLocal
 }
 
 // IsParticipant returns true if the user is participant who taking the exam.
 // This is the default value
-func (user User) IsParticipant() bool {
+func (user *User) IsParticipant() bool {
 	return user.userType != userTypeLocal
+}
+
+// SetAsLocal set the user as local administrator of exam
+func (user *User) SetAsLocal() {
+	user.userType = userTypeLocal
+}
+
+// SetAsParticipant set the user as participant of exam
+func (user *User) SetAsParticipant() {
+	user.userType = userTypeParticipant
 }

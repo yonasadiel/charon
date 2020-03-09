@@ -1,5 +1,7 @@
 all:
-	go build -o bin/charon .
+	go build -o bin/createuser ./cmd/createuser/
+	go build -o bin/localserver ./cmd/localserver/
+	chmod +x ./bin/*
 	@echo "Build done"
 
 test:
