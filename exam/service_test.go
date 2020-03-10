@@ -7,23 +7,29 @@ import (
 	"github.com/yonasadiel/helios"
 )
 
-func TestGetAllQuestion(t *testing.T) {
+func TestGetAllEventOfUser(t *testing.T) {
 	beforeTest(true)
 
-	questions := GetAllQuestionOfUser(user1)
+	eventsParticipant := GetAllEventOfUser(user1)
+	assert.Equal(t, 2, len(eventsParticipant), "eventUnparticipated should not be included")
+	assert.Equal(t, event1.Title, eventsParticipant[0].Title, "Event should be ordered by start time, so event1 will be the first")
+	assert.Equal(t, event2.Title, eventsParticipant[1].Title, "Event should be ordered by start time, so event2 will be the second")
 
-	assert.Equal(t, 3, len(questions), "Different number of questions")
-	if len(questions) > 0 {
-		assert.Equal(t, questionSimple.Content, questions[0].Content, "Different question content")
-		assert.Equal(t, submissionUser1QuestionSimple2.Answer, questions[0].UserAnswer, "The answer should be latest submission")
-	}
-	if len(questions) > 1 {
-		assert.Equal(t, questionWithChoice.Content, questions[1].Content, "Different question content")
-		assert.Equal(t, submissionUser1QuestionWithChoice1.Answer, questions[1].UserAnswer, "Different answer on question with choice")
-	}
-	if len(questions) > 2 {
-		assert.Empty(t, questions[2].UserAnswer, "Quesion unanswered should be unanswered")
-	}
+	eventsLocal := GetAllEventOfUser(userLocal)
+	assert.Equal(t, 3, len(eventsLocal), "eventUnparticipated should be shown because the user has local role")
+}
+
+func TestGetAllQuestionOfUser(t *testing.T) {
+	beforeTest(true)
+
+	questions := GetAllQuestionOfEventAndUser(event1.ID, user1)
+
+	assert.Equal(t, 3, len(questions), "Different number of questions. Maybe questionEvent2 or questionUnowned is included?")
+	assert.Equal(t, questionSimple.Content, questions[0].Content, "Different question content")
+	assert.Equal(t, submissionUser1QuestionSimple2.Answer, questions[0].UserAnswer, "The answer should be latest submission")
+	assert.Equal(t, questionWithChoice.Content, questions[1].Content, "Different question content")
+	assert.Equal(t, submissionUser1QuestionWithChoice1.Answer, questions[1].UserAnswer, "Different answer on question with choice")
+	assert.Empty(t, questions[2].UserAnswer, "Quesion unanswered should be unanswered")
 }
 
 func TestGetQuestionOfUser(t *testing.T) {

@@ -5,9 +5,30 @@ import (
 	"github.com/yonasadiel/helios"
 )
 
-// GetAllQuestionOfUser returns all questions in database
-// that belongs to an user, including the current submission
-func GetAllQuestionOfUser(user auth.User) []Question {
+// GetAllEventOfUser returns all events that is participated by user.
+// If the user is local, then return all events that are exist.
+func GetAllEventOfUser(user auth.User) []Event {
+	var events []Event
+
+	if user.IsLocal() {
+		helios.DB.Find(&events)
+	} else { // user is participant
+		helios.DB.
+			Table("user_events").
+			Select("events.*").
+			Joins("left join events on events.id = user_events.event_id").
+			Where("user_id = ?", user.ID).
+			Order("events.starts_at").
+			Find(&events)
+	}
+
+	return events
+}
+
+// GetAllQuestionOfEventAndUser returns all questions in database
+// that exists on an event and belongs to an user.
+// Current submission of the user will be attached.
+func GetAllQuestionOfEventAndUser(eventID uint, user auth.User) []Question {
 	var questions []Question
 	var userSubmissions []Submission
 	var userSubmissionByQuestionID = make(map[uint]Submission)
@@ -18,6 +39,7 @@ func GetAllQuestionOfUser(user auth.User) []Question {
 		Select("questions.*").
 		Joins("left join questions on questions.id = user_questions.question_id").
 		Where("user_id = ?", user.ID).
+		Where("questions.event_id = ?", eventID).
 		Order("user_questions.ordering asc").
 		Find(&questions)
 	helios.DB.Where("user_id = ?", user.ID).Order("created_at asc").Find(&userSubmissions)

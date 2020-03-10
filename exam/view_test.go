@@ -16,6 +16,7 @@ func TestQuestionListView(t *testing.T) {
 
 	req := helios.NewMockRequest()
 	req.SetContextData(auth.UserContextKey, user1)
+	req.URLParam["eventID"] = strconv.Itoa(int(event1.ID))
 
 	QuestionListView(&req)
 
@@ -27,7 +28,7 @@ func TestQuestionDetailView(t *testing.T) {
 
 	req1 := helios.NewMockRequest()
 	req1.SetContextData(auth.UserContextKey, user1)
-	req1.URLParam["questionId"] = strconv.Itoa(int(questionSimple.ID))
+	req1.URLParam["questionID"] = strconv.Itoa(int(questionSimple.ID))
 
 	QuestionDetailView(&req1)
 
@@ -35,7 +36,7 @@ func TestQuestionDetailView(t *testing.T) {
 
 	req2 := helios.NewMockRequest()
 	req2.SetContextData(auth.UserContextKey, user1)
-	req2.URLParam["questionId"] = "malformed"
+	req2.URLParam["questionID"] = "malformed"
 
 	QuestionDetailView(&req2)
 
@@ -43,7 +44,7 @@ func TestQuestionDetailView(t *testing.T) {
 
 	req3 := helios.NewMockRequest()
 	req3.SetContextData(auth.UserContextKey, user1)
-	req3.URLParam["questionId"] = "879654"
+	req3.URLParam["questionID"] = "879654"
 
 	QuestionDetailView(&req3)
 
@@ -58,7 +59,7 @@ func TestSubmissionCreateView(t *testing.T) {
 
 	req := helios.NewMockRequest()
 	req.SetContextData(auth.UserContextKey, user1)
-	req.URLParam["questionId"] = strconv.Itoa(int(questionSimple.ID))
+	req.URLParam["questionID"] = strconv.Itoa(int(questionSimple.ID))
 	req.RequestData = SubmitSubmissionRequest{Answer: "answer1"}
 
 	SubmissionCreateView(&req)
@@ -77,7 +78,7 @@ func TestSubmissionCreateViewMalformedQuestionID(t *testing.T) {
 
 	req := helios.NewMockRequest()
 	req.SetContextData(auth.UserContextKey, user1)
-	req.URLParam["questionId"] = "abc"
+	req.URLParam["questionID"] = "abc"
 	req.RequestData = SubmitSubmissionRequest{Answer: "answer1"}
 
 	SubmissionCreateView(&req)
@@ -96,7 +97,7 @@ func TestSubmissionCreateViewUnknownQuestionID(t *testing.T) {
 
 	req := helios.NewMockRequest()
 	req.SetContextData(auth.UserContextKey, user1)
-	req.URLParam["questionId"] = "976857463"
+	req.URLParam["questionID"] = "976857463"
 	req.RequestData = SubmitSubmissionRequest{Answer: "answer1"}
 
 	SubmissionCreateView(&req)
@@ -115,7 +116,7 @@ func TestSubmissionCreateViewBadRequest(t *testing.T) {
 
 	req := helios.NewMockRequest()
 	req.SetContextData(auth.UserContextKey, user1)
-	req.URLParam["questionId"] = "976857463"
+	req.URLParam["questionID"] = "976857463"
 	req.RequestData = nil
 
 	SubmissionCreateView(&req)

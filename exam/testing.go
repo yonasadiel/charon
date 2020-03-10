@@ -1,16 +1,23 @@
 package exam
 
 import (
+	"time"
+
 	"github.com/yonasadiel/charon/auth"
 	"github.com/yonasadiel/helios"
 )
 
+var event1 Event
+var event2 Event
+var eventUnparticipated Event
 var user1 auth.User
 var user2 auth.User
+var userLocal auth.User
 var questionSimple Question
 var questionWithChoice Question
 var questionUnanswered Question
 var questionUnowned Question
+var questionEvent2 Question
 var submissionUser1QuestionSimple1 Submission
 var submissionUser1QuestionSimple2 Submission
 var submissionUser1QuestionWithChoice1 Submission
@@ -20,16 +27,47 @@ func beforeTest(populate bool) {
 	helios.App.BeforeTest()
 
 	if populate {
+		utcTZ := time.FixedZone("UTC", 0)
+		event1 = Event{
+			Title:    "Event #1",
+			StartsAt: time.Date(2020, 8, 12, 9, 30, 10, 0, utcTZ),
+			EndsAt:   time.Date(2020, 8, 12, 4, 30, 10, 0, utcTZ),
+		}
+		event2 = Event{
+			Title:    "Event #2",
+			StartsAt: time.Date(2020, 8, 13, 9, 30, 10, 0, utcTZ),
+			EndsAt:   time.Date(2020, 8, 13, 4, 30, 10, 0, utcTZ),
+		}
+		eventUnparticipated = Event{
+			Title:    "Event #3",
+			StartsAt: time.Date(2020, 8, 14, 9, 30, 10, 0, utcTZ),
+			EndsAt:   time.Date(2020, 8, 14, 4, 30, 10, 0, utcTZ),
+		}
+		helios.DB.Create(&eventUnparticipated)
+		helios.DB.Create(&event2)
+		helios.DB.Create(&event1)
+
 		user1 = auth.User{Email: "user1"}
 		user2 = auth.User{Email: "user2"}
+		userLocal = auth.User{Email: "userLocal"}
+		userLocal.SetAsLocal()
 		helios.DB.Create(&user1)
 		helios.DB.Create(&user2)
+		helios.DB.Create(&userLocal)
+
+		// Connect all user to all events, except eventUnparticipated.
+		helios.DB.Create(&UserEvent{UserID: user1.ID, EventID: event1.ID})
+		helios.DB.Create(&UserEvent{UserID: user2.ID, EventID: event1.ID})
+		helios.DB.Create(&UserEvent{UserID: user1.ID, EventID: event2.ID})
+		helios.DB.Create(&UserEvent{UserID: user2.ID, EventID: event2.ID})
 
 		questionSimple = Question{
+			EventID: event1.ID,
 			Content: "abc",
 			Choices: []QuestionChoice{},
 		}
 		questionWithChoice = Question{
+			EventID: event1.ID,
 			Content: "def",
 			Choices: []QuestionChoice{
 				QuestionChoice{Text: "choice1"},
@@ -37,11 +75,18 @@ func beforeTest(populate bool) {
 			},
 		}
 		questionUnanswered = Question{
+			EventID: event1.ID,
 			Content: "ghi",
 			Choices: []QuestionChoice{},
 		}
 		questionUnowned = Question{
+			EventID: event1.ID,
 			Content: "jkl",
+			Choices: []QuestionChoice{},
+		}
+		questionEvent2 = Question{
+			EventID: event2.ID,
+			Content: "mno",
 			Choices: []QuestionChoice{},
 		}
 		helios.DB.Create(&questionSimple)

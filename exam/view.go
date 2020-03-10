@@ -2,7 +2,6 @@ package exam
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/yonasadiel/charon/auth"
 	"github.com/yonasadiel/helios"
@@ -16,7 +15,13 @@ func QuestionListView(req helios.Request) {
 		return
 	}
 
-	var questions []Question = GetAllQuestionOfUser(user)
+	eventID, errParseQuestionID := req.GetURLParamUint("eventID")
+	if errParseQuestionID != nil {
+		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
+		return
+	}
+
+	var questions []Question = GetAllQuestionOfEventAndUser(eventID, user)
 	serializedQuestions := make([]QuestionResponse, 0)
 	for _, question := range questions {
 		serializedQuestions = append(serializedQuestions, SerializeQuestion(question))
@@ -32,13 +37,11 @@ func QuestionDetailView(req helios.Request) {
 		return
 	}
 
-	questionIDStr := req.GetURLParam("questionId")
-	questionID64, errParseQuestionID := strconv.ParseUint(questionIDStr, 10, 32)
+	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
 		return
 	}
-	questionID := uint(questionID64)
 
 	var question *Question = GetQuestionOfUser(questionID, user)
 	if question == nil {
@@ -56,13 +59,11 @@ func SubmissionCreateView(req helios.Request) {
 		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.StatusCode)
 		return
 	}
-	questionIDStr := req.GetURLParam("questionId")
-	questionID64, errParseQuestionID := strconv.ParseUint(questionIDStr, 10, 32)
+	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
 		return
 	}
-	questionID := uint(questionID64)
 
 	var submitSubmissionRequest SubmitSubmissionRequest
 	var errDeserialization *helios.APIError = req.DeserializeRequestData(&submitSubmissionRequest)

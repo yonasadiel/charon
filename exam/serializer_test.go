@@ -3,11 +3,34 @@ package exam
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSerializerQuestionEmptyChoices(t *testing.T) {
+func TestSerializeEvent(t *testing.T) {
+	beforeTest(false)
+
+	jakartaSeconds := int((7 * time.Hour).Seconds())
+	jakartaTZ := time.FixedZone("Asia/Jakarta", jakartaSeconds)
+	utcTZ := time.FixedZone("UTC", 0)
+
+	event := Event{
+		ID:       3,
+		Title:    "Math Final Exam",
+		StartsAt: time.Date(2020, 8, 12, 9, 30, 10, 0, jakartaTZ),
+		EndsAt:   time.Date(2020, 8, 12, 4, 30, 10, 0, utcTZ),
+	}
+	expectedJSON := `{"id":3,"title":"Math Final Exam","starts_at":"2020-08-12T09:30:10+07:00","ends_at":"2020-08-12T04:30:10Z"}`
+	ser := SerializeEvent(event)
+	serJSON, err := json.Marshal(ser)
+	if err != nil {
+		t.Errorf("Error marshaling json: %s", err)
+	}
+	assert.Equal(t, expectedJSON, string(serJSON), "Unequal JSON")
+}
+
+func TestSerializeQuestionEmptyChoices(t *testing.T) {
 	beforeTest(false)
 
 	question := Question{
@@ -26,7 +49,7 @@ func TestSerializerQuestionEmptyChoices(t *testing.T) {
 	assert.Equal(t, expectedJSON, string(serJSON), "Unequal JSON")
 }
 
-func TestSerializerQuestionWithChoices(t *testing.T) {
+func TestSerializeQuestionWithChoices(t *testing.T) {
 	beforeTest(false)
 
 	question := Question{

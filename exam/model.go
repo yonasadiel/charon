@@ -7,13 +7,43 @@ import (
 	"github.com/yonasadiel/helios"
 )
 
+// Event is the exam event
+// It also stores the start and end time
+type Event struct {
+	ID       uint   `gorm:"primary_key"`
+	Title    string `gorm:"size:100"`
+	StartsAt time.Time
+	EndsAt   time.Time
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+}
+
+// UserEvent is many to many indicating an user is participating
+// in an event.
+type UserEvent struct {
+	ID      uint `gorm:"primary_key"`
+	EventID uint
+	UserID  uint
+
+	Event *Event     `gorm:"foreignkey:EventID"`
+	User  *auth.User `gorm:"foreignkey:UserID"`
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+}
+
 // Question that will be served to participant
 // UserAnswer is the user current answer to related question
 type Question struct {
 	ID         uint   `gorm:"primary_key"`
 	Content    string `gorm:"type:text"`
+	EventID    uint
 	UserAnswer string `gorm:"-"`
 
+	Event   *Event           `gorm:"foreignkey:EventID"`
 	Choices []QuestionChoice `gorm:"foreignkey:QuestionID"`
 
 	CreatedAt time.Time
@@ -67,6 +97,8 @@ type Submission struct {
 }
 
 func init() {
+	helios.App.RegisterModel(Event{})
+	helios.App.RegisterModel(UserEvent{})
 	helios.App.RegisterModel(QuestionChoice{})
 	helios.App.RegisterModel(Question{})
 	helios.App.RegisterModel(UserQuestion{})
