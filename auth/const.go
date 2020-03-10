@@ -19,8 +19,8 @@ const (
 	// UserContextKey is the key of context data that store user object
 	UserContextKey = "user"
 
-	userTypeLocal       = "local"       // the one that organize the exam
-	userTypeParticipant = "participant" // the one that taking the exam
+	userRoleLocal       = "local"       // the one that organize the exam
+	userRoleParticipant = "participant" // the one that taking the exam
 
 )
 

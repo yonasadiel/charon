@@ -14,7 +14,7 @@ type User struct {
 	Name     string `gorm:"size:256"`
 	Email    string `gorm:"size:256; unique"`
 	Password string `gorm:"size:256"`
-	userType string `gorm:"size:10"` // enum("local", "participant"), default to "participant"
+	Role     string `gorm:"size:10"` // enum("local", "participant"), default to "participant"
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -47,26 +47,27 @@ func NewUser(name, email, password string) User {
 		Name:     name,
 		Email:    email,
 		Password: hashPassword(password),
+		Role:     userRoleParticipant,
 	}
 }
 
 // IsLocal returns true if the user is local
 func (user *User) IsLocal() bool {
-	return user.userType == userTypeLocal
+	return user.Role == userRoleLocal
 }
 
 // IsParticipant returns true if the user is participant who taking the exam.
 // This is the default value
 func (user *User) IsParticipant() bool {
-	return user.userType != userTypeLocal
+	return user.Role != userRoleLocal
 }
 
 // SetAsLocal set the user as local administrator of exam
 func (user *User) SetAsLocal() {
-	user.userType = userTypeLocal
+	user.Role = userRoleLocal
 }
 
 // SetAsParticipant set the user as participant of exam
 func (user *User) SetAsParticipant() {
-	user.userType = userTypeParticipant
+	user.Role = userRoleParticipant
 }

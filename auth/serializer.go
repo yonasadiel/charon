@@ -10,6 +10,7 @@ type LoginRequest struct {
 type UserResponse struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 // SerializeUser serialize user to UserResponse
@@ -17,5 +18,6 @@ func SerializeUser(user User) UserResponse {
 	return UserResponse{
 		Email: user.Email,
 		Name:  user.Name,
+		Role:  user.Role,
 	}
 }
