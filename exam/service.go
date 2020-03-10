@@ -70,9 +70,15 @@ func GetAllQuestionOfEventAndUser(user auth.User, eventID uint) ([]Question, *he
 
 // GetQuestionOfUser returns a question with given id, but first check
 // if the user has rights to the question
-func GetQuestionOfUser(user auth.User, questionID uint) *Question {
+func GetQuestionOfUser(user auth.User, eventID uint, questionID uint) (*Question, *helios.APIError) {
+	var event Event
 	var question Question
 	var userSubmission Submission
+
+	helios.DB.Where("id = ?", eventID).First(&event)
+	if event.ID == 0 {
+		return nil, &errEventNotFound
+	}
 
 	helios.DB.
 		Table("user_questions").
@@ -81,24 +87,29 @@ func GetQuestionOfUser(user auth.User, questionID uint) *Question {
 		Where("user_id = ?", user.ID).
 		Where("question_id = ?", questionID).
 		First(&question)
-	helios.DB.Where("user_id = ?", user.ID).Where("question_id = ?", questionID).Order("created_at desc").First(&userSubmission)
-
 	if question.ID == 0 {
-		return nil
+		return nil, &errQuestionNotFound
 	}
+
+	helios.DB.Where("user_id = ?", user.ID).Where("question_id = ?", questionID).Order("created_at desc").First(&userSubmission)
 	if userSubmission.ID != 0 {
 		question.UserAnswer = userSubmission.Answer
 	}
-	return &question
+	return &question, nil
 }
 
 // SubmitSubmission submit a submission from user to a question.
-func SubmitSubmission(user auth.User, questionID uint, answer string) (*Submission, *helios.APIError) {
+func SubmitSubmission(user auth.User, eventID uint, questionID uint, answer string) (*Submission, *helios.APIError) {
+	var event Event
 	var question Question
 	var choices []QuestionChoice
 	var submission Submission
 
-	helios.DB.Where("id = ?", questionID).First(&question)
+	helios.DB.Where("id = ?", eventID).First(&event)
+	if event.ID == 0 {
+		return nil, &errEventNotFound
+	}
+	helios.DB.Where("event_id = ?", eventID).Where("id = ?", questionID).First(&question)
 	helios.DB.Where("question_id = ?", questionID).Find(&choices)
 	if question.ID == 0 {
 		return nil, &errQuestionNotFound

@@ -41,19 +41,21 @@ func TestGetAllQuestionOfEventAndUser(t *testing.T) {
 func TestGetQuestionOfUser(t *testing.T) {
 	beforeTest(true)
 
-	question1 := GetQuestionOfUser(user1, questionSimple.ID)
+	question1, err1 := GetQuestionOfUser(user1, event1.ID, questionSimple.ID)
+	assert.Nil(t, err1, "Failed to get question")
 	assert.NotNil(t, question1, "Question is not found")
 	assert.Equal(t, questionSimple.ID, question1.ID, "Different question content")
 	assert.Equal(t, questionSimple.Content, question1.Content, "Different question content")
 	assert.Equal(t, submissionUser1QuestionSimple2.Answer, question1.UserAnswer, "The answer should be latest submission")
 
-	question2 := GetQuestionOfUser(user1, 4567)
-	assert.Nil(t, question2, "Question invalid ID should not be found")
+	_, err2 := GetQuestionOfUser(user1, event1.ID, 4567)
+	assert.Equal(t, errQuestionNotFound, *err2, "Unknwon question id returns errQuestionNotFound")
 
-	question3 := GetQuestionOfUser(user1, questionUnowned.ID)
-	assert.Nil(t, question3, "Question unowned by the user should not be found")
+	_, err3 := GetQuestionOfUser(user1, event1.ID, questionUnowned.ID)
+	assert.Equal(t, errQuestionNotFound, *err3, "Question unowned by the user should not be found")
 
-	question4 := GetQuestionOfUser(user1, questionUnanswered.ID)
+	question4, err4 := GetQuestionOfUser(user1, event1.ID, questionUnanswered.ID)
+	assert.Nil(t, err4, "Failed to get question")
 	assert.NotNil(t, question4, "Question is not found")
 	assert.Equal(t, questionUnanswered.ID, question4.ID, "Different question content")
 	assert.Equal(t, questionUnanswered.Content, question4.Content, "Different question content")
@@ -65,7 +67,7 @@ func TestSubmitSubmissionSuccess(t *testing.T) {
 	beforeTest(true)
 
 	submission1Answer := "answer2"
-	submission1Returned, err := SubmitSubmission(user1, questionSimple.ID, submission1Answer)
+	submission1Returned, err := SubmitSubmission(user1, event1.ID, questionSimple.ID, submission1Answer)
 	assert.Nil(t, err, "Failed to submit submission")
 	assert.Equal(t, submission1Answer, submission1Returned.Answer, "Answer returned different with answer submitted")
 
@@ -78,7 +80,7 @@ func TestSubmitSubmissionSuccess(t *testing.T) {
 	assert.Equal(t, user1.ID, submission1Stored.UserID, "Different user ID stored in database")
 
 	submission2Answer := "choice2"
-	submission2Returned, err := SubmitSubmission(user2, questionWithChoice.ID, submission2Answer)
+	submission2Returned, err := SubmitSubmission(user2, event1.ID, questionWithChoice.ID, submission2Answer)
 	assert.Nil(t, err, "Failed to submit submission")
 	assert.Equal(t, submission2Answer, submission2Returned.Answer, "Answer returned different with answer submitted")
 
@@ -91,13 +93,13 @@ func TestSubmitSubmissionSuccess(t *testing.T) {
 	assert.Equal(t, user2.ID, submission2Stored.UserID, "Different user ID stored in database")
 }
 
-func TestSubmitInvalidQuestionID(t *testing.T) {
+func TestSubmitInvalidQuestionIDOrEventID(t *testing.T) {
 	beforeTest(true)
 
 	var submissionCountBefore, submissionCountAfter int
 	helios.DB.Model(&Submission{}).Count(&submissionCountBefore)
 	submission1Answer := "answer1"
-	submission1Returned, err := SubmitSubmission(user1, 30, submission1Answer)
+	submission1Returned, err := SubmitSubmission(user1, event1.ID, 30, submission1Answer)
 	helios.DB.Model(&Submission{}).Count(&submissionCountAfter)
 	assert.Equal(t, errQuestionNotFound.Code, err.Code, "Submission should be fail")
 	assert.Nil(t, submission1Returned, "Fail to submit should return nil submission")
@@ -110,7 +112,7 @@ func TestSubmitSubmissionInvalidChoice(t *testing.T) {
 	var submissionCountBefore, submissionCountAfter int
 	helios.DB.Model(&Submission{}).Count(&submissionCountBefore)
 	submission1Answer := "not in choice"
-	submission1Returned, err := SubmitSubmission(user1, questionWithChoice.ID, submission1Answer)
+	submission1Returned, err := SubmitSubmission(user1, event1.ID, questionWithChoice.ID, submission1Answer)
 	helios.DB.Model(&Submission{}).Count(&submissionCountAfter)
 	assert.Equal(t, errAnswerNotValid.Code, err.Code, "Submission should be fail")
 	assert.Nil(t, submission1Returned, "Fail to submit should return nil submission")

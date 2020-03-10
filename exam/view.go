@@ -60,15 +60,23 @@ func QuestionDetailView(req helios.Request) {
 		return
 	}
 
+	eventID, errParseEventID := req.GetURLParamUint("eventID")
+	if errParseEventID != nil {
+		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.StatusCode)
+		return
+	}
+
 	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
 		return
 	}
 
-	var question *Question = GetQuestionOfUser(user, questionID)
-	if question == nil {
-		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
+	var question *Question
+	var err *helios.APIError
+	question, err = GetQuestionOfUser(user, eventID, questionID)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.StatusCode)
 		return
 	}
 	var serializedQuestion QuestionResponse = SerializeQuestion(*question)
@@ -82,6 +90,13 @@ func SubmissionCreateView(req helios.Request) {
 		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.StatusCode)
 		return
 	}
+
+	eventID, errParseEventID := req.GetURLParamUint("eventID")
+	if errParseEventID != nil {
+		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.StatusCode)
+		return
+	}
+
 	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
@@ -97,7 +112,7 @@ func SubmissionCreateView(req helios.Request) {
 
 	var submission *Submission
 	var err *helios.APIError
-	submission, err = SubmitSubmission(user, questionID, submitSubmissionRequest.Answer)
+	submission, err = SubmitSubmission(user, eventID, questionID, submitSubmissionRequest.Answer)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.StatusCode)
 	} else {
