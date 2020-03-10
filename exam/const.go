@@ -6,6 +6,12 @@ import (
 	"github.com/yonasadiel/helios"
 )
 
+var errEventNotFound = helios.APIError{
+	StatusCode: http.StatusNotFound,
+	Code:       "event_not_found",
+	Message:    "No event with given ID",
+}
+
 var errQuestionNotFound = helios.APIError{
 	StatusCode: http.StatusNotFound,
 	Code:       "question_not_found",

@@ -11,16 +11,41 @@ import (
 	"github.com/yonasadiel/helios"
 )
 
-func TestQuestionListView(t *testing.T) {
+func TestEventListView(t *testing.T) {
 	beforeTest(true)
 
 	req := helios.NewMockRequest()
 	req.SetContextData(auth.UserContextKey, user1)
-	req.URLParam["eventID"] = strconv.Itoa(int(event1.ID))
 
-	QuestionListView(&req)
+	EventListView(&req)
 
 	assert.Equal(t, http.StatusOK, req.StatusCode, "Unexpected status code")
+}
+
+func TestQuestionListView(t *testing.T) {
+	beforeTest(true)
+
+	req1 := helios.NewMockRequest()
+	req1.SetContextData(auth.UserContextKey, user1)
+	req1.URLParam["eventID"] = strconv.Itoa(int(event1.ID))
+
+	QuestionListView(&req1)
+
+	req2 := helios.NewMockRequest()
+	req2.SetContextData(auth.UserContextKey, user1)
+	req2.URLParam["eventID"] = "abcdef"
+
+	QuestionListView(&req2)
+
+	assert.Equal(t, http.StatusNotFound, req2.StatusCode, "eventID is not configured correctly")
+
+	req3 := helios.NewMockRequest()
+	req3.SetContextData(auth.UserContextKey, user1)
+	req3.URLParam["eventID"] = "8900"
+
+	QuestionListView(&req3)
+
+	assert.Equal(t, http.StatusNotFound, req3.StatusCode, "eventID is not exist on database")
 }
 
 func TestQuestionDetailView(t *testing.T) {

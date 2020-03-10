@@ -35,9 +35,10 @@ func CreateRouter() (router *mux.Router) {
 	router.HandleFunc("/auth/login/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 	router.HandleFunc("/auth/logout/", helios.WithMiddleware(auth.LogoutView, loggedInMiddlewares)).Methods(http.MethodPost)
 
-	router.HandleFunc("/exam/question/", helios.WithMiddleware(exam.QuestionListView, loggedInMiddlewares)).Methods(http.MethodGet)
-	router.HandleFunc("/exam/question/:questionId/", helios.WithMiddleware(exam.QuestionDetailView, loggedInMiddlewares)).Methods(http.MethodGet)
-	router.HandleFunc("/exam/question/:questionId/submit/", helios.WithMiddleware(exam.SubmissionCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
+	router.HandleFunc("/exam/", helios.WithMiddleware(exam.EventListView, loggedInMiddlewares)).Methods(http.MethodGet)
+	router.HandleFunc("/exam/:eventID/question/", helios.WithMiddleware(exam.QuestionListView, loggedInMiddlewares)).Methods(http.MethodGet)
+	router.HandleFunc("/exam/:eventID/question/:questionID/", helios.WithMiddleware(exam.QuestionDetailView, loggedInMiddlewares)).Methods(http.MethodGet)
+	router.HandleFunc("/exam/:eventID/question/:questionID/submit/", helios.WithMiddleware(exam.SubmissionCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
 
 	router.Use(mux.CORSMethodMiddleware(router))
 

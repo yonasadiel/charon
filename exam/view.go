@@ -7,6 +7,22 @@ import (
 	"github.com/yonasadiel/helios"
 )
 
+// EventListView send list of questions
+func EventListView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.StatusCode)
+		return
+	}
+
+	var events []Event = GetAllEventOfUser(user)
+	serializedEvents := make([]EventResponse, 0)
+	for _, event := range events {
+		serializedEvents = append(serializedEvents, SerializeEvent(event))
+	}
+	req.SendJSON(serializedEvents, http.StatusOK)
+}
+
 // QuestionListView send list of questions
 func QuestionListView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
@@ -21,7 +37,14 @@ func QuestionListView(req helios.Request) {
 		return
 	}
 
-	var questions []Question = GetAllQuestionOfEventAndUser(eventID, user)
+	var questions []Question
+	var err *helios.APIError
+	questions, err = GetAllQuestionOfEventAndUser(user, eventID)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.StatusCode)
+		return
+	}
+
 	serializedQuestions := make([]QuestionResponse, 0)
 	for _, question := range questions {
 		serializedQuestions = append(serializedQuestions, SerializeQuestion(question))
@@ -43,7 +66,7 @@ func QuestionDetailView(req helios.Request) {
 		return
 	}
 
-	var question *Question = GetQuestionOfUser(questionID, user)
+	var question *Question = GetQuestionOfUser(user, questionID)
 	if question == nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
 		return
@@ -74,7 +97,7 @@ func SubmissionCreateView(req helios.Request) {
 
 	var submission *Submission
 	var err *helios.APIError
-	submission, err = SubmitSubmission(questionID, user, submitSubmissionRequest.Answer)
+	submission, err = SubmitSubmission(user, questionID, submitSubmissionRequest.Answer)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.StatusCode)
 	} else {

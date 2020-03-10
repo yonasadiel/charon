@@ -28,10 +28,16 @@ func GetAllEventOfUser(user auth.User) []Event {
 // GetAllQuestionOfEventAndUser returns all questions in database
 // that exists on an event and belongs to an user.
 // Current submission of the user will be attached.
-func GetAllQuestionOfEventAndUser(eventID uint, user auth.User) []Question {
+func GetAllQuestionOfEventAndUser(user auth.User, eventID uint) ([]Question, *helios.APIError) {
+	var event Event
 	var questions []Question
 	var userSubmissions []Submission
 	var userSubmissionByQuestionID = make(map[uint]Submission)
+
+	helios.DB.Where("id = ?", eventID).First(&event)
+	if event.ID == 0 {
+		return nil, &errEventNotFound
+	}
 
 	// Querying for user questions and user submissions
 	helios.DB.
@@ -59,12 +65,12 @@ func GetAllQuestionOfEventAndUser(eventID uint, user auth.User) []Question {
 		}
 	}
 
-	return questions
+	return questions, nil
 }
 
 // GetQuestionOfUser returns a question with given id, but first check
 // if the user has rights to the question
-func GetQuestionOfUser(questionID uint, user auth.User) *Question {
+func GetQuestionOfUser(user auth.User, questionID uint) *Question {
 	var question Question
 	var userSubmission Submission
 
@@ -87,7 +93,7 @@ func GetQuestionOfUser(questionID uint, user auth.User) *Question {
 }
 
 // SubmitSubmission submit a submission from user to a question.
-func SubmitSubmission(questionID uint, user auth.User, answer string) (*Submission, *helios.APIError) {
+func SubmitSubmission(user auth.User, questionID uint, answer string) (*Submission, *helios.APIError) {
 	var question Question
 	var choices []QuestionChoice
 	var submission Submission
