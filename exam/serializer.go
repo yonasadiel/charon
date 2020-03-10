@@ -6,8 +6,8 @@ import "time"
 type EventResponse struct {
 	ID       uint      `json:"id"`
 	Title    string    `json:"title"`
-	StartsAt time.Time `json:"starts_at"`
-	EndsAt   time.Time `json:"ends_at"`
+	StartsAt time.Time `json:"startsAt"`
+	EndsAt   time.Time `json:"endsAt"`
 }
 
 // SubmitSubmissionRequest is JSON representation of request data
