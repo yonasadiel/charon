@@ -11,41 +11,66 @@ import (
 func EventListView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
 	if !ok {
-		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.StatusCode)
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
 		return
 	}
 
 	var events []Event = GetAllEventOfUser(user)
-	serializedEvents := make([]EventResponse, 0)
+	serializedEvents := make([]EventData, 0)
 	for _, event := range events {
 		serializedEvents = append(serializedEvents, SerializeEvent(event))
 	}
 	req.SendJSON(serializedEvents, http.StatusOK)
 }
 
+// EventCreateView creates the event
+func EventCreateView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var eventData EventData
+	var event Event
+	var err helios.Error
+	err = req.DeserializeRequestData(&eventData)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	err = DeserializeEvent(eventData, &event)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	UpsertEvent(user, &event)
+	req.SendJSON(SerializeEvent(event), http.StatusCreated)
+}
+
 // QuestionListView send list of questions
 func QuestionListView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
 	if !ok {
-		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.StatusCode)
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
 		return
 	}
 
 	eventID, errParseQuestionID := req.GetURLParamUint("eventID")
 	if errParseQuestionID != nil {
-		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
+		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
 		return
 	}
 
 	var questions []Question
-	var err *helios.APIError
+	var err helios.Error
 	questions, err = GetAllQuestionOfEventAndUser(user, eventID)
 	if err != nil {
-		req.SendJSON(err.GetMessage(), err.StatusCode)
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
 	}
 
-	serializedQuestions := make([]QuestionResponse, 0)
+	serializedQuestions := make([]QuestionData, 0)
 	for _, question := range questions {
 		serializedQuestions = append(serializedQuestions, SerializeQuestion(question))
 	}
@@ -56,30 +81,30 @@ func QuestionListView(req helios.Request) {
 func QuestionDetailView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
 	if !ok {
-		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.StatusCode)
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
 		return
 	}
 
 	eventID, errParseEventID := req.GetURLParamUint("eventID")
 	if errParseEventID != nil {
-		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.StatusCode)
+		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
 		return
 	}
 
 	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
-		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
+		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
 		return
 	}
 
 	var question *Question
-	var err *helios.APIError
+	var err helios.Error
 	question, err = GetQuestionOfUser(user, eventID, questionID)
 	if err != nil {
-		req.SendJSON(err.GetMessage(), err.StatusCode)
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
 	}
-	var serializedQuestion QuestionResponse = SerializeQuestion(*question)
+	var serializedQuestion QuestionData = SerializeQuestion(*question)
 	req.SendJSON(serializedQuestion, http.StatusOK)
 }
 
@@ -87,36 +112,36 @@ func QuestionDetailView(req helios.Request) {
 func SubmissionCreateView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
 	if !ok {
-		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.StatusCode)
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
 		return
 	}
 
 	eventID, errParseEventID := req.GetURLParamUint("eventID")
 	if errParseEventID != nil {
-		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.StatusCode)
+		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
 		return
 	}
 
 	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
-		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.StatusCode)
+		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
 		return
 	}
 
 	var submitSubmissionRequest SubmitSubmissionRequest
-	var errDeserialization *helios.APIError = req.DeserializeRequestData(&submitSubmissionRequest)
+	var errDeserialization helios.Error = req.DeserializeRequestData(&submitSubmissionRequest)
 	if errDeserialization != nil {
-		req.SendJSON(errDeserialization.GetMessage(), errDeserialization.StatusCode)
+		req.SendJSON(errDeserialization.GetMessage(), errDeserialization.GetStatusCode())
 		return
 	}
 
 	var submission *Submission
-	var err *helios.APIError
+	var err helios.Error
 	submission, err = SubmitSubmission(user, eventID, questionID, submitSubmissionRequest.Answer)
 	if err != nil {
-		req.SendJSON(err.GetMessage(), err.StatusCode)
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 	} else {
-		var questionResponse QuestionResponse = SerializeQuestion(*submission.Question)
-		req.SendJSON(questionResponse, http.StatusCreated)
+		var questionData QuestionData = SerializeQuestion(*submission.Question)
+		req.SendJSON(questionData, http.StatusCreated)
 	}
 }

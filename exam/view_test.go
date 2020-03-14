@@ -23,6 +23,37 @@ func TestEventListView(t *testing.T) {
 	assert.Equal(t, http.StatusOK, req.StatusCode, "Unexpected status code")
 }
 
+func TestEventCreateView(t *testing.T) {
+	beforeTest(false)
+
+	user1.SetAsOrganizer()
+	var eventCountBefore, eventCountAfter int
+	helios.DB.Model(Event{}).Count(&eventCountBefore)
+
+	req := helios.NewMockRequest()
+	req.SetContextData(auth.UserContextKey, user1)
+	req.RequestData = `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`
+	EventCreateView(&req)
+	helios.DB.Model(Event{}).Count(&eventCountAfter)
+
+	assert.Equal(t, eventCountBefore+1, eventCountAfter, "Event should be added to database")
+	assert.Equal(t, http.StatusCreated, req.StatusCode, "Unexpected status code")
+
+	req.RequestData = `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"INVALID_END_TIME"}`
+	EventCreateView(&req)
+	helios.DB.Model(Event{}).Count(&eventCountAfter)
+
+	assert.Equal(t, eventCountBefore+1, eventCountAfter, "Event should not be added to database")
+	assert.Equal(t, http.StatusBadRequest, req.StatusCode, "Unexpected status code")
+
+	req.RequestData = `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`
+	EventCreateView(&req)
+	helios.DB.Model(Event{}).Count(&eventCountAfter)
+
+	assert.Equal(t, eventCountBefore+1, eventCountAfter, "Event should note be added to database")
+	assert.Equal(t, http.StatusBadRequest, req.StatusCode, "Unexpected status code")
+}
+
 func TestQuestionListView(t *testing.T) {
 	beforeTest(true)
 
@@ -68,10 +99,10 @@ func TestQuestionDetailView(t *testing.T) {
 
 	QuestionDetailView(&req2)
 
-	var err2 helios.APIError
+	var err2 map[string]interface{}
 	json.Unmarshal(req2.JSONResponse, &err2)
 	assert.Equal(t, http.StatusNotFound, req2.StatusCode, "Unexpected status code")
-	assert.Equal(t, errQuestionNotFound.Code, err2.Code, "Different error code")
+	assert.Equal(t, errQuestionNotFound.Code, err2["code"], "Different error code")
 
 	req3 := helios.NewMockRequest()
 	req3.SetContextData(auth.UserContextKey, user1)
@@ -80,10 +111,10 @@ func TestQuestionDetailView(t *testing.T) {
 
 	QuestionDetailView(&req3)
 
-	var err3 helios.APIError
+	var err3 map[string]interface{}
 	json.Unmarshal(req2.JSONResponse, &err3)
 	assert.Equal(t, http.StatusNotFound, req3.StatusCode, "Unexpected status code")
-	assert.Equal(t, errQuestionNotFound.Code, err3.Code, "Different error code")
+	assert.Equal(t, errQuestionNotFound.Code, err3["code"], "Different error code")
 
 	req4 := helios.NewMockRequest()
 	req4.SetContextData(auth.UserContextKey, user1)
@@ -92,10 +123,10 @@ func TestQuestionDetailView(t *testing.T) {
 
 	QuestionDetailView(&req4)
 
-	var err4 helios.APIError
+	var err4 map[string]interface{}
 	json.Unmarshal(req2.JSONResponse, &err4)
 	assert.Equal(t, http.StatusNotFound, req4.StatusCode, "Unexpected status code")
-	assert.Equal(t, errQuestionNotFound.Code, err4.Code, "Different error code")
+	assert.Equal(t, errQuestionNotFound.Code, err4["code"], "Different error code")
 
 	req5 := helios.NewMockRequest()
 	req5.SetContextData(auth.UserContextKey, user1)
@@ -104,10 +135,10 @@ func TestQuestionDetailView(t *testing.T) {
 
 	QuestionDetailView(&req5)
 
-	var err5 helios.APIError
+	var err5 map[string]interface{}
 	json.Unmarshal(req2.JSONResponse, &err5)
 	assert.Equal(t, http.StatusNotFound, req5.StatusCode, "Unexpected status code")
-	assert.Equal(t, errQuestionNotFound.Code, err5.Code, "Different error code")
+	assert.Equal(t, errQuestionNotFound.Code, err5["code"], "Different error code")
 }
 
 func TestSubmissionCreateView(t *testing.T) {

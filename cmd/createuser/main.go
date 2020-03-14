@@ -31,14 +31,18 @@ func main() {
 
 	user = auth.NewUser(name, email, password)
 
-	fmt.Printf("Input user type [L]ocal / [P]articipant: ")
+	fmt.Printf("Input user type [A]dmin / [O]rganize / [L]ocal / [P]articipant: ")
 	userType, _ = reader.ReadString('\n')
 	userType = strings.TrimSpace(userType)
 
-	if userType == "L" {
-		user.SetAsLocal()
+	if userType == "A" {
+		user.Role = "admin"
+	} else if userType == "o" {
+		user.Role = "organizer"
+	} else if userType == "L" {
+		user.Role = "local"
 	} else if userType == "P" {
-		user.SetAsParticipant()
+		user.Role = "participant"
 	} else {
 		fmt.Println("Unknown user type.")
 		return

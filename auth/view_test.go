@@ -54,7 +54,7 @@ func TestLoginViewWrongUsername(t *testing.T) {
 
 	LoginView(&req)
 
-	assert.Equal(t, errWrongUsernamePassword.StatusCode, req.StatusCode, "Unexpected status code")
+	assert.Equal(t, errWrongUsernamePassword.GetStatusCode(), req.StatusCode, "Unexpected status code")
 
 	var errMessage map[string]interface{}
 	errUnmarshalling := json.Unmarshal(req.JSONResponse, &errMessage)
@@ -80,7 +80,7 @@ func TestLoginViewWrongPassword(t *testing.T) {
 
 	LoginView(&req)
 
-	assert.Equal(t, errWrongUsernamePassword.StatusCode, req.StatusCode, "Unexpected status code")
+	assert.Equal(t, errWrongUsernamePassword.GetStatusCode(), req.StatusCode, "Unexpected status code")
 
 	var errMessage map[string]interface{}
 	errUnmarshalling := json.Unmarshal(req.JSONResponse, &errMessage)

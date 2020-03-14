@@ -14,7 +14,7 @@ func LoggedInMiddleware(f helios.HTTPHandler) helios.HTTPHandler {
 		userToken, _ = req.GetSessionData(UserTokenSessionKey).(string)
 
 		if userToken == "" {
-			req.SendJSON(errUnauthorized.GetMessage(), errUnauthorized.StatusCode)
+			req.SendJSON(errUnauthorized.GetMessage(), errUnauthorized.GetStatusCode())
 			return
 		}
 
@@ -25,7 +25,7 @@ func LoggedInMiddleware(f helios.HTTPHandler) helios.HTTPHandler {
 			First(&userSession)
 
 		if userSession.ID == 0 {
-			req.SendJSON(errUnauthorized.GetMessage(), errUnauthorized.StatusCode)
+			req.SendJSON(errUnauthorized.GetMessage(), errUnauthorized.GetStatusCode())
 			return
 		}
 

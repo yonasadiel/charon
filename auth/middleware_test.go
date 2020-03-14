@@ -15,7 +15,7 @@ func TestLoggedInMiddlewareUnauthorized(t *testing.T) {
 	var wrappedHandler helios.HTTPHandler = LoggedInMiddleware(blankHandler)
 	var req helios.MockRequest = helios.NewMockRequest()
 	wrappedHandler(&req)
-	assert.Equal(t, errUnauthorized.StatusCode, req.StatusCode, "User should be unauthorized")
+	assert.Equal(t, errUnauthorized.GetStatusCode(), req.StatusCode, "User should be unauthorized")
 }
 
 func TestLoggedInMiddlewareUnknownTekon(t *testing.T) {
@@ -27,7 +27,7 @@ func TestLoggedInMiddlewareUnknownTekon(t *testing.T) {
 	var req helios.MockRequest = helios.NewMockRequest()
 	req.SetSessionData(UserTokenSessionKey, "unknown_token")
 	wrappedHandler(&req)
-	assert.Equal(t, errUnauthorized.StatusCode, req.StatusCode, "User should be unauthorized")
+	assert.Equal(t, errUnauthorized.GetStatusCode(), req.StatusCode, "User should be unauthorized")
 }
 
 func TestLoggedInMiddlewareWrongIP(t *testing.T) {
@@ -49,7 +49,7 @@ func TestLoggedInMiddlewareWrongIP(t *testing.T) {
 	req.RemoteAddr = "7.1.1.2"
 	wrappedHandler(&req)
 
-	assert.Equal(t, errUnauthorized.StatusCode, req.StatusCode, "User should be unauthorized")
+	assert.Equal(t, errUnauthorized.GetStatusCode(), req.StatusCode, "User should be unauthorized")
 }
 
 func TestLoggedInMiddlewareAuthorized(t *testing.T) {

@@ -23,16 +23,34 @@ func TestNewUserErrorHash(t *testing.T) {
 }
 
 func TestUserType(t *testing.T) {
-	userLocal := User{Role: userRoleLocal}
-	userParticipant := User{Role: userRoleParticipant}
+	user := NewUser("john", "johndoe@gmail.com", "password")
 
-	assert.True(t, userLocal.IsLocal(), "userLocal should be local")
-	assert.False(t, userLocal.IsParticipant(), "userLocal should be local")
-	assert.True(t, userParticipant.IsParticipant(), "userParticipant should be participant")
-	assert.False(t, userLocal.IsParticipant(), "userLocal should be participant")
+	assert.True(t, user.IsParticipant(), "user should be participant")
+	assert.False(t, user.IsLocal(), "user should be participant")
+	assert.False(t, user.IsOrganizer(), "user should be participant")
+	assert.False(t, user.IsAdmin(), "user should be participant")
 
-	userLocal.SetAsParticipant()
-	assert.Equal(t, userRoleParticipant, userLocal.Role, "userLocal have been converted to participant")
-	userLocal.SetAsLocal()
-	assert.Equal(t, userRoleLocal, userLocal.Role, "userLocal have been converted to local")
+	user.SetAsLocal()
+	assert.False(t, user.IsParticipant(), "user should be local")
+	assert.True(t, user.IsLocal(), "user should be local")
+	assert.False(t, user.IsOrganizer(), "user should be local")
+	assert.False(t, user.IsAdmin(), "user should be local")
+
+	user.SetAsOrganizer()
+	assert.False(t, user.IsLocal(), "user should be organizer")
+	assert.False(t, user.IsParticipant(), "user should be organizer")
+	assert.True(t, user.IsOrganizer(), "user should be organizer")
+	assert.False(t, user.IsAdmin(), "user should be organizer")
+
+	user.SetAsAdmin()
+	assert.False(t, user.IsLocal(), "user should be admin")
+	assert.False(t, user.IsParticipant(), "user should be admin")
+	assert.False(t, user.IsOrganizer(), "user should be admin")
+	assert.True(t, user.IsAdmin(), "user should be admin")
+
+	user.SetAsParticipant()
+	assert.True(t, user.IsParticipant(), "user should be participant")
+	assert.False(t, user.IsLocal(), "user should be participant")
+	assert.False(t, user.IsOrganizer(), "user should be participant")
+	assert.False(t, user.IsAdmin(), "user should be participant")
 }

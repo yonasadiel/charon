@@ -1,13 +1,26 @@
 package exam
 
-import "time"
+import (
+	"time"
 
-// EventResponse is JSON representation of exam event.
-type EventResponse struct {
+	"github.com/yonasadiel/helios"
+)
+
+// EventData is JSON representation of exam event.
+type EventData struct {
 	ID       uint      `json:"id"`
 	Title    string    `json:"title"`
 	StartsAt time.Time `json:"startsAt"`
 	EndsAt   time.Time `json:"endsAt"`
+}
+
+// QuestionData is JSON representation of question.
+// Answer is the user's answer of the question, equals to Submission.Answer
+type QuestionData struct {
+	ID      uint     `json:"id"`
+	Content string   `json:"content"`
+	Choices []string `json:"choices"`
+	Answer  string   `json:"answer"`
 }
 
 // SubmitSubmissionRequest is JSON representation of request data
@@ -16,18 +29,9 @@ type SubmitSubmissionRequest struct {
 	Answer string `json:"answer"`
 }
 
-// QuestionResponse is JSON representation of question.
-// Answer is the user's answer of the question, equals to Submission.Answer
-type QuestionResponse struct {
-	ID      uint     `json:"id"`
-	Content string   `json:"content"`
-	Choices []string `json:"choices"`
-	Answer  string   `json:"answer"`
-}
-
 // SerializeEvent converts Event object event to JSON of event
-func SerializeEvent(event Event) EventResponse {
-	eventData := EventResponse{
+func SerializeEvent(event Event) EventData {
+	eventData := EventData{
 		ID:       event.ID,
 		Title:    event.Title,
 		StartsAt: event.StartsAt,
@@ -36,13 +40,45 @@ func SerializeEvent(event Event) EventResponse {
 	return eventData
 }
 
+// DeserializeEvent returns the Event from EventData
+func DeserializeEvent(eventData EventData, event *Event) helios.Error {
+	var err helios.FormError
+	var valid bool = true
+	event.ID = eventData.ID
+	event.Title = eventData.Title
+	event.StartsAt = eventData.StartsAt
+	event.EndsAt = eventData.EndsAt
+
+	err = helios.FormError{}
+	if event.Title == "" {
+		err.AddFieldError("title", "Title can't be empty")
+		valid = false
+	}
+	if event.StartsAt.IsZero() {
+		err.AddFieldError("startsAt", "Start time must be provided")
+		valid = false
+	}
+	if event.EndsAt.IsZero() {
+		err.AddFieldError("endsAt", "End time must be provided")
+		valid = false
+	}
+	if event.EndsAt.Before(event.StartsAt) {
+		err.AddFieldError("endsAt", "End time should be after start time")
+		valid = false
+	}
+	if !valid {
+		return err
+	}
+	return nil
+}
+
 // SerializeQuestion converts Question object question to JSON of question
-func SerializeQuestion(question Question) QuestionResponse {
+func SerializeQuestion(question Question) QuestionData {
 	choices := make([]string, 0)
 	for _, choice := range question.Choices {
 		choices = append(choices, choice.Text)
 	}
-	questionData := QuestionResponse{
+	questionData := QuestionData{
 		ID:      question.ID,
 		Content: question.Content,
 		Choices: choices,
@@ -53,17 +89,15 @@ func SerializeQuestion(question Question) QuestionResponse {
 }
 
 // DeserializeQuestion convert JSON of question to Question object
-func DeserializeQuestion(questionData QuestionResponse) Question {
+func DeserializeQuestion(questionData QuestionData, question *Question) helios.Error {
 	var questionChoices []QuestionChoice
 	for _, choiceText := range questionData.Choices {
 		questionChoices = append(questionChoices, QuestionChoice{
 			Text: choiceText,
 		})
 	}
-	question := Question{
-		ID:      questionData.ID,
-		Content: questionData.Content,
-		Choices: questionChoices,
-	}
-	return question
+	question.ID = questionData.ID
+	question.Content = questionData.Content
+	question.Choices = questionChoices
+	return nil
 }

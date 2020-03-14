@@ -44,6 +44,12 @@ github.com/yonasadiel/helios v0.0.0-20200309063707-6ddfa125d298 h1:96EH3GUvfyTyx
 github.com/yonasadiel/helios v0.0.0-20200309063707-6ddfa125d298/go.mod h1:E1od4oUFFNXF0SSjEftY2eiOxsRi7dQDkAq8TwgCVaE=
 github.com/yonasadiel/helios v0.0.0-20200310095822-4d4b6d8ac8bf h1:978W0RurG24VUaUfQOH9LwWp5t1wCjd79L/hxEUSLa0=
 github.com/yonasadiel/helios v0.0.0-20200310095822-4d4b6d8ac8bf/go.mod h1:E1od4oUFFNXF0SSjEftY2eiOxsRi7dQDkAq8TwgCVaE=
+github.com/yonasadiel/helios v0.0.0-20200313030445-03e6618f742c h1:EynxtbmmY4BI5ZXAxyAEq3F/kdmG9DCl8rqYp5KBdXI=
+github.com/yonasadiel/helios v0.0.0-20200313030445-03e6618f742c/go.mod h1:E1od4oUFFNXF0SSjEftY2eiOxsRi7dQDkAq8TwgCVaE=
+github.com/yonasadiel/helios v0.0.0-20200313043615-a7ef705eeefc h1:WFuWbvNOJ9cSGuua7Pi/MLRqFLTMwkhPVhKFJopRfww=
+github.com/yonasadiel/helios v0.0.0-20200313043615-a7ef705eeefc/go.mod h1:E1od4oUFFNXF0SSjEftY2eiOxsRi7dQDkAq8TwgCVaE=
+github.com/yonasadiel/helios v0.0.0-20200314061946-844c0fc0ebdd h1:92LdaqPlAsjYxPfxLIJpFg1uB8ULTpixs5w8gRCqpYY=
+github.com/yonasadiel/helios v0.0.0-20200314061946-844c0fc0ebdd/go.mod h1:E1od4oUFFNXF0SSjEftY2eiOxsRi7dQDkAq8TwgCVaE=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=

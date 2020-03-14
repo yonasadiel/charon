@@ -13,7 +13,7 @@ func LoginView(req helios.Request) {
 	userSession, err := Login(loginRequest.Email, loginRequest.Password, req.ClientIP())
 
 	if err != nil {
-		req.SendJSON(err.GetMessage(), err.StatusCode)
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 	} else {
 		req.SetSessionData(UserTokenSessionKey, userSession.Token)
 		req.SaveSession()

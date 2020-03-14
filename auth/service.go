@@ -47,9 +47,9 @@ func generateUserToken() string {
 }
 
 // Login will try to authenticate user and store the session
-// if it fails, it will give APIError, If it success, it will
+// if it fails, it will give helios.Error, If it success, it will
 // return a new session
-func Login(email string, password string, ip string) (*Session, *helios.APIError) {
+func Login(email string, password string, ip string) (*Session, helios.Error) {
 	var user User
 	var session Session
 	var token string
@@ -57,11 +57,11 @@ func Login(email string, password string, ip string) (*Session, *helios.APIError
 	helios.DB.Where(&User{Email: email}).First(&user)
 
 	if user.ID == 0 {
-		return nil, &errWrongUsernamePassword
+		return nil, errWrongUsernamePassword
 	}
 
 	if !checkPasswordHash(password, user.Password) {
-		return nil, &errWrongUsernamePassword
+		return nil, errWrongUsernamePassword
 	}
 
 	token = generateUserToken()

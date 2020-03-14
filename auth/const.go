@@ -19,12 +19,14 @@ const (
 	// UserContextKey is the key of context data that store user object
 	UserContextKey = "user"
 
-	userRoleLocal       = "local"       // the one that organize the exam
+	userRoleAdmin       = "admin"       // the administrator of the website
+	userRoleOrganizer   = "organizer"   // the one that organize all the locals
+	userRoleLocal       = "local"       // the one that organize the local exam
 	userRoleParticipant = "participant" // the one that taking the exam
 
 )
 
-/*** APIError of auth package ***/
+/*** Error of auth package ***/
 var errWrongUsernamePassword = helios.APIError{
 	StatusCode: http.StatusBadRequest,
 	Code:       "login_wrong_email_or_password",

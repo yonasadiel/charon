@@ -19,11 +19,48 @@ func TestGetAllEventOfUser(t *testing.T) {
 	assert.Equal(t, 3, len(eventsLocal), "eventUnparticipated should be shown because the user has local role")
 }
 
+func TestUpsertEvent(t *testing.T) {
+	beforeTest(false)
+	var eventCount int
+	var eventSaved Event
+
+	err1 := UpsertEvent(user1, &event1)
+	assert.Equal(t, errEventChangeNotAuthorized, err1, "participant user should not be able to upsert event")
+
+	user1.SetAsLocal()
+	err2 := UpsertEvent(user1, &event1)
+	assert.Equal(t, errEventChangeNotAuthorized, err2, "local user should not be able to upsert event")
+
+	user1.SetAsOrganizer()
+	event1.ID = 0
+	err3 := UpsertEvent(user1, &event1)
+	helios.DB.Model(&Event{}).Count(&eventCount)
+	assert.Nil(t, err3, "organizer user should be able to upsert event")
+	assert.Equal(t, 1, eventCount, "Event should be created")
+
+	user1.SetAsAdmin()
+	event1.ID = 0
+	err4 := UpsertEvent(user1, &event1)
+	helios.DB.Model(&Event{}).Count(&eventCount)
+	helios.DB.Where("id = ?", event1.ID).First(&eventSaved)
+	assert.Nil(t, err4, "organizer user should be able to upsert event")
+	assert.Equal(t, 2, eventCount, "Event should be created")
+	assert.Equal(t, event1.Title, eventSaved.Title, "Event title is not equal")
+
+	event1.Title = "ABC"
+	err5 := UpsertEvent(user1, &event1)
+	helios.DB.Model(&Event{}).Count(&eventCount)
+	helios.DB.Where("id = ?", event1.ID).First(&eventSaved)
+	assert.Nil(t, err5, "organizer user should be able to upsert event")
+	assert.Equal(t, 2, eventCount, "Event should be updated, not created")
+	assert.Equal(t, event1.Title, eventSaved.Title, "Event title is not equal")
+}
+
 func TestGetAllQuestionOfEventAndUser(t *testing.T) {
 	beforeTest(true)
 
 	var questions []Question
-	var err *helios.APIError
+	var err helios.Error
 
 	questions, err = GetAllQuestionOfEventAndUser(user1, event1.ID)
 	assert.Nil(t, err, "Failed to get all question")
@@ -49,10 +86,10 @@ func TestGetQuestionOfUser(t *testing.T) {
 	assert.Equal(t, submissionUser1QuestionSimple2.Answer, question1.UserAnswer, "The answer should be latest submission")
 
 	_, err2 := GetQuestionOfUser(user1, event1.ID, 4567)
-	assert.Equal(t, errQuestionNotFound, *err2, "Unknwon question id returns errQuestionNotFound")
+	assert.Equal(t, errQuestionNotFound, err2, "Unknwon question id returns errQuestionNotFound")
 
 	_, err3 := GetQuestionOfUser(user1, event1.ID, questionUnowned.ID)
-	assert.Equal(t, errQuestionNotFound, *err3, "Question unowned by the user should not be found")
+	assert.Equal(t, errQuestionNotFound, err3, "Question unowned by the user should not be found")
 
 	question4, err4 := GetQuestionOfUser(user1, event1.ID, questionUnanswered.ID)
 	assert.Nil(t, err4, "Failed to get question")
@@ -101,7 +138,7 @@ func TestSubmitInvalidQuestionIDOrEventID(t *testing.T) {
 	submission1Answer := "answer1"
 	submission1Returned, err := SubmitSubmission(user1, event1.ID, 30, submission1Answer)
 	helios.DB.Model(&Submission{}).Count(&submissionCountAfter)
-	assert.Equal(t, errQuestionNotFound.Code, err.Code, "Submission should be fail")
+	assert.Equal(t, errQuestionNotFound, err, "Submission should be fail")
 	assert.Nil(t, submission1Returned, "Fail to submit should return nil submission")
 	assert.Equal(t, submissionCountBefore, submissionCountAfter, "Submission should not be made")
 }
@@ -114,7 +151,7 @@ func TestSubmitSubmissionInvalidChoice(t *testing.T) {
 	submission1Answer := "not in choice"
 	submission1Returned, err := SubmitSubmission(user1, event1.ID, questionWithChoice.ID, submission1Answer)
 	helios.DB.Model(&Submission{}).Count(&submissionCountAfter)
-	assert.Equal(t, errAnswerNotValid.Code, err.Code, "Submission should be fail")
+	assert.Equal(t, errAnswerNotValid, err, "Submission should be fail")
 	assert.Nil(t, submission1Returned, "Fail to submit should return nil submission")
 	assert.Equal(t, submissionCountBefore, submissionCountAfter, "Submission should not be made")
 }

@@ -43,7 +43,7 @@ func TestLoginWrongUsername(t *testing.T) {
 
 	userLoggedIn, errLoggedIn := Login("mno", "def", "1.2.3.4")
 
-	assert.Equal(t, errWrongUsernamePassword, *errLoggedIn, "Expected wrong username / password, but success logging in")
+	assert.Equal(t, errWrongUsernamePassword, errLoggedIn, "Expected wrong username / password, but success logging in")
 	assert.Nil(t, userLoggedIn, "Not nil user session")
 }
 
@@ -59,7 +59,7 @@ func TestLoginWrongPassword(t *testing.T) {
 
 	userLoggedIn, errLoggedIn := Login("abc", "abc", "1.2.3.4")
 
-	assert.Equal(t, errWrongUsernamePassword, *errLoggedIn, "Expected wrong username / password, but success logging in")
+	assert.Equal(t, errWrongUsernamePassword, errLoggedIn, "Expected wrong username / password, but success logging in")
 	assert.Nil(t, userLoggedIn, "Not nil user session")
 }
 
