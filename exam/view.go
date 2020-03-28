@@ -44,6 +44,7 @@ func EventCreateView(req helios.Request) {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
 	}
+	event.ID = 0
 	UpsertEvent(user, &event)
 	req.SendJSON(SerializeEvent(event), http.StatusCreated)
 }
@@ -56,8 +57,8 @@ func QuestionListView(req helios.Request) {
 		return
 	}
 
-	eventID, errParseQuestionID := req.GetURLParamUint("eventID")
-	if errParseQuestionID != nil {
+	eventID, errParseEventID := req.GetURLParamUint("eventID")
+	if errParseEventID != nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
 		return
 	}
@@ -75,6 +76,43 @@ func QuestionListView(req helios.Request) {
 		serializedQuestions = append(serializedQuestions, SerializeQuestion(question))
 	}
 	req.SendJSON(serializedQuestions, http.StatusOK)
+}
+
+// QuestionCreateView creates the question
+func QuestionCreateView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	eventID, errParseEventID := req.GetURLParamUint("eventID")
+	if errParseEventID != nil {
+		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
+		return
+	}
+
+	var questionData QuestionData
+	var question Question
+	var err helios.Error
+	err = req.DeserializeRequestData(&questionData)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	// Ignoring error because currently this function wont return any error
+	DeserializeQuestion(questionData, &question)
+
+	question.ID = 0
+	question.EventID = eventID
+	err = UpsertQuestion(user, &question)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	req.SendJSON(SerializeQuestion(question), http.StatusCreated)
 }
 
 // QuestionDetailView send list of questions

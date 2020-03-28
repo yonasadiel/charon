@@ -18,6 +18,12 @@ var errEventChangeNotAuthorized = helios.APIError{
 	Message:    "User is not authorized to make changes on event",
 }
 
+var errQuestionChangeNotAuthorized = helios.APIError{
+	StatusCode: http.StatusUnauthorized,
+	Code:       "not_authorized_edit_question",
+	Message:    "User is not authorized to make changes on question",
+}
+
 var errQuestionNotFound = helios.APIError{
 	StatusCode: http.StatusNotFound,
 	Code:       "question_not_found",

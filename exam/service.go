@@ -10,9 +10,9 @@ import (
 func GetAllEventOfUser(user auth.User) []Event {
 	var events []Event
 
-	if user.IsLocal() {
+	if user.IsAdmin() || user.IsOrganizer() {
 		helios.DB.Find(&events)
-	} else { // user is participant
+	} else { // user is local or participant
 		helios.DB.
 			Table("user_events").
 			Select("events.*").
@@ -84,6 +84,49 @@ func GetAllQuestionOfEventAndUser(user auth.User, eventID uint) ([]Question, hel
 	}
 
 	return questions, nil
+}
+
+// UpsertQuestion creates or updates a question. Only available to
+// admin and organizer. Notice that the EventID may be changed, so
+// this function may move a question to other event.
+// If it is updating, all choices will be deleted then recreated.
+func UpsertQuestion(user auth.User, question *Question) helios.Error {
+	if !user.IsOrganizer() && !user.IsAdmin() {
+		return errQuestionChangeNotAuthorized
+	}
+
+	var event Event
+	helios.DB.Where("id = ?", question.EventID).First(&event)
+	if event.ID == 0 {
+		return errEventNotFound
+	}
+
+	if question.ID == 0 {
+		choices := question.Choices
+		question.Choices = []QuestionChoice{}
+		helios.DB.Create(question)
+		for _, choice := range choices {
+			choice.ID = 0
+			choice.QuestionID = question.ID
+			helios.DB.Create(&choice)
+		}
+		question.Choices = choices
+	} else {
+		choices := question.Choices
+		question.Choices = []QuestionChoice{}
+		tx := helios.DB.Begin()
+		tx.Delete(QuestionChoice{}, "question_id = ?", question.ID)
+		tx.Save(question)
+		for _, choice := range choices {
+			choice.ID = 0
+			choice.QuestionID = question.ID
+			tx.Create(&choice)
+		}
+		question.Choices = choices
+		tx.Commit()
+	}
+
+	return nil
 }
 
 // GetQuestionOfUser returns a question with given id, but first check

@@ -4,19 +4,26 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/yonasadiel/charon/auth"
 	"github.com/yonasadiel/helios"
 )
 
 func TestGetAllEventOfUser(t *testing.T) {
 	beforeTest(true)
 
-	eventsParticipant := GetAllEventOfUser(user1)
+	eventsParticipant := GetAllEventOfUser(userParticipant)
 	assert.Equal(t, 2, len(eventsParticipant), "eventUnparticipated should not be included")
 	assert.Equal(t, event1.Title, eventsParticipant[0].Title, "Event should be ordered by start time, so event1 will be the first")
 	assert.Equal(t, event2.Title, eventsParticipant[1].Title, "Event should be ordered by start time, so event2 will be the second")
 
 	eventsLocal := GetAllEventOfUser(userLocal)
-	assert.Equal(t, 3, len(eventsLocal), "eventUnparticipated should be shown because the user has local role")
+	assert.Equal(t, 1, len(eventsLocal), "eventUnparticipated should not be shown to local user")
+
+	eventsOrganizer := GetAllEventOfUser(userOrganizer)
+	assert.Equal(t, 3, len(eventsOrganizer), "eventUnparticipated should be shown to organizer user")
+
+	eventsAdmin := GetAllEventOfUser(userAdmin)
+	assert.Equal(t, 3, len(eventsAdmin), "eventUnparticipated should be shown to admin user")
 }
 
 func TestUpsertEvent(t *testing.T) {
@@ -54,6 +61,106 @@ func TestUpsertEvent(t *testing.T) {
 	assert.Nil(t, err5, "organizer user should be able to upsert event")
 	assert.Equal(t, 2, eventCount, "Event should be updated, not created")
 	assert.Equal(t, event1.Title, eventSaved.Title, "Event title is not equal")
+}
+
+func TestUpsertQuestion(t *testing.T) {
+	beforeTest(true)
+	var questionCountBefore int
+	var choiceCountBefore int
+
+	helios.DB.Model(&Question{}).Count(&questionCountBefore)
+	helios.DB.Model(&QuestionChoice{}).Count(&choiceCountBefore)
+
+	type questionUpsertTestCase struct {
+		user          auth.User
+		question      Question
+		questionCount int
+		choiceCount   int
+		errExpected   helios.Error
+	}
+	testCases := []questionUpsertTestCase{
+		questionUpsertTestCase{
+			user:          userParticipant,
+			question:      Question{Content: "Content 1", EventID: event1.ID},
+			questionCount: questionCountBefore,
+			choiceCount:   choiceCountBefore,
+			errExpected:   errQuestionChangeNotAuthorized,
+		},
+		questionUpsertTestCase{
+			user:          userLocal,
+			question:      Question{Content: "Content 2", EventID: event1.ID},
+			questionCount: questionCountBefore,
+			choiceCount:   choiceCountBefore,
+			errExpected:   errQuestionChangeNotAuthorized,
+		},
+		questionUpsertTestCase{
+			user:          userOrganizer,
+			question:      Question{Content: "Content 3", EventID: event1.ID},
+			questionCount: questionCountBefore + 1,
+			choiceCount:   choiceCountBefore,
+			errExpected:   nil,
+		},
+		questionUpsertTestCase{
+			user:          userAdmin,
+			question:      Question{ID: questionSimple.ID, Content: "Content 4", EventID: event2.ID},
+			questionCount: questionCountBefore + 1,
+			choiceCount:   choiceCountBefore,
+			errExpected:   nil,
+		},
+		questionUpsertTestCase{
+			user: userAdmin,
+			question: Question{
+				Content: "Content 5",
+				EventID: event1.ID,
+				Choices: []QuestionChoice{
+					QuestionChoice{ID: questionWithChoice.Choices[0].ID, Text: "Choice 5.1"}, // the ID will be ignored
+					QuestionChoice{Text: "Choice 5.2"},
+				},
+			},
+			questionCount: questionCountBefore + 2,
+			choiceCount:   choiceCountBefore + 2,
+			errExpected:   nil,
+		},
+		questionUpsertTestCase{
+			user: userAdmin,
+			question: Question{
+				ID:      questionWithChoice.ID,
+				Content: "Content 6",
+				EventID: event1.ID,
+				Choices: []QuestionChoice{
+					QuestionChoice{ID: questionWithChoice.Choices[0].ID, Text: "Choice 6.1"},
+					QuestionChoice{Text: "Choice 6.2"},
+					QuestionChoice{Text: "Choice 6.3"},
+					QuestionChoice{Text: "Choice 6.4"},
+				},
+			},
+			questionCount: questionCountBefore + 2,
+			choiceCount:   choiceCountBefore + 2 - len(questionWithChoice.Choices) + 4,
+			errExpected:   nil,
+		},
+	}
+
+	for i, testCase := range testCases {
+		var questionCount int
+		var choiceCount int
+		var questionSaved Question
+		t.Logf("Test UpsertQuestion testcase: %d", i)
+		err := UpsertQuestion(testCase.user, &testCase.question)
+		helios.DB.Model(&Question{}).Count(&questionCount)
+		helios.DB.Model(&QuestionChoice{}).Count(&choiceCount)
+		helios.DB.Where("id = ?", testCase.question.ID).First(&questionSaved)
+		if testCase.errExpected == nil {
+			assert.Nil(t, err, "There should be no error")
+			assert.Equal(t, testCase.questionCount, questionCount, "Different number of questions expected")
+			assert.Equal(t, testCase.choiceCount, choiceCount, "Different number of question choices expected")
+			assert.Equal(t, testCase.question.Content, questionSaved.Content, "Different question content")
+			assert.Equal(t, testCase.question.EventID, questionSaved.EventID, "Different question event id")
+		} else {
+			assert.Equal(t, testCase.errExpected, err, "Different error expected")
+			assert.Equal(t, testCase.questionCount, questionCount, "Different number of questions expected")
+			assert.Equal(t, testCase.choiceCount, choiceCount, "Different number of question choices expected")
+		}
+	}
 }
 
 func TestGetAllQuestionOfEventAndUser(t *testing.T) {

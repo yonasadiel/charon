@@ -13,6 +13,9 @@ var eventUnparticipated Event
 var user1 auth.User
 var user2 auth.User
 var userLocal auth.User
+var userParticipant auth.User
+var userOrganizer auth.User
+var userAdmin auth.User
 var questionSimple Question
 var questionWithChoice Question
 var questionUnanswered Question
@@ -49,17 +52,30 @@ func beforeTest(populate bool) {
 
 		user1 = auth.User{Email: "user1"}
 		user2 = auth.User{Email: "user2"}
-		userLocal = auth.User{Email: "userLocal"}
-		userLocal.SetAsLocal()
 		helios.DB.Create(&user1)
 		helios.DB.Create(&user2)
+
+		userLocal = auth.User{Email: "userLocal"}
+		userParticipant = auth.User{Email: "userParticipant"}
+		userOrganizer = auth.User{Email: "userOrganizer"}
+		userAdmin = auth.User{Email: "userAdmin"}
+		userLocal.SetAsLocal()
+		userParticipant.SetAsParticipant()
+		userOrganizer.SetAsOrganizer()
+		userAdmin.SetAsAdmin()
 		helios.DB.Create(&userLocal)
+		helios.DB.Create(&userParticipant)
+		helios.DB.Create(&userOrganizer)
+		helios.DB.Create(&userAdmin)
 
 		// Connect all user to all events, except eventUnparticipated.
 		helios.DB.Create(&UserEvent{UserID: user1.ID, EventID: event1.ID})
-		helios.DB.Create(&UserEvent{UserID: user2.ID, EventID: event1.ID})
 		helios.DB.Create(&UserEvent{UserID: user1.ID, EventID: event2.ID})
+		helios.DB.Create(&UserEvent{UserID: user2.ID, EventID: event1.ID})
 		helios.DB.Create(&UserEvent{UserID: user2.ID, EventID: event2.ID})
+		helios.DB.Create(&UserEvent{UserID: userParticipant.ID, EventID: event1.ID})
+		helios.DB.Create(&UserEvent{UserID: userParticipant.ID, EventID: event2.ID})
+		helios.DB.Create(&UserEvent{UserID: userLocal.ID, EventID: event1.ID})
 
 		questionSimple = Question{
 			EventID: event1.ID,

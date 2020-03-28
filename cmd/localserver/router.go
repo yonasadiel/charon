@@ -37,14 +37,14 @@ func CreateRouter() (router *mux.Router) {
 	router.HandleFunc("/auth/logout/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 
 	router.HandleFunc("/exam/", helios.WithMiddleware(exam.EventListView, loggedInMiddlewares)).Methods(http.MethodGet)
-	// router.HandleFunc("/exam/", helios.WithMiddleware(exam.EventCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
+	router.HandleFunc("/exam/", helios.WithMiddleware(exam.EventCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
 	router.HandleFunc("/exam/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
-	router.HandleFunc("/exam/:eventID/question/", helios.WithMiddleware(exam.QuestionListView, loggedInMiddlewares)).Methods(http.MethodGet)
-	router.HandleFunc("/exam/:eventID/question/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
-	router.HandleFunc("/exam/:eventID/question/:questionID/", helios.WithMiddleware(exam.QuestionDetailView, loggedInMiddlewares)).Methods(http.MethodGet)
-	router.HandleFunc("/exam/:eventID/question/:questionID/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
-	router.HandleFunc("/exam/:eventID/question/:questionID/submit/", helios.WithMiddleware(exam.SubmissionCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
-	router.HandleFunc("/exam/:eventID/question/:questionID/submit/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
+	router.HandleFunc("/exam/{eventID}/question/", helios.WithMiddleware(exam.QuestionListView, loggedInMiddlewares)).Methods(http.MethodGet)
+	router.HandleFunc("/exam/{eventID}/question/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
+	router.HandleFunc("/exam/{eventID}/question/{questionID}/", helios.WithMiddleware(exam.QuestionDetailView, loggedInMiddlewares)).Methods(http.MethodGet)
+	router.HandleFunc("/exam/{eventID}/question/{questionID}/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
+	router.HandleFunc("/exam/{eventID}/question/{questionID}/submit/", helios.WithMiddleware(exam.SubmissionCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
+	router.HandleFunc("/exam/{eventID}/question/{questionID}/submit/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 
 	router.Use(mux.CORSMethodMiddleware(router))
 
