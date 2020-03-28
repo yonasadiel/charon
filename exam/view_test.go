@@ -27,74 +27,114 @@ func TestEventListView(t *testing.T) {
 
 func TestEventCreateView(t *testing.T) {
 	beforeTest(false)
-
-	user1.SetAsOrganizer()
-	var eventCountBefore, eventCountAfter int
+	var eventCountBefore int
+	var eventCount int
 	helios.DB.Model(Event{}).Count(&eventCountBefore)
 
-	req := helios.NewMockRequest()
-	req.SetContextData(auth.UserContextKey, user1)
-	req.RequestData = `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`
-	EventCreateView(&req)
-	helios.DB.Model(Event{}).Count(&eventCountAfter)
+	type eventCreateTestCase struct {
+		user               interface{}
+		requestData        string
+		expectedStatusCode int
+		expectedErrorCode  string
+		expectedEventCount int
+	}
+	testCases := []eventCreateTestCase{
+		eventCreateTestCase{
+			user:               userOrganizer,
+			requestData:        `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`,
+			expectedStatusCode: http.StatusCreated,
+			expectedEventCount: eventCountBefore + 1,
+		},
+		eventCreateTestCase{
+			user:               userOrganizer,
+			requestData:        `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"INVALID_END_TIME"}`,
+			expectedStatusCode: http.StatusBadRequest,
+			expectedErrorCode:  helios.ErrJSONParseFailed.Code,
+			expectedEventCount: eventCountBefore + 1,
+		},
+		eventCreateTestCase{
+			user:               userOrganizer,
+			requestData:        `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`,
+			expectedStatusCode: http.StatusBadRequest,
+			expectedErrorCode:  "form_error",
+			expectedEventCount: eventCountBefore + 1,
+		},
+		eventCreateTestCase{
+			user:               "bad_user",
+			requestData:        `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`,
+			expectedStatusCode: http.StatusInternalServerError,
+			expectedErrorCode:  helios.ErrInternalServerError.Code,
+			expectedEventCount: eventCountBefore + 1,
+		},
+	}
+	for i, testCase := range testCases {
+		t.Logf("Test EventCreate testcase: %d", i)
+		req := helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.RequestData = testCase.requestData
 
-	assert.Equal(t, eventCountBefore+1, eventCountAfter, "Event should be added to database")
-	assert.Equal(t, http.StatusCreated, req.StatusCode, "Unexpected status code")
+		EventCreateView(&req)
 
-	req.RequestData = `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"INVALID_END_TIME"}`
-	EventCreateView(&req)
-	helios.DB.Model(Event{}).Count(&eventCountAfter)
-
-	assert.Equal(t, eventCountBefore+1, eventCountAfter, "Event should not be added to database")
-	assert.Equal(t, http.StatusBadRequest, req.StatusCode, "Unexpected status code")
-
-	req.RequestData = `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`
-	EventCreateView(&req)
-	helios.DB.Model(Event{}).Count(&eventCountAfter)
-
-	assert.Equal(t, eventCountBefore+1, eventCountAfter, "Event should note be added to database")
-	assert.Equal(t, http.StatusBadRequest, req.StatusCode, "Unexpected status code")
-
-	req.SetContextData(auth.UserContextKey, "bad_user")
-	EventCreateView(&req)
-	helios.DB.Model(Event{}).Count(&eventCountAfter)
-
-	assert.Equal(t, eventCountBefore+1, eventCountAfter, "Event should note be added to database")
-	assert.Equal(t, http.StatusInternalServerError, req.StatusCode, "Unexpected status code")
+		helios.DB.Model(Event{}).Count(&eventCount)
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		assert.Equal(t, testCase.expectedEventCount, eventCount, "Unexpected event count")
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+		}
+	}
 }
 
 func TestQuestionListView(t *testing.T) {
 	beforeTest(true)
 
-	req1 := helios.NewMockRequest()
-	req1.SetContextData(auth.UserContextKey, user1)
-	req1.URLParam["eventID"] = strconv.Itoa(int(event1.ID))
+	type questionListTestCase struct {
+		user               interface{}
+		eventID            string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []questionListTestCase{
+		questionListTestCase{
+			user:               user1,
+			eventID:            strconv.Itoa(int(event1.ID)),
+			expectedStatusCode: http.StatusOK,
+		},
+		questionListTestCase{
+			user:               user1,
+			eventID:            "malformed",
+			expectedStatusCode: http.StatusNotFound,
+			expectedErrorCode:  errEventNotFound.Code,
+		},
+		questionListTestCase{
+			user:               user1,
+			eventID:            "79697",
+			expectedStatusCode: http.StatusNotFound,
+			expectedErrorCode:  errEventNotFound.Code,
+		},
+		questionListTestCase{
+			user:               "bad_user",
+			eventID:            strconv.Itoa(int(event1.ID)),
+			expectedStatusCode: http.StatusInternalServerError,
+			expectedErrorCode:  helios.ErrInternalServerError.Code,
+		},
+	}
+	for i, testCase := range testCases {
+		t.Logf("Test QuestionList testcase: %d", i)
+		req := helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventID"] = testCase.eventID
 
-	QuestionListView(&req1)
+		QuestionListView(&req)
 
-	req2 := helios.NewMockRequest()
-	req2.SetContextData(auth.UserContextKey, user1)
-	req2.URLParam["eventID"] = "abcdef"
-
-	QuestionListView(&req2)
-
-	assert.Equal(t, http.StatusNotFound, req2.StatusCode, "eventID is not configured correctly")
-
-	req3 := helios.NewMockRequest()
-	req3.SetContextData(auth.UserContextKey, user1)
-	req3.URLParam["eventID"] = "8900"
-
-	QuestionListView(&req3)
-
-	assert.Equal(t, http.StatusNotFound, req3.StatusCode, "eventID is not exist on database")
-
-	req4 := helios.NewMockRequest()
-	req4.SetContextData(auth.UserContextKey, "bad_user")
-	req4.URLParam["eventID"] = strconv.Itoa(int(event1.ID))
-
-	QuestionListView(&req4)
-
-	assert.Equal(t, http.StatusInternalServerError, req4.StatusCode, "eventID is not exist on database")
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+		}
+	}
 }
 
 func TestQuestionCreateView(t *testing.T) {
@@ -110,6 +150,7 @@ func TestQuestionCreateView(t *testing.T) {
 		requestData           string
 		expectedQuestionCount int
 		expectedStatusCode    int
+		expectedErrorCode     string
 	}
 
 	testCases := []questionCreateTestCase{
@@ -126,13 +167,15 @@ func TestQuestionCreateView(t *testing.T) {
 			requestData:           `{"id":1,"content":"content2","choices":[],"answer":"abc","eventId":2}`,
 			expectedQuestionCount: questionCountBefore + 1,
 			expectedStatusCode:    http.StatusNotFound,
+			expectedErrorCode:     errEventNotFound.Code,
 		},
 		questionCreateTestCase{
-			user:                  userOrganizer,
+			user:                  userAdmin,
 			eventID:               "999",
 			requestData:           `{"id":1,"content":"content2","choices":[],"answer":"abc","eventId":2}`,
 			expectedQuestionCount: questionCountBefore + 1,
 			expectedStatusCode:    http.StatusNotFound,
+			expectedErrorCode:     errEventNotFound.Code,
 		},
 		questionCreateTestCase{
 			user:                  userParticipant,
@@ -140,6 +183,15 @@ func TestQuestionCreateView(t *testing.T) {
 			requestData:           `{"id":1,"content":"content3","choices":[],"answer":"abc","eventId":2}`,
 			expectedQuestionCount: questionCountBefore + 1,
 			expectedStatusCode:    http.StatusUnauthorized,
+			expectedErrorCode:     errQuestionChangeNotAuthorized.Code,
+		},
+		questionCreateTestCase{
+			user:                  userLocal,
+			eventID:               strconv.Itoa(int(event1.ID)),
+			requestData:           `{"id":1,"content":"content3","choices":[],"answer":"abc","eventId":2}`,
+			expectedQuestionCount: questionCountBefore + 1,
+			expectedStatusCode:    http.StatusUnauthorized,
+			expectedErrorCode:     errQuestionChangeNotAuthorized.Code,
 		},
 		questionCreateTestCase{
 			user:                  userOrganizer,
@@ -156,11 +208,12 @@ func TestQuestionCreateView(t *testing.T) {
 			expectedStatusCode:    http.StatusCreated,
 		},
 		questionCreateTestCase{
-			user:                  "bad_user_data",
+			user:                  "bad_user",
 			eventID:               strconv.Itoa(int(event1.ID)),
 			requestData:           `{"content":"content6","choices":[],"answer":"abc","eventId":2}`,
 			expectedQuestionCount: questionCountBefore + 2,
 			expectedStatusCode:    http.StatusInternalServerError,
+			expectedErrorCode:     helios.ErrInternalServerError.Code,
 		},
 	}
 
@@ -176,6 +229,11 @@ func TestQuestionCreateView(t *testing.T) {
 		helios.DB.Model(Question{}).Count(&questionCount)
 		assert.Equal(t, testCase.expectedQuestionCount, questionCount, "Different question count")
 		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+		}
 	}
 }
 
@@ -343,7 +401,9 @@ func TestSubmissionCreateView(t *testing.T) {
 		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
 		assert.Equal(t, testCase.expectedSubmissionCount, submissionCount, "Unexpected submission count")
 		if testCase.expectedErrorCode != "" {
-			assert.Equal(t, testCase.expectedErrorCode, testCase.expectedErrorCode, "Unexpected error code")
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Unexpected error code")
 		}
 	}
 }

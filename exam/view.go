@@ -59,7 +59,7 @@ func QuestionListView(req helios.Request) {
 
 	eventID, errParseEventID := req.GetURLParamUint("eventID")
 	if errParseEventID != nil {
-		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
+		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
 		return
 	}
 
