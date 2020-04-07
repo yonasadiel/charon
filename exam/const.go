@@ -13,13 +13,13 @@ var errEventNotFound = helios.APIError{
 }
 
 var errEventChangeNotAuthorized = helios.APIError{
-	StatusCode: http.StatusUnauthorized,
+	StatusCode: http.StatusForbidden,
 	Code:       "not_authorized_edit_event",
 	Message:    "User is not authorized to make changes on event",
 }
 
 var errQuestionChangeNotAuthorized = helios.APIError{
-	StatusCode: http.StatusUnauthorized,
+	StatusCode: http.StatusForbidden,
 	Code:       "not_authorized_edit_question",
 	Message:    "User is not authorized to make changes on question",
 }

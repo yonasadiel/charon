@@ -21,6 +21,7 @@ var questionWithChoice Question
 var questionUnanswered Question
 var questionUnowned Question
 var questionEvent2 Question
+var questionEventUnparticipated Question
 var submissionUser1QuestionSimple1 Submission
 var submissionUser1QuestionSimple2 Submission
 var submissionUser1QuestionWithChoice1 Submission
@@ -105,10 +106,17 @@ func beforeTest(populate bool) {
 			Content: "mno",
 			Choices: []QuestionChoice{},
 		}
+		questionEventUnparticipated = Question{
+			EventID: eventUnparticipated.ID,
+			Content: "pqr",
+			Choices: []QuestionChoice{},
+		}
 		helios.DB.Create(&questionSimple)
 		helios.DB.Create(&questionWithChoice)
 		helios.DB.Create(&questionUnanswered)
 		helios.DB.Create(&questionUnowned)
+		helios.DB.Create(&questionEvent2)
+		helios.DB.Create(&questionEventUnparticipated)
 
 		submissionUser1QuestionSimple1 = Submission{
 			Answer:     "answer1",

@@ -125,24 +125,35 @@ func TestSerializeQuestionWithChoices(t *testing.T) {
 
 func TestDeserializerQuestionEmptyChoices(t *testing.T) {
 	beforeTest(false)
+	var questionData QuestionData
+	var question Question
 
-	expectedQuestion := Question{
+	expected1 := Question{
 		ID:      2,
 		Content: "Question Content",
 		Choices: []QuestionChoice(nil),
 	}
-	originalJSON := `{"id":2,"content":"Question Content","choices":[],"answer":""}`
-	var questionData QuestionData
-	var question Question
-	err := json.Unmarshal([]byte(originalJSON), &questionData)
-	if err != nil {
-		t.Errorf("Error marshaling json: %s", err)
+	json1 := `{"id":2,"content":"Question Content","choices":[],"answer":""}`
+	err1 := json.Unmarshal([]byte(json1), &questionData)
+	if err1 != nil {
+		t.Errorf("Error marshaling json: %s", err1)
 	}
-	errDeserializeQuestion := DeserializeQuestion(questionData, &question)
-	assert.Nil(t, errDeserializeQuestion, "Failed to deserialize question")
-	assert.Equal(t, expectedQuestion.ID, question.ID, "Unequal question ID")
-	assert.Equal(t, expectedQuestion.Content, question.Content, "Unequal question content")
-	assert.Equal(t, len(expectedQuestion.Choices), len(question.Choices), "Unequal question num of choices")
+	errDeserialization1 := DeserializeQuestion(questionData, &question)
+	assert.Nil(t, errDeserialization1, "Failed to deserialize question")
+	assert.Equal(t, expected1.ID, question.ID, "Unequal question ID")
+	assert.Equal(t, expected1.Content, question.Content, "Unequal question content")
+	assert.Equal(t, len(expected1.Choices), len(question.Choices), "Unequal question num of choices")
+
+	json2 := `{"id":2,"content":"","choices":[],"answer":""}`
+	err2 := json.Unmarshal([]byte(json2), &questionData)
+	if err2 != nil {
+		t.Errorf("Error marshaling json: %s", err2)
+	}
+	errDeserialization2 := DeserializeQuestion(questionData, &question)
+	assert.NotNil(t, errDeserialization2, "Failed to deserialize question")
+	expectedError2 := `{"code":"form_error","message":{"_error":[],"content":["Content can't be empty"]}}`
+	errMessage2, _ := json.Marshal(errDeserialization2.GetMessage())
+	assert.Equal(t, expectedError2, string(errMessage2), "Error of empty json, different error message")
 }
 
 func TestDeserializerQuestionWithChoices(t *testing.T) {
@@ -157,7 +168,7 @@ func TestDeserializerQuestionWithChoices(t *testing.T) {
 			QuestionChoice{Text: "c"},
 		},
 	}
-	originalJSON := `{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":""}`
+	originalJSON := `{"id":2,"content":"Question Content","choices":["a","","b","","c", ""],"answer":""}`
 	var questionData QuestionData
 	var question Question
 	err := json.Unmarshal([]byte(originalJSON), &questionData)

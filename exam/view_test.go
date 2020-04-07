@@ -182,7 +182,7 @@ func TestQuestionCreateView(t *testing.T) {
 			eventID:               strconv.Itoa(int(event1.ID)),
 			requestData:           `{"id":1,"content":"content3","choices":[],"answer":"abc","eventId":2}`,
 			expectedQuestionCount: questionCountBefore + 1,
-			expectedStatusCode:    http.StatusUnauthorized,
+			expectedStatusCode:    http.StatusForbidden,
 			expectedErrorCode:     errQuestionChangeNotAuthorized.Code,
 		},
 		questionCreateTestCase{
@@ -190,7 +190,7 @@ func TestQuestionCreateView(t *testing.T) {
 			eventID:               strconv.Itoa(int(event1.ID)),
 			requestData:           `{"id":1,"content":"content3","choices":[],"answer":"abc","eventId":2}`,
 			expectedQuestionCount: questionCountBefore + 1,
-			expectedStatusCode:    http.StatusUnauthorized,
+			expectedStatusCode:    http.StatusForbidden,
 			expectedErrorCode:     errQuestionChangeNotAuthorized.Code,
 		},
 		questionCreateTestCase{
@@ -299,6 +299,99 @@ func TestQuestionDetailView(t *testing.T) {
 		req.URLParam["questionID"] = testCase.questionID
 
 		QuestionDetailView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+		}
+	}
+}
+
+func TestQuestionDeleteView(t *testing.T) {
+	beforeTest(true)
+
+	type questionDeleteTestCase struct {
+		user               interface{}
+		eventID            string
+		questionID         string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+
+	testCases := []questionDeleteTestCase{
+		questionDeleteTestCase{
+			user:               userParticipant,
+			eventID:            strconv.Itoa(int(event1.ID)),
+			questionID:         strconv.Itoa(int(questionSimple.ID)),
+			expectedStatusCode: http.StatusForbidden,
+			expectedErrorCode:  errQuestionChangeNotAuthorized.Code,
+		},
+		questionDeleteTestCase{
+			user:               userLocal,
+			eventID:            strconv.Itoa(int(event1.ID)),
+			questionID:         strconv.Itoa(int(questionSimple.ID)),
+			expectedStatusCode: http.StatusForbidden,
+			expectedErrorCode:  errQuestionChangeNotAuthorized.Code,
+		},
+		questionDeleteTestCase{
+			user:               userOrganizer,
+			eventID:            strconv.Itoa(int(event1.ID)),
+			questionID:         "bad_question_id",
+			expectedStatusCode: http.StatusNotFound,
+			expectedErrorCode:  errQuestionNotFound.Code,
+		},
+		questionDeleteTestCase{
+			user:               userAdmin,
+			eventID:            strconv.Itoa(int(event1.ID)),
+			questionID:         "879654",
+			expectedStatusCode: http.StatusNotFound,
+			expectedErrorCode:  errQuestionNotFound.Code,
+		},
+		questionDeleteTestCase{
+			user:               userAdmin,
+			eventID:            "4567890",
+			questionID:         "879654",
+			expectedStatusCode: http.StatusNotFound,
+			expectedErrorCode:  errEventNotFound.Code,
+		},
+		questionDeleteTestCase{
+			user:               userAdmin,
+			eventID:            "malformed",
+			questionID:         "malformed",
+			expectedStatusCode: http.StatusNotFound,
+			expectedErrorCode:  errEventNotFound.Code,
+		},
+		questionDeleteTestCase{
+			user:               "bad_user",
+			eventID:            strconv.Itoa(int(event1.ID)),
+			questionID:         strconv.Itoa(int(questionSimple.ID)),
+			expectedStatusCode: http.StatusInternalServerError,
+		},
+		questionDeleteTestCase{
+			user:               userAdmin,
+			eventID:            strconv.Itoa(int(event1.ID)),
+			questionID:         strconv.Itoa(int(questionSimple.ID)),
+			expectedStatusCode: http.StatusOK,
+		},
+		questionDeleteTestCase{
+			user:               userAdmin,
+			eventID:            strconv.Itoa(int(event1.ID)),
+			questionID:         strconv.Itoa(int(questionSimple.ID)),
+			expectedStatusCode: http.StatusNotFound,
+			expectedErrorCode:  errQuestionNotFound.Code,
+		},
+	}
+
+	for i, testCase := range testCases {
+		t.Logf("Test QuestionDelete testcase: %d", i)
+		req := helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventID"] = testCase.eventID
+		req.URLParam["questionID"] = testCase.questionID
+
+		QuestionDeleteView(&req)
 
 		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
 		if testCase.expectedErrorCode != "" {

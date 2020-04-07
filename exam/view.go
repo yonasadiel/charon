@@ -115,7 +115,7 @@ func QuestionCreateView(req helios.Request) {
 	req.SendJSON(SerializeQuestion(question), http.StatusCreated)
 }
 
-// QuestionDetailView send list of questions
+// QuestionDetailView send the question
 func QuestionDetailView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
 	if !ok {
@@ -138,6 +138,37 @@ func QuestionDetailView(req helios.Request) {
 	var question *Question
 	var err helios.Error
 	question, err = GetQuestionOfUser(user, eventID, questionID)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	var serializedQuestion QuestionData = SerializeQuestion(*question)
+	req.SendJSON(serializedQuestion, http.StatusOK)
+}
+
+// QuestionDeleteView delete the question
+func QuestionDeleteView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	eventID, errParseEventID := req.GetURLParamUint("eventID")
+	if errParseEventID != nil {
+		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
+		return
+	}
+
+	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
+	if errParseQuestionID != nil {
+		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
+		return
+	}
+
+	var question *Question
+	var err helios.Error
+	question, err = DeleteQuestion(user, eventID, questionID)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return

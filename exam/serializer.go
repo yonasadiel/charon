@@ -90,14 +90,27 @@ func SerializeQuestion(question Question) QuestionData {
 
 // DeserializeQuestion convert JSON of question to Question object
 func DeserializeQuestion(questionData QuestionData, question *Question) helios.Error {
+	var err helios.FormError
+	var valid bool = true
 	var questionChoices []QuestionChoice
 	for _, choiceText := range questionData.Choices {
-		questionChoices = append(questionChoices, QuestionChoice{
-			Text: choiceText,
-		})
+		if choiceText != "" {
+			questionChoices = append(questionChoices, QuestionChoice{
+				Text: choiceText,
+			})
+		}
 	}
 	question.ID = questionData.ID
 	question.Content = questionData.Content
 	question.Choices = questionChoices
+
+	err = helios.FormError{}
+	if question.Content == "" {
+		err.AddFieldError("content", "Content can't be empty")
+		valid = false
+	}
+	if !valid {
+		return err
+	}
 	return nil
 }

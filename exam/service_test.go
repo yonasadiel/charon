@@ -149,16 +149,14 @@ func TestUpsertQuestion(t *testing.T) {
 		helios.DB.Model(&Question{}).Count(&questionCount)
 		helios.DB.Model(&QuestionChoice{}).Count(&choiceCount)
 		helios.DB.Where("id = ?", testCase.question.ID).First(&questionSaved)
+		assert.Equal(t, testCase.questionCount, questionCount, "Different number of questions expected")
+		assert.Equal(t, testCase.choiceCount, choiceCount, "Different number of question choices expected")
 		if testCase.errExpected == nil {
 			assert.Nil(t, err, "There should be no error")
-			assert.Equal(t, testCase.questionCount, questionCount, "Different number of questions expected")
-			assert.Equal(t, testCase.choiceCount, choiceCount, "Different number of question choices expected")
 			assert.Equal(t, testCase.question.Content, questionSaved.Content, "Different question content")
 			assert.Equal(t, testCase.question.EventID, questionSaved.EventID, "Different question event id")
 		} else {
 			assert.Equal(t, testCase.errExpected, err, "Different error expected")
-			assert.Equal(t, testCase.questionCount, questionCount, "Different number of questions expected")
-			assert.Equal(t, testCase.choiceCount, choiceCount, "Different number of question choices expected")
 		}
 	}
 }
@@ -180,31 +178,110 @@ func TestGetAllQuestionOfEventAndUser(t *testing.T) {
 
 	questions, err = GetAllQuestionOfEventAndUser(user1, 1234)
 	assert.NotNil(t, err, "Random event ID will not found")
+
+	questions, err = GetAllQuestionOfEventAndUser(userAdmin, eventUnparticipated.ID)
+	assert.Nil(t, err, "Failed to get all question")
+	assert.Equal(t, 1, len(questions), "Event thought the event is unparticipated, user is admin so the questions will be loaded")
 }
 
-func TestGetQuestionOfUser(t *testing.T) {
+func TestDeleteQuestion(t *testing.T) {
 	beforeTest(true)
+	var questionCountBefore, choiceCountBefore int
+	helios.DB.Model(&Question{}).Count(&questionCountBefore)
+	helios.DB.Model(&QuestionChoice{}).Count(&choiceCountBefore)
 
-	question1, err1 := GetQuestionOfUser(user1, event1.ID, questionSimple.ID)
-	assert.Nil(t, err1, "Failed to get question")
-	assert.NotNil(t, question1, "Question is not found")
-	assert.Equal(t, questionSimple.ID, question1.ID, "Different question content")
-	assert.Equal(t, questionSimple.Content, question1.Content, "Different question content")
-	assert.Equal(t, submissionUser1QuestionSimple2.Answer, question1.UserAnswer, "The answer should be latest submission")
+	type deleteQuestionTestCase struct {
+		user          auth.User
+		eventID       uint
+		questionID    uint
+		question      Question
+		questionCount int
+		choiceCount   int
+		errExpected   helios.Error
+	}
+	testCases := []deleteQuestionTestCase{
+		deleteQuestionTestCase{
+			user:          userParticipant,
+			eventID:       event1.ID,
+			questionID:    questionSimple.ID,
+			question:      questionSimple,
+			questionCount: questionCountBefore,
+			choiceCount:   choiceCountBefore,
+			errExpected:   errQuestionChangeNotAuthorized,
+		},
+		deleteQuestionTestCase{
+			user:          userLocal,
+			eventID:       event1.ID,
+			questionID:    questionSimple.ID,
+			question:      questionSimple,
+			questionCount: questionCountBefore,
+			choiceCount:   choiceCountBefore,
+			errExpected:   errQuestionChangeNotAuthorized,
+		},
+		deleteQuestionTestCase{
+			user:          userOrganizer,
+			eventID:       event1.ID,
+			questionID:    23987,
+			question:      questionSimple,
+			questionCount: questionCountBefore,
+			choiceCount:   choiceCountBefore,
+			errExpected:   errQuestionNotFound,
+		},
+		deleteQuestionTestCase{
+			user:          userAdmin,
+			eventID:       23987,
+			questionID:    questionSimple.ID,
+			question:      questionSimple,
+			questionCount: questionCountBefore,
+			choiceCount:   choiceCountBefore,
+			errExpected:   errEventNotFound,
+		},
+		deleteQuestionTestCase{
+			user:          userAdmin,
+			eventID:       event2.ID,
+			questionID:    questionSimple.ID,
+			question:      questionSimple,
+			questionCount: questionCountBefore,
+			choiceCount:   choiceCountBefore,
+			errExpected:   errQuestionNotFound,
+		},
+		deleteQuestionTestCase{
+			user:          userAdmin,
+			eventID:       event1.ID,
+			questionID:    questionSimple.ID,
+			question:      questionSimple,
+			questionCount: questionCountBefore - 1,
+			choiceCount:   choiceCountBefore,
+			errExpected:   nil,
+		},
+		deleteQuestionTestCase{
+			user:          userAdmin,
+			eventID:       event1.ID,
+			questionID:    questionWithChoice.ID,
+			question:      questionWithChoice,
+			questionCount: questionCountBefore - 2,
+			choiceCount:   choiceCountBefore - len(questionWithChoice.Choices),
+			errExpected:   nil,
+		},
+	}
 
-	_, err2 := GetQuestionOfUser(user1, event1.ID, 4567)
-	assert.Equal(t, errQuestionNotFound, err2, "Unknwon question id returns errQuestionNotFound")
-
-	_, err3 := GetQuestionOfUser(user1, event1.ID, questionUnowned.ID)
-	assert.Equal(t, errQuestionNotFound, err3, "Question unowned by the user should not be found")
-
-	question4, err4 := GetQuestionOfUser(user1, event1.ID, questionUnanswered.ID)
-	assert.Nil(t, err4, "Failed to get question")
-	assert.NotNil(t, question4, "Question is not found")
-	assert.Equal(t, questionUnanswered.ID, question4.ID, "Different question content")
-	assert.Equal(t, questionUnanswered.Content, question4.Content, "Different question content")
-	assert.Equal(t, "", question4.UserAnswer, "The answer should be latest submission")
-
+	for i, testCase := range testCases {
+		var questionCount int
+		var choiceCount int
+		t.Logf("Test DeleteQuestion testcase: %d", i)
+		questionDeleted, err := DeleteQuestion(testCase.user, testCase.eventID, testCase.questionID)
+		helios.DB.Model(&Question{}).Count(&questionCount)
+		helios.DB.Model(&QuestionChoice{}).Count(&choiceCount)
+		assert.Equal(t, testCase.questionCount, questionCount, "Different number of questions expected")
+		assert.Equal(t, testCase.choiceCount, choiceCount, "Different number of question choices expected")
+		if testCase.errExpected == nil {
+			assert.Nil(t, err, "There should be no error")
+			assert.Equal(t, questionDeleted.ID, testCase.question.ID, "Different question id")
+			assert.Equal(t, questionDeleted.Content, testCase.question.Content, "Different question id")
+		} else {
+			assert.Equal(t, testCase.errExpected, err, "Different error expected")
+		}
+	}
 }
 
 func TestSubmitSubmissionSuccess(t *testing.T) {
