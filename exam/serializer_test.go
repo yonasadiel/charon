@@ -21,7 +21,7 @@ func TestSerializeEvent(t *testing.T) {
 		StartsAt: time.Date(2020, 8, 12, 9, 30, 10, 0, jakartaTZ),
 		EndsAt:   time.Date(2020, 8, 12, 4, 30, 10, 0, utcTZ),
 	}
-	expectedJSON := `{"id":3,"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`
+	expectedJSON := `{"id":3,"title":"Math Final Exam","description":"","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`
 	ser := SerializeEvent(event)
 	serJSON, err := json.Marshal(ser)
 	if err != nil {
@@ -40,12 +40,13 @@ func TestDeserializeEvent(t *testing.T) {
 	var eventData EventData
 	var event Event
 	expectedEvent := Event{
-		ID:       0,
-		Title:    "Math Final Exam",
-		StartsAt: time.Date(2020, 8, 12, 9, 30, 10, 0, jakartaTZ),
-		EndsAt:   time.Date(2020, 8, 12, 2, 30, 10, 0, utcTZ),
+		ID:          0,
+		Title:       "Math Final Exam",
+		Description: "desc",
+		StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, jakartaTZ),
+		EndsAt:      time.Date(2020, 8, 12, 2, 30, 10, 0, utcTZ),
 	}
-	json1 := `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:10Z"}`
+	json1 := `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:10Z","description":"desc"}`
 	err1 := json.Unmarshal([]byte(json1), &eventData)
 	if err1 != nil {
 		t.Errorf("Error unmarshaling json: %s", err1)
@@ -54,6 +55,7 @@ func TestDeserializeEvent(t *testing.T) {
 	assert.Nil(t, errDeserialization1, "Failed to deserialize event")
 	assert.Equal(t, uint(0), event.ID, "Empty id on json will give 0")
 	assert.Equal(t, expectedEvent.Title, event.Title, "Unequal event title")
+	assert.Equal(t, expectedEvent.Description, event.Description, "Unequal event description")
 	assert.True(t, expectedEvent.StartsAt.Equal(event.StartsAt), "Unequal event start time")
 	assert.True(t, expectedEvent.EndsAt.Equal(event.EndsAt), "Unequal Event end time")
 

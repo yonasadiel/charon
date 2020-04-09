@@ -29,8 +29,8 @@ const (
 /*** Error of auth package ***/
 var errWrongUsernamePassword = helios.APIError{
 	StatusCode: http.StatusBadRequest,
-	Code:       "login_wrong_email_or_password",
-	Message:    "Wrong email / password",
+	Code:       "login_wrong_username_or_password",
+	Message:    "Wrong username / password",
 }
 
 var errUnauthorized = helios.APIError{

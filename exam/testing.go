@@ -51,15 +51,15 @@ func beforeTest(populate bool) {
 		helios.DB.Create(&event2)
 		helios.DB.Create(&event1)
 
-		user1 = auth.User{Email: "user1"}
-		user2 = auth.User{Email: "user2"}
+		user1 = auth.User{Username: "user1"}
+		user2 = auth.User{Username: "user2"}
 		helios.DB.Create(&user1)
 		helios.DB.Create(&user2)
 
-		userLocal = auth.User{Email: "userLocal"}
-		userParticipant = auth.User{Email: "userParticipant"}
-		userOrganizer = auth.User{Email: "userOrganizer"}
-		userAdmin = auth.User{Email: "userAdmin"}
+		userLocal = auth.User{Username: "userLocal"}
+		userParticipant = auth.User{Username: "userParticipant"}
+		userOrganizer = auth.User{Username: "userOrganizer"}
+		userAdmin = auth.User{Username: "userAdmin"}
 		userLocal.SetAsLocal()
 		userParticipant.SetAsParticipant()
 		userOrganizer.SetAsOrganizer()

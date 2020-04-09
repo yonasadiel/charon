@@ -10,10 +10,11 @@ import (
 // Event is the exam event
 // It also stores the start and end time
 type Event struct {
-	ID       uint   `gorm:"primary_key"`
-	Title    string `gorm:"size:100"`
-	StartsAt time.Time
-	EndsAt   time.Time
+	ID          uint   `gorm:"primary_key"`
+	Description string `gorm:"type:text"`
+	Title       string `gorm:"size:100"`
+	StartsAt    time.Time
+	EndsAt      time.Time
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

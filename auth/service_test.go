@@ -12,11 +12,11 @@ func TestLoginSuccess(t *testing.T) {
 	helios.App.BeforeTest()
 
 	password := hashPassword("def")
-	user := User{Email: "abc", Password: password}
-	helios.DB.Create(&User{Email: "def", Password: password})
+	user := User{Username: "abc", Password: password}
+	helios.DB.Create(&User{Username: "def", Password: password})
 	helios.DB.Create(&user)
-	helios.DB.Create(&User{Email: "ghi", Password: password})
-	helios.DB.Create(&User{Email: "jkl", Password: password})
+	helios.DB.Create(&User{Username: "ghi", Password: password})
+	helios.DB.Create(&User{Username: "jkl", Password: password})
 
 	userSession, errLoggedIn := Login("abc", "def", "1.2.3.4")
 
@@ -35,11 +35,11 @@ func TestLoginWrongUsername(t *testing.T) {
 	helios.App.BeforeTest()
 
 	password := hashPassword("def")
-	user := User{Email: "abc", Password: password}
-	helios.DB.Create(&User{Email: "def", Password: password})
+	user := User{Username: "abc", Password: password}
+	helios.DB.Create(&User{Username: "def", Password: password})
 	helios.DB.Create(&user)
-	helios.DB.Create(&User{Email: "ghi", Password: password})
-	helios.DB.Create(&User{Email: "jkl", Password: password})
+	helios.DB.Create(&User{Username: "ghi", Password: password})
+	helios.DB.Create(&User{Username: "jkl", Password: password})
 
 	userLoggedIn, errLoggedIn := Login("mno", "def", "1.2.3.4")
 
@@ -51,11 +51,11 @@ func TestLoginWrongPassword(t *testing.T) {
 	helios.App.BeforeTest()
 
 	password := hashPassword("def")
-	user := User{Email: "abc", Password: password}
-	helios.DB.Create(&User{Email: "def", Password: password})
+	user := User{Username: "abc", Password: password}
+	helios.DB.Create(&User{Username: "def", Password: password})
 	helios.DB.Create(&user)
-	helios.DB.Create(&User{Email: "ghi", Password: password})
-	helios.DB.Create(&User{Email: "jkl", Password: password})
+	helios.DB.Create(&User{Username: "ghi", Password: password})
+	helios.DB.Create(&User{Username: "jkl", Password: password})
 
 	userLoggedIn, errLoggedIn := Login("abc", "abc", "1.2.3.4")
 

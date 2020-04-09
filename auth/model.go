@@ -9,12 +9,14 @@ import (
 // User is that is registered in Charon app. Types of user:
 // - "local": user that organize of local exam.
 // - "participant": user that taking the exam.
+// - "admin": administrator of applicaton.
+// - "organizer": writer of problems, etc.
 type User struct {
 	ID       uint   `gorm:"primary_key"`
 	Name     string `gorm:"size:256"`
-	Email    string `gorm:"size:256; unique"`
+	Username string `gorm:"size:256; unique"`
 	Password string `gorm:"size:256"`
-	Role     string `gorm:"size:10"` // enum("local", "participant"), default to "participant"
+	Role     string `gorm:"size:10"` // enum("local", "participant", "admin", "organizer"), default to "participant"
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -40,12 +42,12 @@ func init() {
 	helios.App.RegisterModel(Session{})
 }
 
-// NewUser creates user with provided name, email, and password
+// NewUser creates user with provided name, username, and password
 // password will be hashed first
-func NewUser(name, email, password string) User {
+func NewUser(name, username, password string) User {
 	return User{
 		Name:     name,
-		Email:    email,
+		Username: username,
 		Password: hashPassword(password),
 		Role:     userRoleParticipant,
 	}

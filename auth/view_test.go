@@ -12,10 +12,10 @@ import (
 
 func TestLoginViewsSuccess(t *testing.T) {
 	helios.App.BeforeTest()
-	var user User = NewUser("name", "email", "password")
+	var user User = NewUser("name", "username", "password")
 	helios.DB.Create(&user)
 
-	requestData := LoginRequest{Email: "email", Password: "password"}
+	requestData := LoginRequest{Username: "username", Password: "password"}
 	req := helios.MockRequest{
 		RequestData: requestData,
 		SessionData: make(map[string]interface{}),
@@ -33,7 +33,7 @@ func TestLoginViewsSuccess(t *testing.T) {
 
 	var userSession Session
 	assert.Equal(t, "name", returnedUser["name"], "Wrong Name")
-	assert.Equal(t, "email", returnedUser["email"], "Wrong Email")
+	assert.Equal(t, "username", returnedUser["username"], "Wrong Username")
 	userToken, ok := req.GetSessionData(UserTokenSessionKey).(string)
 	assert.True(t, ok, "Fail to convert user token")
 	assert.NotEmpty(t, userToken, "Session token is empty")
@@ -43,10 +43,10 @@ func TestLoginViewsSuccess(t *testing.T) {
 
 func TestLoginViewWrongUsername(t *testing.T) {
 	helios.App.BeforeTest()
-	var user User = NewUser("name", "email", "password")
+	var user User = NewUser("name", "username", "password")
 	helios.DB.Create(&user)
 
-	requestData := LoginRequest{Email: "wrong_email", Password: "password"}
+	requestData := LoginRequest{Username: "wrong_username", Password: "password"}
 	req := helios.MockRequest{
 		RequestData: requestData,
 		SessionData: make(map[string]interface{}),
@@ -69,10 +69,10 @@ func TestLoginViewWrongUsername(t *testing.T) {
 
 func TestLoginViewWrongPassword(t *testing.T) {
 	helios.App.BeforeTest()
-	var user User = NewUser("name", "email", "password")
+	var user User = NewUser("name", "username", "password")
 	helios.DB.Create(&user)
 
-	requestData := LoginRequest{Email: "email", Password: "wrong_password"}
+	requestData := LoginRequest{Username: "username", Password: "wrong_password"}
 	req := helios.MockRequest{
 		RequestData: requestData,
 		SessionData: make(map[string]interface{}),
@@ -97,7 +97,7 @@ func TestLogoutViewsSuccess(t *testing.T) {
 	helios.App.BeforeTest()
 
 	token := "random_token"
-	user := User{Email: "email"}
+	user := User{Username: "username"}
 	helios.DB.Create(&user)
 
 	session := Session{Token: token, UserID: user.ID}

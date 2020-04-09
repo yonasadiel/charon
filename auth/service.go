@@ -49,12 +49,12 @@ func generateUserToken() string {
 // Login will try to authenticate user and store the session
 // if it fails, it will give helios.Error, If it success, it will
 // return a new session
-func Login(email string, password string, ip string) (*Session, helios.Error) {
+func Login(username string, password string, ip string) (*Session, helios.Error) {
 	var user User
 	var session Session
 	var token string
 
-	helios.DB.Where(&User{Email: email}).First(&user)
+	helios.DB.Where(&User{Username: username}).First(&user)
 
 	if user.ID == 0 {
 		return nil, errWrongUsernamePassword

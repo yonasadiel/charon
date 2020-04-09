@@ -11,25 +11,26 @@ import (
 )
 
 func main() {
-	var name, email, password, userType string
+	var name, username, password, userType string
 	var user auth.User
 	reader := bufio.NewReader(os.Stdin)
 
 	helios.App.Initialize()
+	helios.App.Migrate()
 
 	fmt.Printf("Input name: ")
 	name, _ = reader.ReadString('\n')
 	name = strings.TrimSpace(name)
 
-	fmt.Printf("Input email: ")
-	email, _ = reader.ReadString('\n')
-	email = strings.TrimSpace(email)
+	fmt.Printf("Input username: ")
+	username, _ = reader.ReadString('\n')
+	username = strings.TrimSpace(username)
 
 	fmt.Printf("Input password: ")
 	password, _ = reader.ReadString('\n')
 	password = strings.TrimSpace(password)
 
-	user = auth.NewUser(name, email, password)
+	user = auth.NewUser(name, username, password)
 
 	fmt.Printf("Input user type [A]dmin / [O]rganize / [L]ocal / [P]articipant: ")
 	userType, _ = reader.ReadString('\n')

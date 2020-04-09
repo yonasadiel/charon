@@ -14,7 +14,7 @@ func TestSerializeLoginRequest(t *testing.T) {
 
 	var user User = NewUser("User 1", "user1", "abcd")
 
-	expected := `{"name":"User 1","email":"user1","role":"participant"}`
+	expected := `{"name":"User 1","username":"user1","role":"participant"}`
 	actual, err := json.Marshal(SerializeUser(user))
 	assert.Nil(t, err, "Failed to marshalling user to json")
 	assert.Equal(t, expected, string(actual), "Different serialization")

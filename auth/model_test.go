@@ -10,7 +10,7 @@ func TestNewUser(t *testing.T) {
 	user := NewUser("john", "johndoe@gmail.com", "password")
 
 	assert.Equal(t, "john", user.Name, "Different user name")
-	assert.Equal(t, "johndoe@gmail.com", user.Email, "Different user email")
+	assert.Equal(t, "johndoe@gmail.com", user.Username, "Different username")
 	assert.True(t, checkPasswordHash("password", user.Password), "Different user password")
 }
 
@@ -18,7 +18,7 @@ func TestNewUserErrorHash(t *testing.T) {
 	user := NewUser("john", "johndoe@gmail.com", "password")
 
 	assert.Equal(t, "john", user.Name, "Different user name")
-	assert.Equal(t, "johndoe@gmail.com", user.Email, "Different user email")
+	assert.Equal(t, "johndoe@gmail.com", user.Username, "Different username")
 	assert.True(t, checkPasswordHash("password", user.Password), "Different user password")
 }
 

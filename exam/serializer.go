@@ -8,10 +8,11 @@ import (
 
 // EventData is JSON representation of exam event.
 type EventData struct {
-	ID       uint      `json:"id"`
-	Title    string    `json:"title"`
-	StartsAt time.Time `json:"startsAt"`
-	EndsAt   time.Time `json:"endsAt"`
+	ID          uint      `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	StartsAt    time.Time `json:"startsAt"`
+	EndsAt      time.Time `json:"endsAt"`
 }
 
 // QuestionData is JSON representation of question.
@@ -32,10 +33,11 @@ type SubmitSubmissionRequest struct {
 // SerializeEvent converts Event object event to JSON of event
 func SerializeEvent(event Event) EventData {
 	eventData := EventData{
-		ID:       event.ID,
-		Title:    event.Title,
-		StartsAt: event.StartsAt,
-		EndsAt:   event.EndsAt,
+		ID:          event.ID,
+		Title:       event.Title,
+		Description: event.Description,
+		StartsAt:    event.StartsAt,
+		EndsAt:      event.EndsAt,
 	}
 	return eventData
 }
@@ -45,6 +47,7 @@ func DeserializeEvent(eventData EventData, event *Event) helios.Error {
 	var err helios.FormError
 	var valid bool = true
 	event.ID = eventData.ID
+	event.Description = eventData.Description
 	event.Title = eventData.Title
 	event.StartsAt = eventData.StartsAt
 	event.EndsAt = eventData.EndsAt

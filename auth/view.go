@@ -10,7 +10,7 @@ import (
 func LoginView(req helios.Request) {
 	var loginRequest LoginRequest
 	req.DeserializeRequestData(&loginRequest)
-	userSession, err := Login(loginRequest.Email, loginRequest.Password, req.ClientIP())
+	userSession, err := Login(loginRequest.Username, loginRequest.Password, req.ClientIP())
 
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
