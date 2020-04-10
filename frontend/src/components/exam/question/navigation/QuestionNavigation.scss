@@ -1,0 +1,27 @@
+@import '../../../../styles/base';
+
+.question-navigation {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  line-height: 30px;
+
+  .nav-item {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2px;
+    width: 25px;
+    height: 25px;
+    border-radius: 3px;
+    border: 1px solid #eee;
+
+    &:not(:last-child) {
+      margin-right: 10px;
+    }
+
+    &.active {
+      background-color: rgba(0, 0, 0, .05);
+    }
+  }
+}

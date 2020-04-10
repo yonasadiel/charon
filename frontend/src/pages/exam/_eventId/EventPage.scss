@@ -1,0 +1,17 @@
+@import '../../../styles/base';
+
+.event-detail-page {
+  @extend .container;
+  padding-top: 20px;
+  padding-bottom: 50px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  .titlebar {
+    h1 {
+      font-size: 2em;
+    }
+    margin-bottom: 10px;
+  }
+}

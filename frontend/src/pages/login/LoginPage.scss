@@ -1,0 +1,21 @@
+@import '../../styles/base';
+
+.login-page {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  padding: 20px 20px 0 20px;
+
+  .login-card {
+    max-width: 500px;
+    margin-left: 20px;
+    margin-right: 20px;
+    width: 100%;
+
+    .title {
+      font-size: 1.5em;
+      margin-bottom: 5px;
+    }
+  }
+}

@@ -1,0 +1,46 @@
+@import '../../../../styles/base';
+
+.question-form {
+  .title {
+    font-size: 1.5em;
+    margin-bottom: .5em;
+  }
+
+  .field-row {
+    margin-bottom: .5em;
+
+    .editor-area {
+      background-color: $foreground-color;
+    }
+
+    &.choice {
+      display: flex;
+      flex-direction: row;
+      align-items: baseline;
+
+      .label, .wrapper {
+        margin-right: 10px;
+      }
+
+      .label {
+        flex: 1 0;
+      }
+
+      .wrapper {
+        flex: 2 0;
+      }
+
+      .delete-button {
+        min-width: 0;
+        background-color: $danger-color;
+
+      }
+    }
+  }
+
+  .add-choice {
+    i.fas {
+      margin-right: 5px;
+    }
+  }
+}

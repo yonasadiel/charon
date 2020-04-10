@@ -1,0 +1,17 @@
+@import '../../../../styles/base';
+
+.event-form {
+  .title {
+    font-size: 1.5em;
+  }
+
+  .event-button-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .error {
+    color: red;
+  }
+}

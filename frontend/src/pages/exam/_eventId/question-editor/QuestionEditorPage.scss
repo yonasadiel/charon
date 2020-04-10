@@ -1,0 +1,36 @@
+@import '../../../../styles/base';
+
+.question-editor {
+  display: flex;
+  flex-direction: column;
+
+  .add-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    align-items: baseline;
+  }
+
+  .question {
+    padding: 10px 0;
+
+    .editing-row {
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-end;
+
+      *:not(:last-child) {
+        margin-right: 5px;
+      }
+
+      .delete-button {
+        color: $danger-color;
+      }
+    }
+
+    &:not(:first-child) {
+      border-top: 1px solid #bbb;
+    }
+  }
+}

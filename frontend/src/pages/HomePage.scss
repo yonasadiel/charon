@@ -1,0 +1,25 @@
+@import '../styles/base';
+
+.home-page {
+  @extend .container;
+  margin-top: 20px;
+
+  h1 {
+    font-size: 1.75em;
+    margin-bottom: 1em;
+  }
+
+  .menus {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-size: 1.2em;
+
+    .menu {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+}

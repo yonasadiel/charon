@@ -1,0 +1,30 @@
+@import '../../styles/base';
+
+.event-page {
+  @extend .container;
+  padding-top: 20px;
+
+  .create-button-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+
+    span {
+      font-weight: 900;
+      margin-left: 5px;
+    }
+  }
+
+  .create-event-modal-title {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+  }
+
+  .event-card {
+    .event-title {
+      font-size: 1.5em;
+      margin-bottom: .5em;
+    }
+  }
+}

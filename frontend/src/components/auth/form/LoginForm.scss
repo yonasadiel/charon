@@ -1,0 +1,13 @@
+@import '../../../styles/base';
+
+.login-form {
+  .login-button-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .error {
+    color: red;
+  }
+}

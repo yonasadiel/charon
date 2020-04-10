@@ -1,0 +1,20 @@
+@import '../../../styles/base';
+
+.question-detail {
+  .choices {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    .choice {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      margin-top: 5px;
+
+      input[type=radio] {
+        margin-right: 3px;
+      }
+    }
+  }
+}

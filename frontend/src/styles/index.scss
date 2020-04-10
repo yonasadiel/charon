@@ -1,0 +1,136 @@
+@import './base';
+@import '../../node_modules/react-hephaestus/dist/main.css';
+@import '../../node_modules/react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;;
+  outline: none;
+}
+
+body {
+  color: $text-color !important;
+  font-family: $primary-font;
+  font-size: $font-size;
+  letter-spacing: 0.0125em;
+  background-color: $background-color;
+}
+
+.secondary-info {
+  font-family: $accent-font;
+}
+
+h1, h2, h3, h4, h5 {
+  color: $primary-color;
+  font-family: $accent-font !important;
+  font-weight: 700 !important;
+  font-size: $font-size;
+}
+
+p {
+  line-height: 20px;
+}
+
+small {
+  line-height: 14px !important;
+}
+
+strong {
+  font-weight: 700;
+}
+
+hr {
+  margin-top: 15px !important;
+  margin-bottom: 15px !important;
+
+  border: none;
+  border-bottom: 1px solid rgba($text-color, .15);
+}
+
+a {
+  text-decoration: none;
+  color: unset;
+}
+
+td {
+  color: $text-color !important;
+}
+
+ol {
+  list-style: decimal;
+}
+
+ul {
+  list-style: disc;
+}
+
+ol, ul {
+  padding-left: 25px;
+}
+
+ol li, ul li {
+  line-height: 20px;
+  margin-bottom: 2px;
+}
+
+code, pre {
+  font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+  background-color: #f5f5f5;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+}
+
+code {
+  font-size: 12px;
+  padding: 3px;
+}
+
+pre {
+  font-size: 13px;
+  padding: 9px;
+  overflow: auto;
+
+  code {
+    padding: initial;
+    border: initial;
+    border-radius: initial;
+  }
+}
+
+em {
+  font-style: oblique;
+}
+
+label {
+  font-size: $font-size-small;
+}
+
+input[type=text], input[type=number], input[type=password] {
+  font-family: $primary-font;
+  width: 100%;
+  height: 35px !important;
+  border-radius: 2px;
+}
+
+select {
+  width: 100%;
+}
+
+table {
+  width: 100%;
+}
+
+.multiline-text {
+  white-space: pre-wrap;
+}
+
+.clearfix::after {
+  content: '';
+  clear: both;
+  display: table;
+}
+
+.normal-weight {
+  font-weight: normal !important;
+}

@@ -1,0 +1,20 @@
+{
+  "short_name": "Semi Online Exam",
+  "name": "Semi-online Exam Student Interface",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "400x400"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0059d6",
+  "background_color": "#000000"
+}
