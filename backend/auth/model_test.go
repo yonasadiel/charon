@@ -6,24 +6,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewUser(t *testing.T) {
-	user := NewUser("john", "johndoe@gmail.com", "password")
-
-	assert.Equal(t, "john", user.Name, "Different user name")
-	assert.Equal(t, "johndoe@gmail.com", user.Username, "Different username")
-	assert.True(t, checkPasswordHash("password", user.Password), "Different user password")
-}
-
-func TestNewUserErrorHash(t *testing.T) {
-	user := NewUser("john", "johndoe@gmail.com", "password")
-
-	assert.Equal(t, "john", user.Name, "Different user name")
-	assert.Equal(t, "johndoe@gmail.com", user.Username, "Different username")
-	assert.True(t, checkPasswordHash("password", user.Password), "Different user password")
+func TestPassword(t *testing.T) {
+	user1 := UserFactory(User{Password: "password"})
+	user2 := User{Password: "password"}
+	assert.True(t, checkPasswordHash("password", user1.Password))
+	assert.False(t, checkPasswordHash("password", user2.Password))
 }
 
 func TestUserType(t *testing.T) {
-	user := NewUser("john", "johndoe@gmail.com", "password")
+	user := UserFactory(User{})
 
 	assert.True(t, user.IsParticipant(), "user should be participant")
 	assert.False(t, user.IsLocal(), "user should be participant")

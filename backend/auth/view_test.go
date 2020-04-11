@@ -10,97 +10,79 @@ import (
 	"github.com/yonasadiel/helios"
 )
 
-func TestLoginViewsSuccess(t *testing.T) {
+func TestLoginView(t *testing.T) {
 	helios.App.BeforeTest()
-	var user User = NewUser("name", "username", "password")
-	helios.DB.Create(&user)
 
-	requestData := LoginRequest{Username: "username", Password: "password"}
-	req := helios.MockRequest{
-		RequestData: requestData,
-		SessionData: make(map[string]interface{}),
+	type loginViewTestCase struct {
+		user               User
+		username           string
+		password           string
+		expectedStatusCode int
+		expectedError      helios.Error
 	}
-
-	LoginView(&req)
-
-	assert.Equal(t, http.StatusOK, req.StatusCode, "Unexpected status code")
-
-	var returnedUser map[string]interface{}
-	errUnmarshalling := json.Unmarshal(req.JSONResponse, &returnedUser)
-	if errUnmarshalling != nil {
-		t.Errorf("Error unmarshalling: %s", errUnmarshalling)
+	testCases := []loginViewTestCase{
+		loginViewTestCase{
+			user:               UserFactorySaved(User{Username: "user1", Password: "password"}),
+			username:           "user1",
+			password:           "password",
+			expectedStatusCode: http.StatusOK,
+		},
+		loginViewTestCase{
+			user:               UserFactorySaved(User{Username: "user2", Password: "password"}),
+			username:           "wrong_username",
+			password:           "password",
+			expectedStatusCode: errWrongUsernamePassword.StatusCode,
+			expectedError:      errWrongUsernamePassword,
+		},
+		loginViewTestCase{
+			user:               UserFactorySaved(User{Username: "user3", Password: "password"}),
+			username:           "user3",
+			password:           "wrong_password",
+			expectedStatusCode: errWrongUsernamePassword.StatusCode,
+			expectedError:      errWrongUsernamePassword,
+		},
 	}
-
-	var userSession Session
-	assert.Equal(t, "name", returnedUser["name"], "Wrong Name")
-	assert.Equal(t, "username", returnedUser["username"], "Wrong Username")
-	userToken, ok := req.GetSessionData(UserTokenSessionKey).(string)
-	assert.True(t, ok, "Fail to convert user token")
-	assert.NotEmpty(t, userToken, "Session token is empty")
-	helios.DB.Where("token = ?", userToken).Find(&userSession)
-	assert.Equal(t, user.ID, userSession.UserID, "user ID is not equal")
+	for i, testCase := range testCases {
+		t.Logf("Test LoginView testcase: %d", i)
+		requestData := LoginRequest{Username: testCase.username, Password: testCase.password}
+		req := helios.MockRequest{
+			RequestData: requestData,
+			SessionData: make(map[string]interface{}),
+		}
+		LoginView(&req)
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedError == nil {
+			var errMarshall error
+			var userSerialized []byte
+			var ok bool
+			var userToken string
+			var userSession Session
+			userSerialized, errMarshall = json.Marshal(SerializeUser(testCase.user))
+			userToken, ok = req.GetSessionData(UserTokenSessionKey).(string)
+			helios.DB.Where("token = ?", userToken).Find(&userSession)
+			assert.Nil(t, errMarshall)
+			assert.True(t, ok)
+			assert.Equal(t, userSerialized, req.JSONResponse)
+			assert.Equal(t, testCase.user.ID, userSession.UserID)
+			assert.NotEmpty(t, userToken)
+		} else {
+			var errMarshall error
+			var errSerialized []byte
+			errSerialized, errMarshall = json.Marshal(testCase.expectedError.GetMessage())
+			assert.Nil(t, errMarshall)
+			assert.Empty(t, req.GetSessionData(UserTokenSessionKey), "Session data should remain empty")
+			assert.Equal(t, errSerialized, req.JSONResponse)
+		}
+	}
 }
 
-func TestLoginViewWrongUsername(t *testing.T) {
-	helios.App.BeforeTest()
-	var user User = NewUser("name", "username", "password")
-	helios.DB.Create(&user)
-
-	requestData := LoginRequest{Username: "wrong_username", Password: "password"}
-	req := helios.MockRequest{
-		RequestData: requestData,
-		SessionData: make(map[string]interface{}),
-	}
-
-	LoginView(&req)
-
-	assert.Equal(t, errWrongUsernamePassword.GetStatusCode(), req.StatusCode, "Unexpected status code")
-
-	var errMessage map[string]interface{}
-	errUnmarshalling := json.Unmarshal(req.JSONResponse, &errMessage)
-	if errUnmarshalling != nil {
-		t.Errorf("Error unmarshalling: %s", errUnmarshalling)
-	}
-
-	assert.Equal(t, errWrongUsernamePassword.Code, errMessage["code"], "Wrong Code")
-	assert.Equal(t, errWrongUsernamePassword.Message, errMessage["message"], "Wrong Message")
-	assert.Empty(t, req.GetSessionData(UserTokenSessionKey), "User is logged in")
-}
-
-func TestLoginViewWrongPassword(t *testing.T) {
-	helios.App.BeforeTest()
-	var user User = NewUser("name", "username", "password")
-	helios.DB.Create(&user)
-
-	requestData := LoginRequest{Username: "username", Password: "wrong_password"}
-	req := helios.MockRequest{
-		RequestData: requestData,
-		SessionData: make(map[string]interface{}),
-	}
-
-	LoginView(&req)
-
-	assert.Equal(t, errWrongUsernamePassword.GetStatusCode(), req.StatusCode, "Unexpected status code")
-
-	var errMessage map[string]interface{}
-	errUnmarshalling := json.Unmarshal(req.JSONResponse, &errMessage)
-	if errUnmarshalling != nil {
-		t.Errorf("Error unmarshalling: %s", errUnmarshalling)
-	}
-
-	assert.Equal(t, errWrongUsernamePassword.Code, errMessage["code"], "Wrong Code")
-	assert.Equal(t, errWrongUsernamePassword.Message, errMessage["message"], "Wrong Message")
-	assert.Empty(t, req.GetSessionData(UserTokenSessionKey), "User is logged in")
-}
-
-func TestLogoutViewsSuccess(t *testing.T) {
+func TestLogoutView(t *testing.T) {
 	helios.App.BeforeTest()
 
-	token := "random_token"
-	user := User{Username: "username"}
-	helios.DB.Create(&user)
+	var user User = UserFactorySaved(User{Username: "username", Password: "password"})
+	var token string = "random_token"
+	var session Session = Session{Token: token, UserID: user.ID}
 
-	session := Session{Token: token, UserID: user.ID}
 	helios.DB.Create(&session)
 
 	sessionData := make(map[string]interface{})

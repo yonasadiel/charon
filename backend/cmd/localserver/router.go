@@ -6,8 +6,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/yonasadiel/helios"
 
-	"github.com/yonasadiel/charon/auth"
-	"github.com/yonasadiel/charon/exam"
+	"github.com/yonasadiel/charon/backend/auth"
+	"github.com/yonasadiel/charon/backend/exam"
 )
 
 // CreateRouter returns the router

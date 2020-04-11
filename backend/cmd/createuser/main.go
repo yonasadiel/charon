@@ -6,15 +6,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/yonasadiel/charon/auth"
+	"github.com/yonasadiel/charon/backend/auth"
 	"github.com/yonasadiel/helios"
 )
 
 func main() {
-	var name, username, password, userType string
-	var user auth.User
+	var name, username, password, userRole string
 	reader := bufio.NewReader(os.Stdin)
-
 	helios.App.Initialize()
 	helios.App.Migrate()
 
@@ -30,25 +28,19 @@ func main() {
 	password, _ = reader.ReadString('\n')
 	password = strings.TrimSpace(password)
 
-	user = auth.NewUser(name, username, password)
+	fmt.Printf("Input user type (admin / organizer / local / participant): ")
+	userRole, _ = reader.ReadString('\n')
+	userRole = strings.ToLower(strings.TrimSpace(userRole))
 
-	fmt.Printf("Input user type [A]dmin / [O]rganize / [L]ocal / [P]articipant: ")
-	userType, _ = reader.ReadString('\n')
-	userType = strings.TrimSpace(userType)
-
-	if userType == "A" {
-		user.Role = "admin"
-	} else if userType == "o" {
-		user.Role = "organizer"
-	} else if userType == "L" {
-		user.Role = "local"
-	} else if userType == "P" {
-		user.Role = "participant"
-	} else {
+	if userRole != auth.UserRoleAdmin &&
+		userRole != auth.UserRoleOrganizer &&
+		userRole != auth.UserRoleLocal &&
+		userRole != auth.UserRoleParticipant {
 		fmt.Println("Unknown user type.")
 		return
 	}
-	helios.DB.Create(&user)
+
+	auth.UserFactorySaved(auth.User{Name: name, Username: username, Password: password, Role: userRole})
 
 	fmt.Println("Success creates user.")
 }

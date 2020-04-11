@@ -5,14 +5,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/yonasadiel/helios"
 )
 
 func TestSerializeLoginRequest(t *testing.T) {
-	helios.App.BeforeTest()
-
-	var user User = NewUser("User 1", "user1", "abcd")
+	var user User = UserFactory(User{Name: "User 1", Username: "user1", Password: "abcd"})
 
 	expected := `{"name":"User 1","username":"user1","role":"participant"}`
 	actual, err := json.Marshal(SerializeUser(user))

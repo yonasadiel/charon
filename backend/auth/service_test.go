@@ -8,64 +8,58 @@ import (
 	"github.com/yonasadiel/helios"
 )
 
-func TestLoginSuccess(t *testing.T) {
+func TestLogin(t *testing.T) {
 	helios.App.BeforeTest()
 
-	password := hashPassword("def")
-	user := User{Username: "abc", Password: password}
-	helios.DB.Create(&User{Username: "def", Password: password})
-	helios.DB.Create(&user)
-	helios.DB.Create(&User{Username: "ghi", Password: password})
-	helios.DB.Create(&User{Username: "jkl", Password: password})
-
-	userSession, errLoggedIn := Login("abc", "def", "1.2.3.4")
-
-	assert.Nil(t, errLoggedIn, "Expected success login, but get error: %s", errLoggedIn)
-	assert.NotNil(t, userSession, "Empty session returned")
-	assert.Equal(t, userTokenLength, len(userSession.Token), "Different token length")
-	assert.Equal(t, user.ID, userSession.UserID, "Different user ID returned")
-
-	var userSessionDB Session
-	helios.DB.Where("token = ?", userSession.Token).First(&userSessionDB)
-	assert.NotEqual(t, 0, userSessionDB.ID, "User token not found")
-	assert.Equal(t, user.ID, userSessionDB.UserID, "Different user logged in")
-}
-
-func TestLoginWrongUsername(t *testing.T) {
-	helios.App.BeforeTest()
-
-	password := hashPassword("def")
-	user := User{Username: "abc", Password: password}
-	helios.DB.Create(&User{Username: "def", Password: password})
-	helios.DB.Create(&user)
-	helios.DB.Create(&User{Username: "ghi", Password: password})
-	helios.DB.Create(&User{Username: "jkl", Password: password})
-
-	userLoggedIn, errLoggedIn := Login("mno", "def", "1.2.3.4")
-
-	assert.Equal(t, errWrongUsernamePassword, errLoggedIn, "Expected wrong username / password, but success logging in")
-	assert.Nil(t, userLoggedIn, "Not nil user session")
-}
-
-func TestLoginWrongPassword(t *testing.T) {
-	helios.App.BeforeTest()
-
-	password := hashPassword("def")
-	user := User{Username: "abc", Password: password}
-	helios.DB.Create(&User{Username: "def", Password: password})
-	helios.DB.Create(&user)
-	helios.DB.Create(&User{Username: "ghi", Password: password})
-	helios.DB.Create(&User{Username: "jkl", Password: password})
-
-	userLoggedIn, errLoggedIn := Login("abc", "abc", "1.2.3.4")
-
-	assert.Equal(t, errWrongUsernamePassword, errLoggedIn, "Expected wrong username / password, but success logging in")
-	assert.Nil(t, userLoggedIn, "Not nil user session")
+	type loginTestCase struct {
+		user          User
+		username      string
+		password      string
+		ipAddr        string
+		expectedError helios.Error
+	}
+	testCases := []loginTestCase{
+		loginTestCase{
+			user:     UserFactorySaved(User{Username: "user1", Password: "def"}),
+			username: "user1",
+			password: "def",
+		},
+		loginTestCase{
+			user:          UserFactorySaved(User{Username: "user2", Password: "def"}),
+			username:      "def",
+			password:      "def",
+			expectedError: errWrongUsernamePassword,
+		},
+		loginTestCase{
+			user:          UserFactorySaved(User{Username: "user3", Password: "def"}),
+			username:      "user3",
+			password:      "abc",
+			expectedError: errWrongUsernamePassword,
+		},
+	}
+	for i, testCase := range testCases {
+		t.Logf("Test Login testcase: %d", i)
+		var userSession *Session
+		var userSessionSaved Session
+		var err helios.Error
+		userSession, err = Login(testCase.username, testCase.password, "1.2.3.4")
+		if testCase.expectedError == nil {
+			helios.DB.Where("token = ?", userSession.Token).First(&userSessionSaved)
+			assert.Nil(t, err)
+			assert.NotNil(t, userSession)
+			assert.Equal(t, userTokenLength, len(userSession.Token))
+			assert.Equal(t, testCase.user.ID, userSession.UserID)
+			assert.NotEqual(t, 0, userSessionSaved.ID, "Session not saved on database")
+			assert.Equal(t, testCase.user.ID, userSessionSaved.UserID)
+			assert.Equal(t, "1.2.3.4", userSessionSaved.IPAddress)
+		} else {
+			assert.Equal(t, testCase.expectedError, err)
+			assert.Nil(t, userSession)
+		}
+	}
 }
 
 func TestHashPassword(t *testing.T) {
-	helios.App.BeforeTest()
-
 	passwordHashed := hashPassword("charon")
 	assert.NotEmpty(t, passwordHashed, "Hashed Password is empty")
 }
