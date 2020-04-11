@@ -20,28 +20,24 @@ func TestLoginView(t *testing.T) {
 		expectedStatusCode int
 		expectedError      helios.Error
 	}
-	testCases := []loginViewTestCase{
-		loginViewTestCase{
-			user:               UserFactorySaved(User{Username: "user1", Password: "password"}),
-			username:           "user1",
-			password:           "password",
-			expectedStatusCode: http.StatusOK,
-		},
-		loginViewTestCase{
-			user:               UserFactorySaved(User{Username: "user2", Password: "password"}),
-			username:           "wrong_username",
-			password:           "password",
-			expectedStatusCode: errWrongUsernamePassword.StatusCode,
-			expectedError:      errWrongUsernamePassword,
-		},
-		loginViewTestCase{
-			user:               UserFactorySaved(User{Username: "user3", Password: "password"}),
-			username:           "user3",
-			password:           "wrong_password",
-			expectedStatusCode: errWrongUsernamePassword.StatusCode,
-			expectedError:      errWrongUsernamePassword,
-		},
-	}
+	testCases := []loginViewTestCase{{
+		user:               UserFactorySaved(User{Username: "user1", Password: "password"}),
+		username:           "user1",
+		password:           "password",
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               UserFactorySaved(User{Username: "user2", Password: "password"}),
+		username:           "wrong_username",
+		password:           "password",
+		expectedStatusCode: errWrongUsernamePassword.StatusCode,
+		expectedError:      errWrongUsernamePassword,
+	}, {
+		user:               UserFactorySaved(User{Username: "user3", Password: "password"}),
+		username:           "user3",
+		password:           "wrong_password",
+		expectedStatusCode: errWrongUsernamePassword.StatusCode,
+		expectedError:      errWrongUsernamePassword,
+	}}
 	for i, testCase := range testCases {
 		t.Logf("Test LoginView testcase: %d", i)
 		requestData := LoginRequest{Username: testCase.username, Password: testCase.password}

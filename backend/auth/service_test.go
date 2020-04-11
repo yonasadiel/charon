@@ -18,25 +18,21 @@ func TestLogin(t *testing.T) {
 		ipAddr        string
 		expectedError helios.Error
 	}
-	testCases := []loginTestCase{
-		loginTestCase{
-			user:     UserFactorySaved(User{Username: "user1", Password: "def"}),
-			username: "user1",
-			password: "def",
-		},
-		loginTestCase{
-			user:          UserFactorySaved(User{Username: "user2", Password: "def"}),
-			username:      "def",
-			password:      "def",
-			expectedError: errWrongUsernamePassword,
-		},
-		loginTestCase{
-			user:          UserFactorySaved(User{Username: "user3", Password: "def"}),
-			username:      "user3",
-			password:      "abc",
-			expectedError: errWrongUsernamePassword,
-		},
-	}
+	testCases := []loginTestCase{{
+		user:     UserFactorySaved(User{Username: "user1", Password: "def"}),
+		username: "user1",
+		password: "def",
+	}, {
+		user:          UserFactorySaved(User{Username: "user2", Password: "def"}),
+		username:      "def",
+		password:      "def",
+		expectedError: errWrongUsernamePassword,
+	}, {
+		user:          UserFactorySaved(User{Username: "user3", Password: "def"}),
+		username:      "user3",
+		password:      "abc",
+		expectedError: errWrongUsernamePassword,
+	}}
 	for i, testCase := range testCases {
 		t.Logf("Test Login testcase: %d", i)
 		var userSession *Session

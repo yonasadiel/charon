@@ -23,25 +23,20 @@ func TestLoggedInMiddleware(t *testing.T) {
 		expectedStatusCode int
 		remoteAddr         string
 	}
-	testCases := []loggedInMiddlewareTestCase{
-		loggedInMiddlewareTestCase{
-			expectedStatusCode: errUnauthorized.StatusCode,
-		},
-		loggedInMiddlewareTestCase{
-			sessionToken:       "unknown_token",
-			expectedStatusCode: errUnauthorized.StatusCode,
-		},
-		loggedInMiddlewareTestCase{
-			sessionToken:       token,
-			expectedStatusCode: errUnauthorized.StatusCode,
-			remoteAddr:         "7.1.1.2",
-		},
-		loggedInMiddlewareTestCase{
-			sessionToken:       token,
-			expectedStatusCode: http.StatusOK,
-			remoteAddr:         "7.1.1.1",
-		},
-	}
+	testCases := []loggedInMiddlewareTestCase{{
+		expectedStatusCode: errUnauthorized.StatusCode,
+	}, {
+		sessionToken:       "unknown_token",
+		expectedStatusCode: errUnauthorized.StatusCode,
+	}, {
+		sessionToken:       token,
+		expectedStatusCode: errUnauthorized.StatusCode,
+		remoteAddr:         "7.1.1.2",
+	}, {
+		sessionToken:       token,
+		expectedStatusCode: http.StatusOK,
+		remoteAddr:         "7.1.1.1",
+	}}
 	for i, testCase := range testCases {
 		t.Logf("Test LoggedInMiddleware testcase: %d", i)
 		var req helios.MockRequest
