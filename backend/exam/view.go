@@ -3,9 +3,82 @@ package exam
 import (
 	"net/http"
 
-	"github.com/yonasadiel/charon/auth"
+	"github.com/yonasadiel/charon/backend/auth"
 	"github.com/yonasadiel/helios"
 )
+
+// VenueListView send list of venues
+func VenueListView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+	var venues []Venue
+	var errGetVenue helios.Error
+
+	venues, errGetVenue = GetAllVenue(user)
+	if errGetVenue != nil {
+		req.SendJSON(errGetVenue.GetMessage(), errGetVenue.GetStatusCode())
+	}
+
+	serializedVenues := make([]VenueData, 0)
+	for _, venue := range venues {
+		serializedVenues = append(serializedVenues, SerializeVenue(venue))
+	}
+	req.SendJSON(serializedVenues, http.StatusOK)
+}
+
+// VenueCreateView creates the venue
+func VenueCreateView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var venueData VenueData
+	var venue Venue
+	var err helios.Error
+	err = req.DeserializeRequestData(&venueData)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	err = DeserializeVenue(venueData, &venue)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	venue.ID = 0
+	UpsertVenue(user, &venue)
+	req.SendJSON(SerializeVenue(venue), http.StatusCreated)
+}
+
+// VenueDeleteView delete the question
+func VenueDeleteView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	venueID, errParseVenueID := req.GetURLParamUint("venueID")
+	if errParseVenueID != nil {
+		req.SendJSON(errVenueNotFound.GetMessage(), errVenueNotFound.GetStatusCode())
+		return
+	}
+
+	var venue *Venue
+	var err helios.Error
+	venue, err = DeleteVenue(user, venueID)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	var serializedVenue VenueData = SerializeVenue(*venue)
+	req.SendJSON(serializedVenue, http.StatusOK)
+}
 
 // EventListView send list of questions
 func EventListView(req helios.Request) {
@@ -137,7 +210,7 @@ func QuestionDetailView(req helios.Request) {
 
 	var question *Question
 	var err helios.Error
-	question, err = GetQuestionOfUser(user, eventID, questionID)
+	question, err = GetQuestionOfEventAndUser(user, eventID, questionID)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
@@ -204,13 +277,13 @@ func SubmissionCreateView(req helios.Request) {
 		return
 	}
 
-	var submission *Submission
+	var question *Question
 	var err helios.Error
-	submission, err = SubmitSubmission(user, eventID, questionID, submitSubmissionRequest.Answer)
+	question, err = SubmitSubmission(user, eventID, questionID, submitSubmissionRequest.Answer)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 	} else {
-		var questionData QuestionData = SerializeQuestion(*submission.Question)
+		var questionData QuestionData = SerializeQuestion(*question)
 		req.SendJSON(questionData, http.StatusCreated)
 	}
 }

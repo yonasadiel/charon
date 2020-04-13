@@ -3,7 +3,7 @@ package exam
 import (
 	"time"
 
-	"github.com/yonasadiel/charon/auth"
+	"github.com/yonasadiel/charon/backend/auth"
 	"github.com/yonasadiel/helios"
 )
 
@@ -11,8 +11,9 @@ import (
 // It also stores the start and end time
 type Event struct {
 	ID          uint   `gorm:"primary_key"`
+	Slug        string `gorm:"size:100"`
+	Title       string `gorm:"size:256"`
 	Description string `gorm:"type:text"`
-	Title       string `gorm:"size:100"`
 	StartsAt    time.Time
 	EndsAt      time.Time
 
@@ -21,15 +22,27 @@ type Event struct {
 	DeletedAt *time.Time
 }
 
-// UserEvent is many to many indicating an user is participating
-// in an event.
-type UserEvent struct {
+// Venue is the event venue
+type Venue struct {
+	ID   uint `gorm:"primary_key"`
+	Name string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+}
+
+// Participation is many to many indicating an user is participating
+// in a local event.
+type Participation struct {
 	ID      uint `gorm:"primary_key"`
 	EventID uint
 	UserID  uint
+	VenueID uint
 
 	Event *Event     `gorm:"foreignkey:EventID"`
 	User  *auth.User `gorm:"foreignkey:UserID"`
+	Venue *Venue     `gorm:"foreignkey:VenueID"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -68,29 +81,14 @@ type QuestionChoice struct {
 // UserQuestion is the many-to-many relation between user and question
 // because user can't see al questions, but only theirs.
 type UserQuestion struct {
-	ID         uint `gorm:"primary_key"`
-	QuestionID uint
-	UserID     uint
-	Ordering   uint
+	ID              uint `gorm:"primary_key"`
+	ParticipationID uint
+	QuestionID      uint
+	Ordering        uint
+	Answer          string `gorm:"type:text"`
 
-	Question *Question  `gorm:"foreignkey:QuestionID"`
-	User     *auth.User `gorm:"foreignkey:UserID"`
-
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time
-}
-
-// Submission of user to the question. This model should be insert only,
-// never deleted, for log purpose.
-type Submission struct {
-	ID         uint   `gorm:"primary_key"`
-	Answer     string `gorm:"type:text"`
-	QuestionID uint
-	UserID     uint
-
-	Question *Question  `gorm:"foreignkey:QuestionID"`
-	User     *auth.User `gorm:"foreignkey:UserID"`
+	Participation *Participation `gorm:"foreignkey:ParticipationID"`
+	Question      *Question      `gorm:"foreignkey:QuestionID"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -99,9 +97,9 @@ type Submission struct {
 
 func init() {
 	helios.App.RegisterModel(Event{})
-	helios.App.RegisterModel(UserEvent{})
+	helios.App.RegisterModel(Venue{})
+	helios.App.RegisterModel(Participation{})
 	helios.App.RegisterModel(QuestionChoice{})
 	helios.App.RegisterModel(Question{})
 	helios.App.RegisterModel(UserQuestion{})
-	helios.App.RegisterModel(Submission{})
 }

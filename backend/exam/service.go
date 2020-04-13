@@ -1,9 +1,66 @@
 package exam
 
 import (
-	"github.com/yonasadiel/charon/auth"
+	"time"
+
+	"github.com/yonasadiel/charon/backend/auth"
 	"github.com/yonasadiel/helios"
 )
+
+// GetAllVenue returns all venues.
+// Only admin and organizer have permission for this use case.
+func GetAllVenue(user auth.User) ([]Venue, helios.Error) {
+	if !user.IsAdmin() && !user.IsOrganizer() {
+		return nil, errVenueAccessNotAuthorized
+	}
+
+	var venues []Venue
+	helios.DB.Find(&venues)
+	return venues, nil
+}
+
+// UpsertVenue creates or updates a venue. It creates if
+// ID = 0, or updates otherwise. Only user with organizer or
+// admin role that can creates / updates venue.
+// If it is create, then venue.ID will be changed.
+func UpsertVenue(user auth.User, venue *Venue) helios.Error {
+	if !user.IsAdmin() && !user.IsOrganizer() {
+		return errVenueAccessNotAuthorized
+	}
+
+	if venue.ID == 0 {
+		helios.DB.Create(venue)
+	} else {
+		helios.DB.Save(venue)
+	}
+	return nil
+}
+
+// DeleteVenue deletes a venue with given id
+// and returns the deleted venue. Only organizer and
+// admin that can do deletion. If there is an event
+// organized on the venue, it will fail
+func DeleteVenue(user auth.User, venueID uint) (*Venue, helios.Error) {
+	if !user.IsOrganizer() && !user.IsAdmin() {
+		return nil, errVenueAccessNotAuthorized
+	}
+
+	var venue Venue
+	var participationCount int
+
+	helios.DB.Where("id = ?", venueID).First(&venue)
+	if venue.ID == 0 {
+		return nil, errVenueNotFound
+	}
+
+	helios.DB.Model(&Participation{}).Where("venue_id = ?", venue.ID).Count(&participationCount)
+	if participationCount > 0 {
+		return nil, errVenueCantDeletedEventExists
+	}
+
+	helios.DB.Delete(&venue)
+	return &venue, nil
+}
 
 // GetAllEventOfUser returns all events that is participated by user.
 // If the user is admin or organizer, then return all events that are exist.
@@ -11,14 +68,16 @@ func GetAllEventOfUser(user auth.User) []Event {
 	var events []Event
 
 	if user.IsAdmin() || user.IsOrganizer() {
-		helios.DB.Find(&events)
+		helios.DB.
+			Order("events.starts_at asc").
+			Find(&events)
 	} else { // user is local or participant
 		helios.DB.
-			Table("user_events").
 			Select("events.*").
-			Joins("left join events on events.id = user_events.event_id").
+			Table("events").
+			Joins("inner join participations on participations.event_id = events.id").
 			Where("user_id = ?", user.ID).
-			Order("events.starts_at").
+			Order("events.starts_at asc").
 			Find(&events)
 	}
 
@@ -34,12 +93,11 @@ func GetEventOfUser(user auth.User, eventID uint) (Event, helios.Error) {
 		helios.DB.Where("id = ?", eventID).First(&event)
 	} else {
 		helios.DB.
-			Table("user_events").
+			Table("events").
 			Select("events.*").
-			Joins("left join events on events.id = user_events.event_id").
+			Joins("inner join participations on participations.event_id = events.id").
 			Where("user_id = ?", user.ID).
 			Where("events.id = ?", eventID).
-			Order("events.starts_at").
 			First(&event)
 	}
 	if event.ID == 0 {
@@ -72,8 +130,6 @@ func UpsertEvent(user auth.User, event *Event) helios.Error {
 func GetAllQuestionOfEventAndUser(user auth.User, eventID uint) ([]Question, helios.Error) {
 	var event Event
 	var questions []Question
-	var userSubmissions []Submission
-	var userSubmissionByQuestionID = make(map[uint]Submission)
 	var errGetEvent helios.Error
 
 	event, errGetEvent = GetEventOfUser(user, eventID)
@@ -81,35 +137,24 @@ func GetAllQuestionOfEventAndUser(user auth.User, eventID uint) ([]Question, hel
 		return nil, errGetEvent
 	}
 
+	if !user.IsAdmin() && !user.IsOrganizer() && event.StartsAt.After(time.Now()) {
+		return nil, errEventIsNotYetStarted
+	}
+
 	// Querying for user questions and user submissions
-	if user.IsAdmin() || user.IsOrganizer() {
+	if user.IsAdmin() || user.IsOrganizer() || user.IsLocal() {
 		helios.DB.Preload("Choices").Where("event_id = ?", eventID).Find(&questions)
 	} else {
 		helios.DB.
-			Table("user_questions").
+			Select("questions.*, user_questions.answer as user_answer").
+			Table("questions").
 			Preload("Choices").
-			Select("questions.*").
-			Joins("left join questions on questions.id = user_questions.question_id").
-			Where("user_id = ?", user.ID).
+			Joins("inner join user_questions on user_questions.question_id = questions.id").
+			Joins("inner join participations on participations.id = user_questions.participation_id").
 			Where("questions.event_id = ?", event.ID).
+			Where("participations.user_id = ?", user.ID).
 			Order("user_questions.ordering asc").
 			Find(&questions)
-		helios.DB.Where("user_id = ?", user.ID).Order("created_at asc").Find(&userSubmissions)
-	}
-
-	// Mapping user submission by the question id
-	for _, userSubmission := range userSubmissions {
-		// Here, we safely assume that if the userSubmission is latter
-		// in array, then it has latest creation time
-		userSubmissionByQuestionID[userSubmission.QuestionID] = userSubmission
-	}
-
-	// Set the question answer to the user submission
-	for i := range questions {
-		userSubmission := userSubmissionByQuestionID[questions[i].ID]
-		if userSubmission.ID != 0 {
-			questions[i].UserAnswer = userSubmission.Answer
-		}
 	}
 
 	return questions, nil
@@ -124,16 +169,17 @@ func UpsertQuestion(user auth.User, question *Question) helios.Error {
 		return errQuestionChangeNotAuthorized
 	}
 
-	var event Event
-	helios.DB.Where("id = ?", question.EventID).First(&event)
-	if event.ID == 0 {
-		return errEventNotFound
+	var errGetEvent helios.Error
+
+	_, errGetEvent = GetEventOfUser(user, question.EventID)
+	if errGetEvent != nil {
+		return errGetEvent
 	}
 
+	tx := helios.DB.Begin()
 	if question.ID == 0 {
 		choices := question.Choices
 		question.Choices = []QuestionChoice{}
-		tx := helios.DB.Begin()
 		tx.Create(question)
 		for _, choice := range choices {
 			choice.ID = 0
@@ -141,11 +187,9 @@ func UpsertQuestion(user auth.User, question *Question) helios.Error {
 			tx.Create(&choice)
 		}
 		question.Choices = choices
-		tx.Commit()
 	} else {
 		choices := question.Choices
 		question.Choices = []QuestionChoice{}
-		tx := helios.DB.Begin()
 		tx.Delete(QuestionChoice{}, "question_id = ?", question.ID)
 		tx.Save(question)
 		for _, choice := range choices {
@@ -154,18 +198,17 @@ func UpsertQuestion(user auth.User, question *Question) helios.Error {
 			tx.Create(&choice)
 		}
 		question.Choices = choices
-		tx.Commit()
 	}
+	tx.Commit()
 
 	return nil
 }
 
-// GetQuestionOfUser returns a question with given id, but first check
+// GetQuestionOfEventAndUser returns a question with given id, but first check
 // if the user has rights to the question
-func GetQuestionOfUser(user auth.User, eventID uint, questionID uint) (*Question, helios.Error) {
+func GetQuestionOfEventAndUser(user auth.User, eventID uint, questionID uint) (*Question, helios.Error) {
 	var event Event
 	var question Question
-	var userSubmission Submission
 	var errGetEvent helios.Error
 
 	event, errGetEvent = GetEventOfUser(user, eventID)
@@ -173,21 +216,27 @@ func GetQuestionOfUser(user auth.User, eventID uint, questionID uint) (*Question
 		return nil, errGetEvent
 	}
 
-	helios.DB.
-		Table("user_questions").
-		Select("questions.*").
-		Joins("left join questions on questions.id = user_questions.question_id").
-		Where("user_id = ?", user.ID).
-		Where("event_id = ?", event.ID).
-		Where("question_id = ?", questionID).
-		First(&question)
-	if question.ID == 0 {
-		return nil, errQuestionNotFound
+	if !user.IsAdmin() && !user.IsOrganizer() && event.StartsAt.After(time.Now()) {
+		return nil, errEventIsNotYetStarted
 	}
 
-	helios.DB.Where("user_id = ?", user.ID).Where("question_id = ?", questionID).Order("created_at desc").First(&userSubmission)
-	if userSubmission.ID != 0 {
-		question.UserAnswer = userSubmission.Answer
+	if user.IsAdmin() || user.IsOrganizer() || user.IsLocal() {
+		helios.DB.Where("id = ?", questionID).Where("event_id = ?", eventID).First(&question)
+	} else {
+		helios.DB.
+			Select("questions.*, user_questions.answer as user_answer").
+			Table("questions").
+			Preload("Choices").
+			Joins("inner join user_questions on user_questions.question_id = questions.id").
+			Joins("inner join participations on participations.id = user_questions.participation_id").
+			Where("questions.event_id = ?", event.ID).
+			Where("participations.user_id = ?", user.ID).
+			Where("participations.event_id = ?", event.ID).
+			Where("questions.id = ?", questionID).
+			First(&question)
+	}
+	if question.ID == 0 {
+		return nil, errQuestionNotFound
 	}
 	return &question, nil
 }
@@ -214,40 +263,55 @@ func DeleteQuestion(user auth.User, eventID uint, questionID uint) (*Question, h
 		return nil, errQuestionNotFound
 	}
 	tx := helios.DB.Begin()
-	tx.Delete(&question)
-	tx.Where("question_id = ?", questionID).Delete(Submission{})
+	tx.Where("question_id = ?", questionID).Delete(UserQuestion{})
 	tx.Where("question_id = ?", questionID).Delete(QuestionChoice{})
+	tx.Delete(&question)
 	tx.Commit()
 	return &question, nil
 }
 
 // SubmitSubmission submit a submission from user to a question.
-func SubmitSubmission(user auth.User, eventID uint, questionID uint, answer string) (*Submission, helios.Error) {
+func SubmitSubmission(user auth.User, eventID uint, questionID uint, answer string) (*Question, helios.Error) {
+	if !user.IsParticipant() {
+		return nil, errSubmissionNotAuthorized
+	}
+
 	var event Event
-	var question Question
-	var choices []QuestionChoice
-	var submission Submission
+	var userQuestion UserQuestion
 	var errGetEvent helios.Error
 
 	event, errGetEvent = GetEventOfUser(user, eventID)
 	if errGetEvent != nil {
 		return nil, errGetEvent
 	}
-	helios.DB.Where("event_id = ?", event.ID).Where("id = ?", questionID).First(&question)
-	helios.DB.Where("question_id = ?", questionID).Find(&choices)
-	if question.ID == 0 {
+
+	if !user.IsAdmin() && !user.IsOrganizer() && event.StartsAt.After(time.Now()) {
+		return nil, errEventIsNotYetStarted
+	}
+
+	helios.DB.
+		Select("user_questions.*").
+		Table("user_questions").
+		Preload("Question").
+		Preload("Question.Choices").
+		Joins("inner join questions on questions.id = user_questions.question_id").
+		Joins("inner join participations on participations.id = user_questions.participation_id").
+		Where("questions.event_id = ?", event.ID).
+		Where("participations.user_id = ?", user.ID).
+		Where("participations.event_id = ?", event.ID).
+		Where("questions.id = ?", questionID).
+		First(&userQuestion)
+
+	if userQuestion.ID == 0 {
 		return nil, errQuestionNotFound
 	}
-	if !isAnswerValidChoice(answer, choices) {
+
+	if !isAnswerValidChoice(answer, userQuestion.Question.Choices) {
 		return nil, errAnswerNotValid
 	}
-	submission = Submission{
-		Answer:     answer,
-		QuestionID: question.ID,
-		UserID:     user.ID,
-		Question:   &question,
-		User:       &user,
-	}
-	helios.DB.Create(&submission)
-	return &submission, nil
+
+	userQuestion.Answer = answer
+	userQuestion.Question.UserAnswer = answer
+	helios.DB.Save(&userQuestion)
+	return userQuestion.Question, nil
 }

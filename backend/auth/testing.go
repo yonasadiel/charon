@@ -32,7 +32,9 @@ func UserFactory(user User) User {
 // UserFactorySaved do exactly like UserFactory but the result
 // will be saved to database
 func UserFactorySaved(user User) User {
-	user = UserFactory(user)
-	helios.DB.Create(&user)
+	if user.ID == 0 {
+		user = UserFactory(user)
+		helios.DB.Create(&user)
+	}
 	return user
 }

@@ -8,11 +8,17 @@ import (
 
 // EventData is JSON representation of exam event.
 type EventData struct {
-	ID          uint      `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	StartsAt    time.Time `json:"startsAt"`
-	EndsAt      time.Time `json:"endsAt"`
+	ID          uint   `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	StartsAt    string `json:"startsAt"`
+	EndsAt      string `json:"endsAt"`
+}
+
+// VenueData is JSON representation of venue.
+type VenueData struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
 }
 
 // QuestionData is JSON representation of question.
@@ -30,14 +36,41 @@ type SubmitSubmissionRequest struct {
 	Answer string `json:"answer"`
 }
 
+// SerializeVenue converts Venue object venue to JSON of venue
+func SerializeVenue(venue Venue) VenueData {
+	venueData := VenueData{
+		ID:   venue.ID,
+		Name: venue.Name,
+	}
+	return venueData
+}
+
+// DeserializeVenue returns the Venue from VenueData
+func DeserializeVenue(venueData VenueData, venue *Venue) helios.Error {
+	var err helios.FormError
+	var valid bool = true
+	venue.ID = venueData.ID
+	venue.Name = venueData.Name
+
+	err = helios.FormError{}
+	if venue.Name == "" {
+		err.AddFieldError("name", "Name can't be empty")
+		valid = false
+	}
+	if !valid {
+		return err
+	}
+	return nil
+}
+
 // SerializeEvent converts Event object event to JSON of event
 func SerializeEvent(event Event) EventData {
 	eventData := EventData{
 		ID:          event.ID,
 		Title:       event.Title,
 		Description: event.Description,
-		StartsAt:    event.StartsAt,
-		EndsAt:      event.EndsAt,
+		StartsAt:    event.StartsAt.Local().Format(time.RFC3339),
+		EndsAt:      event.EndsAt.Local().Format(time.RFC3339),
 	}
 	return eventData
 }
@@ -45,24 +78,31 @@ func SerializeEvent(event Event) EventData {
 // DeserializeEvent returns the Event from EventData
 func DeserializeEvent(eventData EventData, event *Event) helios.Error {
 	var err helios.FormError
+	var errStartsAt, errEndsAt error
 	var valid bool = true
 	event.ID = eventData.ID
 	event.Description = eventData.Description
 	event.Title = eventData.Title
-	event.StartsAt = eventData.StartsAt
-	event.EndsAt = eventData.EndsAt
+	event.StartsAt, errStartsAt = time.Parse(time.RFC3339, eventData.StartsAt)
+	event.EndsAt, errEndsAt = time.Parse(time.RFC3339, eventData.EndsAt)
 
 	err = helios.FormError{}
 	if event.Title == "" {
 		err.AddFieldError("title", "Title can't be empty")
 		valid = false
 	}
-	if event.StartsAt.IsZero() {
+	if eventData.StartsAt == "" {
 		err.AddFieldError("startsAt", "Start time must be provided")
 		valid = false
+	} else if errStartsAt != nil {
+		err.AddFieldError("startsAt", "Failed to parse time")
+		valid = false
 	}
-	if event.EndsAt.IsZero() {
+	if eventData.EndsAt == "" {
 		err.AddFieldError("endsAt", "End time must be provided")
+		valid = false
+	} else if errEndsAt != nil {
+		err.AddFieldError("endsAt", "Failed to parse time")
 		valid = false
 	}
 	if event.EndsAt.Before(event.StartsAt) {

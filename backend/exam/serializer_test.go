@@ -6,184 +6,222 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/yonasadiel/helios"
 )
 
+func TestSerializeVenye(t *testing.T) {
+	var venue Venue = VenueFactory(Venue{
+		ID:   3,
+		Name: "venue name",
+	})
+	var expectedJSON string = `{"id":3,"name":"venue name"}`
+	var serialized VenueData = SerializeVenue(venue)
+	var serializedJSON []byte
+	var errMarshalling error
+	serializedJSON, errMarshalling = json.Marshal(serialized)
+	assert.Nil(t, errMarshalling)
+	assert.Equal(t, expectedJSON, string(serializedJSON))
+}
+
+func TestDeserializeVenue(t *testing.T) {
+	type deserializeVenueTestCase struct {
+		venueDataJSON string
+		expectedVenue Venue
+		expectedError string
+	}
+	testCases := []deserializeVenueTestCase{{
+		venueDataJSON: `{"name":"Venue 1"}`,
+		expectedVenue: Venue{
+			ID:   0,
+			Name: "Venue 1",
+		},
+	}, {
+		venueDataJSON: `{"id":3,"name":"Venue 2"}`,
+		expectedVenue: Venue{
+			ID:   3,
+			Name: "Venue 2",
+		},
+	}, {
+		venueDataJSON: `{}`,
+		expectedError: `{"code":"form_error","message":{"_error":[],"name":["Name can't be empty"]}}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test DeserializeVenue testcase: %d", i)
+		var venue Venue
+		var venueData VenueData
+		var errUnmarshalling error
+		var errDeserialization helios.Error
+		errUnmarshalling = json.Unmarshal([]byte(testCase.venueDataJSON), &venueData)
+		errDeserialization = DeserializeVenue(venueData, &venue)
+		assert.Nil(t, errUnmarshalling)
+		if testCase.expectedError == "" {
+			assert.Nil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedVenue.ID, venue.ID, "Empty id on json will give 0")
+			assert.Equal(t, testCase.expectedVenue.Name, venue.Name)
+		} else {
+			var errDeserializationJSON []byte
+			var errMarshalling error
+			errDeserializationJSON, errMarshalling = json.Marshal(errDeserialization.GetMessage())
+			assert.Nil(t, errMarshalling)
+			assert.NotNil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedError, string(errDeserializationJSON))
+		}
+	}
+}
+
 func TestSerializeEvent(t *testing.T) {
-	beforeTest(false)
-
-	jakartaSeconds := int((7 * time.Hour).Seconds())
-	jakartaTZ := time.FixedZone("Asia/Jakarta", jakartaSeconds)
-	utcTZ := time.FixedZone("UTC", 0)
-
-	event := Event{
-		ID:       3,
-		Title:    "Math Final Exam",
-		StartsAt: time.Date(2020, 8, 12, 9, 30, 10, 0, jakartaTZ),
-		EndsAt:   time.Date(2020, 8, 12, 4, 30, 10, 0, utcTZ),
-	}
-	expectedJSON := `{"id":3,"title":"Math Final Exam","description":"","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`
-	ser := SerializeEvent(event)
-	serJSON, err := json.Marshal(ser)
-	if err != nil {
-		t.Errorf("Error marshaling json: %s", err)
-	}
-	assert.Equal(t, expectedJSON, string(serJSON), "Unequal JSON")
+	var event Event = EventFactory(Event{
+		ID:          3,
+		Title:       "Math Final Exam",
+		Description: "desc",
+		StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+		EndsAt:      time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
+	})
+	var expectedJSON string = `{"id":3,"title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"}`
+	var serialized EventData = SerializeEvent(event)
+	var serializedJSON []byte
+	var errMarshalling error
+	serializedJSON, errMarshalling = json.Marshal(serialized)
+	assert.Nil(t, errMarshalling)
+	assert.Equal(t, expectedJSON, string(serializedJSON))
 }
 
 func TestDeserializeEvent(t *testing.T) {
-	beforeTest(false)
-
-	jakartaSeconds := int((7 * time.Hour).Seconds())
-	jakartaTZ := time.FixedZone("Asia/Jakarta", jakartaSeconds)
-	utcTZ := time.FixedZone("UTC", 0)
-
-	var eventData EventData
-	var event Event
-	expectedEvent := Event{
-		ID:          0,
-		Title:       "Math Final Exam",
-		Description: "desc",
-		StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, jakartaTZ),
-		EndsAt:      time.Date(2020, 8, 12, 2, 30, 10, 0, utcTZ),
+	type deserializeEventTestCase struct {
+		eventDataJSON string
+		expectedEvent Event
+		expectedError string
 	}
-	json1 := `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:10Z","description":"desc"}`
-	err1 := json.Unmarshal([]byte(json1), &eventData)
-	if err1 != nil {
-		t.Errorf("Error unmarshaling json: %s", err1)
-	}
-	errDeserialization1 := DeserializeEvent(eventData, &event)
-	assert.Nil(t, errDeserialization1, "Failed to deserialize event")
-	assert.Equal(t, uint(0), event.ID, "Empty id on json will give 0")
-	assert.Equal(t, expectedEvent.Title, event.Title, "Unequal event title")
-	assert.Equal(t, expectedEvent.Description, event.Description, "Unequal event description")
-	assert.True(t, expectedEvent.StartsAt.Equal(event.StartsAt), "Unequal event start time")
-	assert.True(t, expectedEvent.EndsAt.Equal(event.EndsAt), "Unequal Event end time")
-
-	json2 := `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`
-	eventData = EventData{}
-	err2 := json.Unmarshal([]byte(json2), &eventData)
-	if err2 != nil {
-		t.Errorf("Error unmarshaling json: %s", err2)
-	}
-	errDeserialization2 := DeserializeEvent(eventData, &event)
-	expectedError2 := `{"code":"form_error","message":{"_error":[],"endsAt":["End time should be after start time"]}}`
-	errMessage2, _ := json.Marshal(errDeserialization2.GetMessage())
-	assert.Equal(t, expectedError2, string(errMessage2), "endsAt is before startsAt, should give error")
-
-	json3 := `{}`
-	eventData = EventData{}
-	err3 := json.Unmarshal([]byte(json3), &eventData)
-	if err3 != nil {
-		t.Errorf("Error unmarshaling json: %s", err3)
-	}
-	errDeserialization4 := DeserializeEvent(eventData, &event)
-	expectedError4 := `{"code":"form_error","message":{"_error":[],"endsAt":["End time must be provided"],"startsAt":["Start time must be provided"],"title":["Title can't be empty"]}}`
-	errMessage4, _ := json.Marshal(errDeserialization4.GetMessage())
-	assert.Equal(t, expectedError4, string(errMessage4), "Error of empty json, different error message")
-}
-
-func TestSerializeQuestionEmptyChoices(t *testing.T) {
-	beforeTest(false)
-
-	question := Question{
-		ID:      2,
-		Content: "Question Content",
-		Choices: []QuestionChoice{},
-	}
-
-	expectedJSON := `{"id":2,"content":"Question Content","choices":[],"answer":""}`
-	ser := SerializeQuestion(question)
-	serJSON, err := json.Marshal(ser)
-	if err != nil {
-		t.Errorf("Error marshaling json: %s", err)
-	}
-
-	assert.Equal(t, expectedJSON, string(serJSON), "Unequal JSON")
-}
-
-func TestSerializeQuestionWithChoices(t *testing.T) {
-	beforeTest(false)
-
-	question := Question{
-		ID:      2,
-		Content: "Question Content",
-		Choices: []QuestionChoice{
-			QuestionChoice{Text: "a"},
-			QuestionChoice{Text: "b"},
-			QuestionChoice{Text: "c"},
+	testCases := []deserializeEventTestCase{{
+		eventDataJSON: `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:10Z","description":"desc"}`,
+		expectedEvent: Event{
+			ID:          0,
+			Title:       "Math Final Exam",
+			Description: "desc",
+			StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+			EndsAt:      time.Date(2020, 8, 12, 2, 30, 10, 0, time.FixedZone("UTC", 0)),
 		},
-		UserAnswer: "answer2",
+	}, {
+		// endsAt is before startsAt
+		eventDataJSON: `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`,
+		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["End time should be after start time"]}}`,
+	}, {
+		// wrong format endsAt and startsAt
+		eventDataJSON: `{"title":"Math Final Exam","startsAt":"bad_format","endsAt":"bad_format"}`,
+		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["Failed to parse time"],"startsAt":["Failed to parse time"]}}`,
+	}, {
+		// empty fields
+		eventDataJSON: `{}`,
+		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["End time must be provided"],"startsAt":["Start time must be provided"],"title":["Title can't be empty"]}}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test DeserializeEvent testcase: %d", i)
+		var event Event
+		var eventData EventData
+		var errUnmarshalling error
+		var errDeserialization helios.Error
+		errUnmarshalling = json.Unmarshal([]byte(testCase.eventDataJSON), &eventData)
+		errDeserialization = DeserializeEvent(eventData, &event)
+		assert.Nil(t, errUnmarshalling)
+		if testCase.expectedError == "" {
+			assert.Nil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedEvent.ID, event.ID, "Empty id on json will give 0")
+			assert.Equal(t, testCase.expectedEvent.Title, event.Title)
+			assert.Equal(t, testCase.expectedEvent.Description, event.Description)
+			assert.True(t, testCase.expectedEvent.StartsAt.Equal(event.StartsAt))
+			assert.True(t, testCase.expectedEvent.EndsAt.Equal(event.EndsAt))
+		} else {
+			var errDeserializationJSON []byte
+			var errMarshalling error
+			errDeserializationJSON, errMarshalling = json.Marshal(errDeserialization.GetMessage())
+			assert.Nil(t, errMarshalling)
+			assert.NotNil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedError, string(errDeserializationJSON))
+		}
 	}
-
-	expectedJSON := `{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"}`
-	ser := SerializeQuestion(question)
-	serJSON, err := json.Marshal(ser)
-	if err != nil {
-		t.Errorf("Error marshaling json: %s", err)
-	}
-
-	assert.Equal(t, expectedJSON, string(serJSON), "Unequal JSON")
 }
 
-func TestDeserializerQuestionEmptyChoices(t *testing.T) {
-	beforeTest(false)
-	var questionData QuestionData
-	var question Question
-
-	expected1 := Question{
-		ID:      2,
-		Content: "Question Content",
-		Choices: []QuestionChoice(nil),
+func TestSerializeQuestion(t *testing.T) {
+	type serializeQuestionTestCase struct {
+		question     Question
+		expectedJSON string
 	}
-	json1 := `{"id":2,"content":"Question Content","choices":[],"answer":""}`
-	err1 := json.Unmarshal([]byte(json1), &questionData)
-	if err1 != nil {
-		t.Errorf("Error marshaling json: %s", err1)
-	}
-	errDeserialization1 := DeserializeQuestion(questionData, &question)
-	assert.Nil(t, errDeserialization1, "Failed to deserialize question")
-	assert.Equal(t, expected1.ID, question.ID, "Unequal question ID")
-	assert.Equal(t, expected1.Content, question.Content, "Unequal question content")
-	assert.Equal(t, len(expected1.Choices), len(question.Choices), "Unequal question num of choices")
-
-	json2 := `{"id":2,"content":"","choices":[],"answer":""}`
-	err2 := json.Unmarshal([]byte(json2), &questionData)
-	if err2 != nil {
-		t.Errorf("Error marshaling json: %s", err2)
-	}
-	errDeserialization2 := DeserializeQuestion(questionData, &question)
-	assert.NotNil(t, errDeserialization2, "Failed to deserialize question")
-	expectedError2 := `{"code":"form_error","message":{"_error":[],"content":["Content can't be empty"]}}`
-	errMessage2, _ := json.Marshal(errDeserialization2.GetMessage())
-	assert.Equal(t, expectedError2, string(errMessage2), "Error of empty json, different error message")
-}
-
-func TestDeserializerQuestionWithChoices(t *testing.T) {
-	beforeTest(false)
-
-	expectedQuestion := Question{
-		ID:      2,
-		Content: "Question Content",
-		Choices: []QuestionChoice{
-			QuestionChoice{Text: "a"},
-			QuestionChoice{Text: "b"},
-			QuestionChoice{Text: "c"},
+	testCases := []serializeQuestionTestCase{{
+		question: Question{
+			ID:      2,
+			Content: "Question Content",
+			Choices: []QuestionChoice{},
 		},
+		expectedJSON: `{"id":2,"content":"Question Content","choices":[],"answer":""}`,
+	}, {
+		question: Question{
+			ID:         2,
+			Content:    "Question Content",
+			Choices:    []QuestionChoice{{Text: "a"}, {Text: "b"}, {Text: "c"}},
+			UserAnswer: "answer2",
+		},
+		expectedJSON: `{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test SerializeQuestion testcase: %d", i)
+		var serialized QuestionData
+		var serializedJSON []byte
+		var errMarshalling error
+		serialized = SerializeQuestion(testCase.question)
+		serializedJSON, errMarshalling = json.Marshal(serialized)
+		assert.Nil(t, errMarshalling)
+		assert.Equal(t, testCase.expectedJSON, string(serializedJSON))
 	}
-	originalJSON := `{"id":2,"content":"Question Content","choices":["a","","b","","c", ""],"answer":""}`
-	var questionData QuestionData
-	var question Question
-	err := json.Unmarshal([]byte(originalJSON), &questionData)
-	if err != nil {
-		t.Errorf("Error marshaling json: %s", err)
-	}
-	errDeserializeQuestion := DeserializeQuestion(questionData, &question)
+}
 
-	assert.Nil(t, errDeserializeQuestion, "Error deserializting question")
-	assert.Equal(t, expectedQuestion.ID, question.ID, "Unequal question ID")
-	assert.Equal(t, expectedQuestion.Content, question.Content, "Unequal question content")
-	assert.Equal(t, len(expectedQuestion.Choices), len(question.Choices), "Unequal question num of choices")
-	for i := range expectedQuestion.Choices {
-		assert.Equal(t, expectedQuestion.Choices[i].Text, question.Choices[i].Text, "Unequal question num of choices")
+func TestDeserializeQuestion(t *testing.T) {
+	type deserializeQuestionTestCase struct {
+		questionDataJSON string
+		expectedQuestion Question
+		expectedError    string
+	}
+	testCases := []deserializeQuestionTestCase{{
+		questionDataJSON: `{"id":2,"content":"Question Content","choices":[],"answer":""}`,
+		expectedQuestion: Question{
+			ID:      2,
+			Content: "Question Content",
+			Choices: []QuestionChoice(nil),
+		},
+	}, {
+		questionDataJSON: `{"id":2,"content":"Question Content","choices":["a","","b","","c", ""],"answer":""}`,
+		expectedQuestion: Question{
+			ID:      2,
+			Content: "Question Content",
+			Choices: []QuestionChoice{{Text: "a"}, {Text: "b"}, {Text: "c"}},
+		},
+	}, {
+		questionDataJSON: `{"id":2,"content":"","choices":[],"answer":""}`,
+		expectedError:    `{"code":"form_error","message":{"_error":[],"content":["Content can't be empty"]}}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test DeserializeQuestion testcase: %d", i)
+		var questionData QuestionData
+		var question Question
+		var errUnmarshalling error
+		var errDeserialization helios.Error
+		errUnmarshalling = json.Unmarshal([]byte(testCase.questionDataJSON), &questionData)
+		errDeserialization = DeserializeQuestion(questionData, &question)
+		assert.Nil(t, errUnmarshalling)
+		if testCase.expectedError == "" {
+			assert.Nil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedQuestion.ID, question.ID)
+			assert.Equal(t, testCase.expectedQuestion.Content, question.Content)
+			assert.Equal(t, len(testCase.expectedQuestion.Choices), len(question.Choices))
+			for i := range testCase.expectedQuestion.Choices {
+				assert.Equal(t, testCase.expectedQuestion.Choices[i].Text, question.Choices[i].Text)
+			}
+		} else {
+			var errDeserializationJSON []byte
+			var errMarshalling error
+			errDeserializationJSON, errMarshalling = json.Marshal(errDeserialization.GetMessage())
+			assert.Nil(t, errMarshalling)
+			assert.NotNil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedError, string(errDeserializationJSON))
+		}
 	}
 }
