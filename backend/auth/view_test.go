@@ -94,10 +94,78 @@ func TestLogoutView(t *testing.T) {
 
 	LogoutView(&req)
 
-	assert.Equal(t, http.StatusOK, req.StatusCode, "Unexpected status code")
+	assert.Equal(t, http.StatusOK, req.StatusCode)
 	assert.Empty(t, sessionData[UserTokenSessionKey], "User token should be removed")
 
 	var userSession Session
 	helios.DB.Where("token = ?", token).First(&userSession)
 	assert.Equal(t, uint(0), userSession.ID, "User session should be deleted")
+}
+
+func TestUserListView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var user User = UserFactorySaved(User{})
+	var req helios.MockRequest
+	req = helios.NewMockRequest()
+	req.SetContextData(UserContextKey, user)
+	UserListView(&req)
+
+	assert.Equal(t, http.StatusOK, req.StatusCode)
+}
+
+func TestUserCreateView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var userLocal User = UserFactorySaved(User{Role: UserRoleLocal})
+	type userCreateTestCase struct {
+		user               interface{}
+		requestData        string
+		expectedStatusCode int
+		expectedErrorCode  string
+		expectedUserCount  int
+	}
+	testCases := []userCreateTestCase{{
+		user:               userLocal,
+		requestData:        `{"id":2,"name":"User 1","username":"user1","role":"participant"}`,
+		expectedStatusCode: http.StatusCreated,
+		expectedUserCount:  2,
+	}, {
+		user:               userLocal,
+		requestData:        `{"name":""}`,
+		expectedStatusCode: http.StatusBadRequest,
+		expectedErrorCode:  "form_error",
+		expectedUserCount:  2,
+	}, {
+		user:               "bad_user",
+		requestData:        `{"name":""}`,
+		expectedStatusCode: http.StatusInternalServerError,
+		expectedErrorCode:  helios.ErrInternalServerError.Code,
+		expectedUserCount:  2,
+	}, {
+		user:               userLocal,
+		requestData:        `bad_request_data`,
+		expectedStatusCode: http.StatusBadRequest,
+		expectedErrorCode:  helios.ErrJSONParseFailed.Code,
+		expectedUserCount:  2,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test UserCreateView testcase: %d", i)
+		var eventCount int
+		var req helios.MockRequest
+		req = helios.NewMockRequest()
+		req.SetContextData(UserContextKey, testCase.user)
+		req.RequestData = testCase.requestData
+
+		UserCreateView(&req)
+
+		helios.DB.Model(User{}).Count(&eventCount)
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		assert.Equal(t, testCase.expectedUserCount, eventCount)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
 }

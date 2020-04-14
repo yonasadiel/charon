@@ -35,6 +35,9 @@ func CreateRouter() (router *mux.Router) {
 	router.HandleFunc("/auth/login/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 	router.HandleFunc("/auth/logout/", helios.WithMiddleware(auth.LogoutView, loggedInMiddlewares)).Methods(http.MethodPost)
 	router.HandleFunc("/auth/logout/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
+	router.HandleFunc("/auth/user/", helios.WithMiddleware(auth.UserListView, loggedInMiddlewares)).Methods(http.MethodGet)
+	router.HandleFunc("/auth/user/", helios.WithMiddleware(auth.UserCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
+	router.HandleFunc("/auth/user/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 
 	router.HandleFunc("/exam/venue/", helios.WithMiddleware(exam.VenueListView, loggedInMiddlewares)).Methods(http.MethodGet)
 	router.HandleFunc("/exam/venue/", helios.WithMiddleware(exam.VenueCreateView, loggedInMiddlewares)).Methods(http.MethodPost)

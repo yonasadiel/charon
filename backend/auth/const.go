@@ -15,13 +15,13 @@ const (
 	UserContextKey = "user"
 
 	// UserRoleAdmin is the administrator of the website
-	UserRoleAdmin = "admin"
+	UserRoleAdmin = 40
 	// UserRoleOrganizer is the one that organize all the locals
-	UserRoleOrganizer = "organizer"
+	UserRoleOrganizer = 30
 	// UserRoleLocal is the one that organize the local exam
-	UserRoleLocal = "local"
+	UserRoleLocal = 20
 	// UserRoleParticipant is the one that taking the exam
-	UserRoleParticipant = "participant"
+	UserRoleParticipant = 10
 
 	userTokenLength  = 16 // length of the token
 	userTokenBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -41,4 +41,10 @@ var errUnauthorized = helios.APIError{
 	StatusCode: http.StatusUnauthorized,
 	Code:       "unauthorized",
 	Message:    "You need to log in first",
+}
+
+var errUserRoleTooHigh = helios.APIError{
+	StatusCode: http.StatusBadRequest,
+	Code:       "user_role_too_high",
+	Message:    "Can't create user with same or higher role",
 }

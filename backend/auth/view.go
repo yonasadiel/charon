@@ -23,10 +23,41 @@ func LoginView(req helios.Request) {
 
 // LogoutView clear user session data
 func LogoutView(req helios.Request) {
-	var user User
-
-	user = req.GetContextData(UserTokenSessionKey).(User)
+	var user User = req.GetContextData(UserTokenSessionKey).(User)
 	Logout(user)
 	req.SetSessionData(UserTokenSessionKey, "")
 	req.SendJSON(nil, http.StatusOK)
+}
+
+// UserListView returns all the users
+func UserListView(req helios.Request) {
+	var user User = req.GetContextData(UserTokenSessionKey).(User)
+	var users []User = GetAllUser(user)
+	req.SendJSON(users, http.StatusOK)
+}
+
+// UserCreateView creates the user
+func UserCreateView(req helios.Request) {
+	user, ok := req.GetContextData(UserContextKey).(User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var userData UserData
+	var newUser User
+	var err helios.Error
+	err = req.DeserializeRequestData(&userData)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	err = DeserializeUser(userData, &newUser)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	newUser.ID = 0
+	UpsertUser(user, &newUser)
+	req.SendJSON(SerializeUser(newUser), http.StatusCreated)
 }

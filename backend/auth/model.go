@@ -16,7 +16,7 @@ type User struct {
 	Name     string `gorm:"size:256"`
 	Username string `gorm:"size:256; unique"`
 	Password string `gorm:"size:256"`
-	Role     string `gorm:"size:10"` // enum("local", "participant", "admin", "organizer"), default to "participant"
+	Role     uint   // default to participant
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	var name, username, password, userRole string
+	var name, username, password, userRoleString string
 	reader := bufio.NewReader(os.Stdin)
 	helios.App.Initialize()
 	helios.App.Migrate()
@@ -29,13 +29,19 @@ func main() {
 	password = strings.TrimSpace(password)
 
 	fmt.Printf("Input user type (admin / organizer / local / participant): ")
-	userRole, _ = reader.ReadString('\n')
-	userRole = strings.ToLower(strings.TrimSpace(userRole))
+	userRoleString, _ = reader.ReadString('\n')
+	userRoleString = strings.ToLower(strings.TrimSpace(userRoleString))
 
-	if userRole != auth.UserRoleAdmin &&
-		userRole != auth.UserRoleOrganizer &&
-		userRole != auth.UserRoleLocal &&
-		userRole != auth.UserRoleParticipant {
+	var userRole uint
+	if userRoleString == "admin" {
+		userRole = auth.UserRoleAdmin
+	} else if userRoleString == "organizer" {
+		userRole = auth.UserRoleOrganizer
+	} else if userRoleString == "local" {
+		userRole = auth.UserRoleLocal
+	} else if userRoleString == "participant" {
+		userRole = auth.UserRoleParticipant
+	} else {
 		fmt.Println("Unknown user type.")
 		return
 	}

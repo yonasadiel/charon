@@ -43,14 +43,14 @@ func TestVenueListView(t *testing.T) {
 func TestVenueCreateView(t *testing.T) {
 	helios.App.BeforeTest()
 
-	type eventCreateTestCase struct {
+	type venueCreateTestCase struct {
 		user               interface{}
 		requestData        string
 		expectedStatusCode int
 		expectedErrorCode  string
 		expectedVenueCount int
 	}
-	testCases := []eventCreateTestCase{{
+	testCases := []venueCreateTestCase{{
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		requestData:        `{"id":2,"name":"Venue 1"}`,
 		expectedStatusCode: http.StatusCreated,
@@ -75,7 +75,7 @@ func TestVenueCreateView(t *testing.T) {
 		expectedVenueCount: 1,
 	}}
 	for i, testCase := range testCases {
-		t.Logf("Test VenueCreate testcase: %d", i)
+		t.Logf("Test VenueCreateView testcase: %d", i)
 		var eventCount int
 		var req helios.MockRequest
 		req = helios.NewMockRequest()
@@ -85,12 +85,12 @@ func TestVenueCreateView(t *testing.T) {
 		VenueCreateView(&req)
 
 		helios.DB.Model(Venue{}).Count(&eventCount)
-		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
-		assert.Equal(t, testCase.expectedVenueCount, eventCount, "Unexpected event count")
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		assert.Equal(t, testCase.expectedVenueCount, eventCount)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
 			json.Unmarshal(req.JSONResponse, &err)
-			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}
 }

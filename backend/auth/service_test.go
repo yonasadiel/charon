@@ -55,6 +55,80 @@ func TestLogin(t *testing.T) {
 	}
 }
 
+func TestGetAllUser(t *testing.T) {
+	helios.App.BeforeTest()
+	var userAdmin User = UserFactorySaved(User{Role: UserRoleAdmin})
+	var userOrganizer User = UserFactorySaved(User{Role: UserRoleOrganizer})
+	var userLocal User = UserFactorySaved(User{Role: UserRoleLocal})
+	var userParticipant User = UserFactorySaved(User{Role: UserRoleParticipant})
+	type getAllUserTestCase struct {
+		user           User
+		expectedLength int
+	}
+	testCases := []getAllUserTestCase{{
+		user:           userAdmin,
+		expectedLength: 3,
+	}, {
+		user:           userOrganizer,
+		expectedLength: 2,
+	}, {
+		user:           userLocal,
+		expectedLength: 1,
+	}, {
+		user:           userParticipant,
+		expectedLength: 0,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test GetAllUser testcase: %d", i)
+		var users []User
+		users = GetAllUser(testCase.user)
+		assert.Equal(t, testCase.expectedLength, len(users))
+	}
+}
+
+func TestUpsertUser(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var userParticipant User = UserFactorySaved(User{Role: UserRoleParticipant})
+	var userLocal User = UserFactorySaved(User{Role: UserRoleLocal})
+
+	type upsertUserTestCase struct {
+		user              User
+		newUser           User
+		expectedError     helios.Error
+		expectedUserCount int
+	}
+	testCases := []upsertUserTestCase{{
+		user:              userParticipant,
+		newUser:           UserFactory(User{Role: UserRoleParticipant}),
+		expectedError:     errUserRoleTooHigh,
+		expectedUserCount: 2,
+	}, {
+		user:              userLocal,
+		newUser:           UserFactory(User{Role: UserRoleParticipant}),
+		expectedUserCount: 3,
+	}, {
+		user:              userLocal,
+		newUser:           UserFactory(User{ID: userLocal.ID, Name: "abc"}),
+		expectedUserCount: 3,
+	}}
+	for i, testCase := range testCases {
+		var newUserCount int
+		var newUserSaved User
+		t.Logf("Test UpsertUser testcase: %d", i)
+		err := UpsertUser(testCase.user, &testCase.newUser)
+		helios.DB.Model(User{}).Count(&newUserCount)
+		helios.DB.Where("id = ?", testCase.newUser.ID).First(&newUserSaved)
+		assert.Equal(t, testCase.expectedUserCount, newUserCount)
+		if testCase.expectedError == nil {
+			assert.Nil(t, err)
+			assert.Equal(t, testCase.newUser.Name, newUserSaved.Name, "If the newUser has already existed, it should be updated")
+		} else {
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
+}
+
 func TestHashPassword(t *testing.T) {
 	passwordHashed := hashPassword("charon")
 	assert.NotEmpty(t, passwordHashed, "Hashed Password is empty")

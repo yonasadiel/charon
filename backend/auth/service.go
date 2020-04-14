@@ -80,3 +80,27 @@ func Login(username string, password string, ip string) (*Session, helios.Error)
 func Logout(user User) {
 	helios.DB.Where("user_id = ?", user.ID).Delete(&Session{})
 }
+
+// GetAllUser returns all users with lower role.
+func GetAllUser(user User) []User {
+	var users []User
+	helios.DB.Where("role < ?", user.Role).Find(&users)
+	return users
+}
+
+// UpsertUser creates or updates a user. It creates if
+// ID = 0, or updates otherwise. The role should be
+// less then invoker's role
+// If it is create, then user.ID will be changed.
+func UpsertUser(user User, newUser *User) helios.Error {
+	if newUser.Role >= user.Role {
+		return errUserRoleTooHigh
+	}
+
+	if newUser.ID == 0 {
+		helios.DB.Create(newUser)
+	} else {
+		helios.DB.Save(newUser)
+	}
+	return nil
+}

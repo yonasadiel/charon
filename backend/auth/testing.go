@@ -23,7 +23,7 @@ func UserFactory(user User) User {
 	} else {
 		user.Password = hashPassword(user.Password)
 	}
-	if user.Role == "" {
+	if user.Role == 0 {
 		user.Role = UserRoleParticipant
 	}
 	return user
