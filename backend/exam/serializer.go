@@ -21,6 +21,13 @@ type VenueData struct {
 	Name string `json:"name"`
 }
 
+// ParticipationData is JSON representation of participation.
+type ParticipationData struct {
+	ID           uint   `json:"id"`
+	UserUsername string `json:"userUsername"`
+	VenueID      uint   `json:"venueId"`
+}
+
 // QuestionData is JSON representation of question.
 // Answer is the user's answer of the question, equals to Submission.Answer
 type QuestionData struct {
@@ -113,6 +120,16 @@ func DeserializeEvent(eventData EventData, event *Event) helios.Error {
 		return err
 	}
 	return nil
+}
+
+// SerializeParticipation converts Participation object participation to JSON of participation
+func SerializeParticipation(participation Participation) ParticipationData {
+	participationData := ParticipationData{
+		ID:           participation.ID,
+		UserUsername: participation.User.Username,
+		VenueID:      participation.Venue.ID,
+	}
+	return participationData
 }
 
 // SerializeQuestion converts Question object question to JSON of question

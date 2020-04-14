@@ -122,6 +122,35 @@ func EventCreateView(req helios.Request) {
 	req.SendJSON(SerializeEvent(event), http.StatusCreated)
 }
 
+// ParticipationListView send list of participations
+func ParticipationListView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	eventID, errParseEventID := req.GetURLParamUint("eventID")
+	if errParseEventID != nil {
+		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
+		return
+	}
+
+	var participations []Participation
+	var err helios.Error
+	participations, err = GetAllParticipationOfUserAndEvent(user, eventID)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	serializedParticipations := make([]ParticipationData, 0)
+	for _, participation := range participations {
+		serializedParticipations = append(serializedParticipations, SerializeParticipation(participation))
+	}
+	req.SendJSON(serializedParticipations, http.StatusOK)
+}
+
 // QuestionListView send list of questions
 func QuestionListView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
@@ -138,7 +167,7 @@ func QuestionListView(req helios.Request) {
 
 	var questions []Question
 	var err helios.Error
-	questions, err = GetAllQuestionOfEventAndUser(user, eventID)
+	questions, err = GetAllQuestionOfUserAndEvent(user, eventID)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return

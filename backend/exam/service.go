@@ -124,10 +124,33 @@ func UpsertEvent(user auth.User, event *Event) helios.Error {
 	return nil
 }
 
-// GetAllQuestionOfEventAndUser returns all questions in database
+// GetAllParticipationOfUserAndEvent returns all participations of the event.
+func GetAllParticipationOfUserAndEvent(user auth.User, eventID uint) ([]Participation, helios.Error) {
+	var event Event
+	var participations []Participation
+	var errGetEvent helios.Error
+
+	event, errGetEvent = GetEventOfUser(user, eventID)
+	if errGetEvent != nil {
+		return nil, errGetEvent
+	}
+
+	helios.DB.
+		Table("participations").
+		Joins("inner join users on participations.user_id = users.id").
+		Preload("User").
+		Preload("Venue").
+		Where("event_id = ?", event.ID).
+		Where("users.role < ?", user.Role).
+		Find(&participations)
+
+	return participations, nil
+}
+
+// GetAllQuestionOfUserAndEvent returns all questions in database
 // that exists on an event and belongs to an user.
 // Current submission of the user will be attached.
-func GetAllQuestionOfEventAndUser(user auth.User, eventID uint) ([]Question, helios.Error) {
+func GetAllQuestionOfUserAndEvent(user auth.User, eventID uint) ([]Question, helios.Error) {
 	var event Event
 	var questions []Question
 	var errGetEvent helios.Error

@@ -42,6 +42,12 @@ var errEventIsNotYetStarted = helios.APIError{
 	Message:    "The event is not yet started",
 }
 
+var errParticipationChangeNotAuthorized = helios.APIError{
+	StatusCode: http.StatusForbidden,
+	Code:       "not_authorized_edit_participation",
+	Message:    "User is not authorized to make changes on participation",
+}
+
 var errQuestionChangeNotAuthorized = helios.APIError{
 	StatusCode: http.StatusForbidden,
 	Code:       "not_authorized_edit_question",

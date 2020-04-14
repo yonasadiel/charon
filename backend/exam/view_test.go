@@ -250,6 +250,55 @@ func TestEventCreateView(t *testing.T) {
 	}
 }
 
+func TestParticipationListView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var event1 Event = EventFactorySaved(Event{})
+	ParticipationFactorySaved(Participation{Event: &event1})
+	ParticipationFactorySaved(Participation{Event: &event1})
+	type questionListTestCase struct {
+		user               interface{}
+		eventID            string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []questionListTestCase{{
+		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventID:            strconv.Itoa(int(event1.ID)),
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventID:            "malformed",
+		expectedStatusCode: http.StatusNotFound,
+		expectedErrorCode:  errEventNotFound.Code,
+	}, {
+		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventID:            "79697",
+		expectedStatusCode: http.StatusNotFound,
+		expectedErrorCode:  errEventNotFound.Code,
+	}, {
+		user:               "bad_user",
+		eventID:            strconv.Itoa(int(event1.ID)),
+		expectedStatusCode: http.StatusInternalServerError,
+		expectedErrorCode:  helios.ErrInternalServerError.Code,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test ParticipationListView testcase: %d", i)
+		req := helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventID"] = testCase.eventID
+
+		ParticipationListView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+		}
+	}
+}
+
 func TestQuestionListView(t *testing.T) {
 	helios.App.BeforeTest()
 
@@ -283,7 +332,7 @@ func TestQuestionListView(t *testing.T) {
 		expectedErrorCode:  helios.ErrInternalServerError.Code,
 	}}
 	for i, testCase := range testCases {
-		t.Logf("Test QuestionList testcase: %d", i)
+		t.Logf("Test QuestionListView testcase: %d", i)
 		req := helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
 		req.URLParam["eventID"] = testCase.eventID

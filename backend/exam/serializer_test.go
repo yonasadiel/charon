@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/yonasadiel/charon/backend/auth"
 	"github.com/yonasadiel/helios"
 )
 
-func TestSerializeVenye(t *testing.T) {
+func TestSerializeVenue(t *testing.T) {
 	var venue Venue = VenueFactory(Venue{
 		ID:   3,
 		Name: "venue name",
@@ -139,6 +140,23 @@ func TestDeserializeEvent(t *testing.T) {
 			assert.Equal(t, testCase.expectedError, string(errDeserializationJSON))
 		}
 	}
+}
+
+func TestSerializeParticipation(t *testing.T) {
+	var user auth.User = auth.UserFactory(auth.User{Username: "abc"})
+	var venue Venue = VenueFactory(Venue{ID: 5})
+	var participation Participation = ParticipationFactory(Participation{
+		ID:    3,
+		User:  &user,
+		Venue: &venue,
+	})
+	var expectedJSON string = `{"id":3,"userUsername":"abc","venueId":5}`
+	var serialized ParticipationData = SerializeParticipation(participation)
+	var serializedJSON []byte
+	var errMarshalling error
+	serializedJSON, errMarshalling = json.Marshal(serialized)
+	assert.Nil(t, errMarshalling)
+	assert.Equal(t, expectedJSON, string(serializedJSON))
 }
 
 func TestSerializeQuestion(t *testing.T) {

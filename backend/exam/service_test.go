@@ -16,12 +16,12 @@ func TestGetAllVenue(t *testing.T) {
 	VenueFactorySaved(Venue{})
 	VenueFactorySaved(Venue{})
 
-	type getAllEventOfUserTestCase struct {
+	type getAllVenueTestCase struct {
 		user           auth.User
 		expectedLength int
 		expectedError  helios.Error
 	}
-	testCases := []getAllEventOfUserTestCase{{
+	testCases := []getAllVenueTestCase{{
 		user:           auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
 		expectedLength: 2,
 	}, {
@@ -243,7 +243,59 @@ func TestUpsertEvent(t *testing.T) {
 	}
 }
 
-func TestGetAllQuestionOfEventAndUser(t *testing.T) {
+func TestGetAllParticipationOfUserAndEvent(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var event1 Event = EventFactorySaved(Event{})
+	var event2 Event = EventFactorySaved(Event{})
+	var userParticipant auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant})
+	ParticipationFactorySaved(Participation{Event: &event2})
+
+	type getAllParticipationOfUserAndEventTestCase struct {
+		user           auth.User
+		eventID        uint
+		expectedLength int
+		expectedError  helios.Error
+	}
+	testCases := []getAllParticipationOfUserAndEventTestCase{{
+		user:           auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
+		eventID:        event1.ID,
+		expectedLength: 2,
+	}, {
+		user:           auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventID:        event2.ID,
+		expectedLength: 1,
+	}, {
+		user:           userLocal,
+		eventID:        event1.ID,
+		expectedLength: 1,
+	}, {
+		user:          userLocal,
+		eventID:       event2.ID,
+		expectedError: errEventNotFound,
+	}, {
+		user:           userParticipant,
+		eventID:        event1.ID,
+		expectedLength: 0,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test GetAllParticipation testcase: %d", i)
+		var venues []Participation
+		var err helios.Error
+		venues, err = GetAllParticipationOfUserAndEvent(testCase.user, testCase.eventID)
+		if testCase.expectedError == nil {
+			assert.Nil(t, err)
+			assert.Equal(t, testCase.expectedLength, len(venues))
+		} else {
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
+}
+
+func TestGetAllQuestionOfUserAndEvent(t *testing.T) {
 	helios.App.BeforeTest()
 
 	var userParticipant auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
@@ -262,14 +314,14 @@ func TestGetAllQuestionOfEventAndUser(t *testing.T) {
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation1, Question: &question1, Ordering: 20, Answer: "abc"})
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation1, Question: &question2, Ordering: 10, Answer: "def"})
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation2, Question: &question3, Ordering: 10, Answer: "def"})
-	type getAllQuestionOfEventAndUserTestCase struct {
+	type getAllQuestionOfUserAndEventTestCase struct {
 		user                        auth.User
 		eventID                     uint
 		expectedError               helios.Error
 		expectedQuestionLen         int
 		expectedFirstQuestionAnswer string
 	}
-	testCases := []getAllQuestionOfEventAndUserTestCase{{
+	testCases := []getAllQuestionOfUserAndEventTestCase{{
 		user:                auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
 		eventID:             event1.ID,
 		expectedQuestionLen: 4,
@@ -304,10 +356,10 @@ func TestGetAllQuestionOfEventAndUser(t *testing.T) {
 		expectedQuestionLen: 0,
 	}}
 	for i, testCase := range testCases {
-		t.Logf("Test GetAllQuestionOfEventAndUser testcase: %d", i)
+		t.Logf("Test GetAllQuestionOfUserAndEvent testcase: %d", i)
 		var questions []Question
 		var err helios.Error
-		questions, err = GetAllQuestionOfEventAndUser(testCase.user, testCase.eventID)
+		questions, err = GetAllQuestionOfUserAndEvent(testCase.user, testCase.eventID)
 		if testCase.expectedError == nil {
 			assert.Nil(t, err)
 			assert.Equal(t, testCase.expectedQuestionLen, len(questions))
