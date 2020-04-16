@@ -130,15 +130,10 @@ func ParticipationListView(req helios.Request) {
 		return
 	}
 
-	eventID, errParseEventID := req.GetURLParamUint("eventID")
-	if errParseEventID != nil {
-		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
-		return
-	}
-
+	var eventSlug string = req.GetURLParam("eventSlug")
 	var participations []Participation
 	var err helios.Error
-	participations, err = GetAllParticipationOfUserAndEvent(user, eventID)
+	participations, err = GetAllParticipationOfUserAndEvent(user, eventSlug)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
@@ -151,6 +146,65 @@ func ParticipationListView(req helios.Request) {
 	req.SendJSON(serializedParticipations, http.StatusOK)
 }
 
+// ParticipationCreateView creates the participation
+func ParticipationCreateView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var eventSlug string = req.GetURLParam("eventSlug")
+	var participationData ParticipationData
+	var participation Participation
+	var err helios.Error
+	err = req.DeserializeRequestData(&participationData)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	err = DeserializeParticipation(participationData, &participation)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	err = UpsertParticipation(user, eventSlug, participationData.UserUsername, &participation)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	req.SendJSON(SerializeParticipation(participation), http.StatusOK)
+}
+
+// ParticipationDeleteView delete the participation
+func ParticipationDeleteView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var eventSlug string = req.GetURLParam("eventSlug")
+	participationID, errParseParticipationID := req.GetURLParamUint("participationID")
+	if errParseParticipationID != nil {
+		req.SendJSON(errParticipationNotFound.GetMessage(), errParticipationNotFound.GetStatusCode())
+		return
+	}
+
+	var participation *Participation
+	var err helios.Error
+	participation, err = DeleteParticipation(user, eventSlug, participationID)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	var serializedParticipation ParticipationData = SerializeParticipation(*participation)
+	req.SendJSON(serializedParticipation, http.StatusOK)
+}
+
 // QuestionListView send list of questions
 func QuestionListView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
@@ -159,15 +213,10 @@ func QuestionListView(req helios.Request) {
 		return
 	}
 
-	eventID, errParseEventID := req.GetURLParamUint("eventID")
-	if errParseEventID != nil {
-		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
-		return
-	}
-
+	var eventSlug string = req.GetURLParam("eventSlug")
 	var questions []Question
 	var err helios.Error
-	questions, err = GetAllQuestionOfUserAndEvent(user, eventID)
+	questions, err = GetAllQuestionOfUserAndEvent(user, eventSlug)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
@@ -188,12 +237,7 @@ func QuestionCreateView(req helios.Request) {
 		return
 	}
 
-	eventID, errParseEventID := req.GetURLParamUint("eventID")
-	if errParseEventID != nil {
-		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
-		return
-	}
-
+	var eventSlug string = req.GetURLParam("eventSlug")
 	var questionData QuestionData
 	var question Question
 	var err helios.Error
@@ -203,12 +247,14 @@ func QuestionCreateView(req helios.Request) {
 		return
 	}
 
-	// Ignoring error because currently this function wont return any error
-	DeserializeQuestion(questionData, &question)
+	err = DeserializeQuestion(questionData, &question)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
 
 	question.ID = 0
-	question.EventID = eventID
-	err = UpsertQuestion(user, &question)
+	err = UpsertQuestion(user, eventSlug, &question)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
@@ -224,13 +270,7 @@ func QuestionDetailView(req helios.Request) {
 		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
 		return
 	}
-
-	eventID, errParseEventID := req.GetURLParamUint("eventID")
-	if errParseEventID != nil {
-		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
-		return
-	}
-
+	var eventSlug string = req.GetURLParam("eventSlug")
 	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
@@ -239,7 +279,7 @@ func QuestionDetailView(req helios.Request) {
 
 	var question *Question
 	var err helios.Error
-	question, err = GetQuestionOfEventAndUser(user, eventID, questionID)
+	question, err = GetQuestionOfEventAndUser(user, eventSlug, questionID)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
@@ -256,12 +296,7 @@ func QuestionDeleteView(req helios.Request) {
 		return
 	}
 
-	eventID, errParseEventID := req.GetURLParamUint("eventID")
-	if errParseEventID != nil {
-		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
-		return
-	}
-
+	var eventSlug string = req.GetURLParam("eventSlug")
 	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
@@ -270,7 +305,7 @@ func QuestionDeleteView(req helios.Request) {
 
 	var question *Question
 	var err helios.Error
-	question, err = DeleteQuestion(user, eventID, questionID)
+	question, err = DeleteQuestion(user, eventSlug, questionID)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
@@ -287,12 +322,7 @@ func SubmissionCreateView(req helios.Request) {
 		return
 	}
 
-	eventID, errParseEventID := req.GetURLParamUint("eventID")
-	if errParseEventID != nil {
-		req.SendJSON(errEventNotFound.GetMessage(), errEventNotFound.GetStatusCode())
-		return
-	}
-
+	var eventSlug string = req.GetURLParam("eventSlug")
 	questionID, errParseQuestionID := req.GetURLParamUint("questionID")
 	if errParseQuestionID != nil {
 		req.SendJSON(errQuestionNotFound.GetMessage(), errQuestionNotFound.GetStatusCode())
@@ -308,7 +338,7 @@ func SubmissionCreateView(req helios.Request) {
 
 	var question *Question
 	var err helios.Error
-	question, err = SubmitSubmission(user, eventID, questionID, submitSubmissionRequest.Answer)
+	question, err = SubmitSubmission(user, eventSlug, questionID, submitSubmissionRequest.Answer)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 	} else {

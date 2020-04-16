@@ -27,7 +27,7 @@ var errVenueCantDeletedEventExists = helios.APIError{
 var errEventNotFound = helios.APIError{
 	StatusCode: http.StatusNotFound,
 	Code:       "event_not_found",
-	Message:    "No event with given ID",
+	Message:    "No event with given slug",
 }
 
 var errEventChangeNotAuthorized = helios.APIError{
@@ -46,6 +46,18 @@ var errParticipationChangeNotAuthorized = helios.APIError{
 	StatusCode: http.StatusForbidden,
 	Code:       "not_authorized_edit_participation",
 	Message:    "User is not authorized to make changes on participation",
+}
+
+var errParticipationNotFound = helios.APIError{
+	StatusCode: http.StatusNotFound,
+	Code:       "participation_not_found",
+	Message:    "No participation with given id",
+}
+
+var errUserNotFound = helios.APIError{
+	StatusCode: http.StatusNotFound,
+	Code:       "user_not_found",
+	Message:    "No user with given username",
 }
 
 var errQuestionChangeNotAuthorized = helios.APIError{

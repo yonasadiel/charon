@@ -151,13 +151,13 @@ func TestVenueDeleteView(t *testing.T) {
 
 		VenueDeleteView(&req)
 
-		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
 			var errUnmarshalling error
 			errUnmarshalling = json.Unmarshal(req.JSONResponse, &err)
 			assert.Nil(t, errUnmarshalling)
-			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}
 }
@@ -240,12 +240,12 @@ func TestEventCreateView(t *testing.T) {
 		EventCreateView(&req)
 
 		helios.DB.Model(Event{}).Count(&eventCount)
-		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
-		assert.Equal(t, testCase.expectedEventCount, eventCount, "Unexpected event count")
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		assert.Equal(t, testCase.expectedEventCount, eventCount)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
 			json.Unmarshal(req.JSONResponse, &err)
-			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}
 }
@@ -258,27 +258,22 @@ func TestParticipationListView(t *testing.T) {
 	ParticipationFactorySaved(Participation{Event: &event1})
 	type questionListTestCase struct {
 		user               interface{}
-		eventID            string
+		eventSlug          string
 		expectedStatusCode int
 		expectedErrorCode  string
 	}
 	testCases := []questionListTestCase{{
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		expectedStatusCode: http.StatusOK,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:            "malformed",
-		expectedStatusCode: http.StatusNotFound,
-		expectedErrorCode:  errEventNotFound.Code,
-	}, {
-		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:            "79697",
+		eventSlug:          "random",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errEventNotFound.Code,
 	}, {
 		user:               "bad_user",
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		expectedStatusCode: http.StatusInternalServerError,
 		expectedErrorCode:  helios.ErrInternalServerError.Code,
 	}}
@@ -286,15 +281,168 @@ func TestParticipationListView(t *testing.T) {
 		t.Logf("Test ParticipationListView testcase: %d", i)
 		req := helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
-		req.URLParam["eventID"] = testCase.eventID
+		req.URLParam["eventSlug"] = testCase.eventSlug
 
 		ParticipationListView(&req)
 
-		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
 			json.Unmarshal(req.JSONResponse, &err)
-			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}
+
+func TestParticipationCreateView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var participationCountBefore int
+	auth.UserFactorySaved(auth.User{Username: "participant", Role: auth.UserRoleParticipant})
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Username: "local", Role: auth.UserRoleLocal})
+	var event1 Event = EventFactorySaved(Event{})
+	var venue1 Venue = VenueFactorySaved(Venue{})
+	var venue2 Venue = VenueFactorySaved(Venue{})
+	ParticipationFactorySaved(Participation{EventID: event1.ID, Event: &event1, UserID: userLocal.ID, User: &userLocal})
+	helios.DB.Model(Participation{}).Count(&participationCountBefore)
+
+	type participationCreateTestCase struct {
+		user                       interface{}
+		eventSlug                  string
+		requestData                string
+		expectedParticipationCount int
+		expectedStatusCode         int
+		expectedErrorCode          string
+	}
+
+	testCases := []participationCreateTestCase{{
+		user:                       userLocal,
+		eventSlug:                  event1.Slug,
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d}`, venue1.ID),
+		expectedParticipationCount: participationCountBefore + 1,
+		expectedStatusCode:         http.StatusOK,
+	}, {
+		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:                  "abcdef",
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d}`, venue1.ID),
+		expectedParticipationCount: participationCountBefore + 1,
+		expectedStatusCode:         http.StatusNotFound,
+		expectedErrorCode:          errEventNotFound.Code,
+	}, {
+		user:                       userLocal,
+		eventSlug:                  event1.Slug,
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"local","venueId":%d}`, venue1.ID),
+		expectedParticipationCount: participationCountBefore + 1,
+		expectedStatusCode:         http.StatusForbidden,
+		expectedErrorCode:          errParticipationChangeNotAuthorized.Code,
+	}, {
+		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:                  event1.Slug,
+		requestData:                `bad_format`,
+		expectedParticipationCount: participationCountBefore + 1,
+		expectedStatusCode:         http.StatusBadRequest,
+	}, {
+		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:                  event1.Slug,
+		requestData:                `{}`,
+		expectedParticipationCount: participationCountBefore + 1,
+		expectedStatusCode:         http.StatusBadRequest,
+		expectedErrorCode:          "form_error",
+	}, {
+		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:                  event1.Slug,
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d}`, venue2.ID),
+		expectedParticipationCount: participationCountBefore + 1,
+		expectedStatusCode:         http.StatusOK,
+	}, {
+		user:                       "bad_user",
+		eventSlug:                  event1.Slug,
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d}`, venue1.ID),
+		expectedParticipationCount: participationCountBefore + 1,
+		expectedStatusCode:         http.StatusInternalServerError,
+		expectedErrorCode:          helios.ErrInternalServerError.Code,
+	}}
+
+	for i, testCase := range testCases {
+		t.Logf("Test ParticipationCreate testcase: %d", i)
+		var participationCount int
+		var req helios.MockRequest
+		req = helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventSlug"] = testCase.eventSlug
+		req.RequestData = testCase.requestData
+
+		ParticipationCreateView(&req)
+
+		helios.DB.Model(Participation{}).Count(&participationCount)
+		assert.Equal(t, testCase.expectedParticipationCount, participationCount)
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			var errUnmarshalling error
+			errUnmarshalling = json.Unmarshal(req.JSONResponse, &err)
+			assert.Nil(t, errUnmarshalling)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}
+
+func TestParticipationDeleteView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var userParticipant auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var event1 Event = EventFactorySaved(Event{})
+	var participation1 Participation = ParticipationFactorySaved(Participation{User: &userParticipant, Event: &event1})
+	var participation2 Participation = ParticipationFactorySaved(Participation{User: &userLocal, Event: &event1})
+
+	type questionDeleteTestCase struct {
+		user               interface{}
+		eventSlug          string
+		participationID    string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []questionDeleteTestCase{{
+		user:               "bad_user",
+		eventSlug:          event1.Slug,
+		participationID:    strconv.Itoa(int(participation1.ID)),
+		expectedStatusCode: http.StatusInternalServerError,
+	}, {
+		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
+		eventSlug:          "slug",
+		participationID:    "malformed",
+		expectedStatusCode: http.StatusNotFound,
+		expectedErrorCode:  errParticipationNotFound.Code,
+	}, {
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		participationID:    strconv.Itoa(int(participation2.ID)),
+		expectedStatusCode: errParticipationChangeNotAuthorized.StatusCode,
+		expectedErrorCode:  errParticipationChangeNotAuthorized.Code,
+	}, {
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		participationID:    strconv.Itoa(int(participation1.ID)),
+		expectedStatusCode: http.StatusOK,
+	}}
+
+	for i, testCase := range testCases {
+		t.Logf("Test ParticipationDelete testcase: %d", i)
+		req := helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventSlug"] = testCase.eventSlug
+		req.URLParam["participationID"] = testCase.participationID
+
+		ParticipationDeleteView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			var errUnmarshalling error
+			errUnmarshalling = json.Unmarshal(req.JSONResponse, &err)
+			assert.Nil(t, errUnmarshalling)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}
 }
@@ -307,27 +455,22 @@ func TestQuestionListView(t *testing.T) {
 	QuestionFactorySaved(Question{Event: &event1})
 	type questionListTestCase struct {
 		user               interface{}
-		eventID            string
+		eventSlug          string
 		expectedStatusCode int
 		expectedErrorCode  string
 	}
 	testCases := []questionListTestCase{{
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		expectedStatusCode: http.StatusOK,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:            "malformed",
-		expectedStatusCode: http.StatusNotFound,
-		expectedErrorCode:  errEventNotFound.Code,
-	}, {
-		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:            "79697",
+		eventSlug:          "random",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errEventNotFound.Code,
 	}, {
 		user:               "bad_user",
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		expectedStatusCode: http.StatusInternalServerError,
 		expectedErrorCode:  helios.ErrInternalServerError.Code,
 	}}
@@ -335,15 +478,15 @@ func TestQuestionListView(t *testing.T) {
 		t.Logf("Test QuestionListView testcase: %d", i)
 		req := helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
-		req.URLParam["eventID"] = testCase.eventID
+		req.URLParam["eventSlug"] = testCase.eventSlug
 
 		QuestionListView(&req)
 
-		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
 			json.Unmarshal(req.JSONResponse, &err)
-			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}
 }
@@ -351,13 +494,11 @@ func TestQuestionListView(t *testing.T) {
 func TestQuestionCreateView(t *testing.T) {
 	helios.App.BeforeTest()
 
-	var questionCountBefore int
 	var event1 Event = EventFactorySaved(Event{})
-	helios.DB.Model(Question{}).Count(&questionCountBefore)
 
 	type questionCreateTestCase struct {
 		user                  interface{}
-		eventID               string
+		eventSlug             string
 		requestData           string
 		expectedQuestionCount int
 		expectedStatusCode    int
@@ -366,55 +507,55 @@ func TestQuestionCreateView(t *testing.T) {
 
 	testCases := []questionCreateTestCase{{
 		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:               strconv.Itoa(int(event1.ID)),
+		eventSlug:             event1.Slug,
 		requestData:           `{"id":1,"content":"content1","choices":[],"answer":"abc","eventId":2}`,
-		expectedQuestionCount: questionCountBefore + 1,
+		expectedQuestionCount: 1,
 		expectedStatusCode:    http.StatusCreated,
 	}, {
 		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:               "abcdef",
+		eventSlug:             "abcdef",
 		requestData:           `{"id":1,"content":"content2","choices":[],"answer":"abc","eventId":2}`,
-		expectedQuestionCount: questionCountBefore + 1,
-		expectedStatusCode:    http.StatusNotFound,
-		expectedErrorCode:     errEventNotFound.Code,
-	}, {
-		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
-		eventID:               "999",
-		requestData:           `{"id":1,"content":"content2","choices":[],"answer":"abc","eventId":2}`,
-		expectedQuestionCount: questionCountBefore + 1,
+		expectedQuestionCount: 1,
 		expectedStatusCode:    http.StatusNotFound,
 		expectedErrorCode:     errEventNotFound.Code,
 	}, {
 		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant}),
-		eventID:               strconv.Itoa(int(event1.ID)),
+		eventSlug:             event1.Slug,
 		requestData:           `{"id":1,"content":"content3","choices":[],"answer":"abc","eventId":2}`,
-		expectedQuestionCount: questionCountBefore + 1,
+		expectedQuestionCount: 1,
 		expectedStatusCode:    http.StatusForbidden,
 		expectedErrorCode:     errQuestionChangeNotAuthorized.Code,
 	}, {
 		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal}),
-		eventID:               strconv.Itoa(int(event1.ID)),
+		eventSlug:             event1.Slug,
 		requestData:           `{"id":1,"content":"content3","choices":[],"answer":"abc","eventId":2}`,
-		expectedQuestionCount: questionCountBefore + 1,
+		expectedQuestionCount: 1,
 		expectedStatusCode:    http.StatusForbidden,
 		expectedErrorCode:     errQuestionChangeNotAuthorized.Code,
 	}, {
 		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:               strconv.Itoa(int(event1.ID)),
+		eventSlug:             event1.Slug,
 		requestData:           `bad_format`,
-		expectedQuestionCount: questionCountBefore + 1,
+		expectedQuestionCount: 1,
 		expectedStatusCode:    http.StatusBadRequest,
 	}, {
 		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:               strconv.Itoa(int(event1.ID)),
+		eventSlug:             event1.Slug,
+		requestData:           `{"choices":["content5_1","content5_2"],"answer":"abc","eventId":2}`,
+		expectedQuestionCount: 1,
+		expectedStatusCode:    http.StatusBadRequest,
+		expectedErrorCode:     "form_error",
+	}, {
+		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:             event1.Slug,
 		requestData:           `{"content":"content5","choices":["content5_1","content5_2"],"answer":"abc","eventId":2}`,
-		expectedQuestionCount: questionCountBefore + 2,
+		expectedQuestionCount: 2,
 		expectedStatusCode:    http.StatusCreated,
 	}, {
 		user:                  "bad_user",
-		eventID:               strconv.Itoa(int(event1.ID)),
+		eventSlug:             event1.Slug,
 		requestData:           `{"content":"content6","choices":[],"answer":"abc","eventId":2}`,
-		expectedQuestionCount: questionCountBefore + 2,
+		expectedQuestionCount: 2,
 		expectedStatusCode:    http.StatusInternalServerError,
 		expectedErrorCode:     helios.ErrInternalServerError.Code,
 	}}
@@ -425,18 +566,20 @@ func TestQuestionCreateView(t *testing.T) {
 		var req helios.MockRequest
 		req = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
-		req.URLParam["eventID"] = testCase.eventID
+		req.URLParam["eventSlug"] = testCase.eventSlug
 		req.RequestData = testCase.requestData
 
 		QuestionCreateView(&req)
 
 		helios.DB.Model(Question{}).Count(&questionCount)
-		assert.Equal(t, testCase.expectedQuestionCount, questionCount, "Different question count")
-		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		assert.Equal(t, testCase.expectedQuestionCount, questionCount)
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
-			json.Unmarshal(req.JSONResponse, &err)
-			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+			var errUnmarshalling error
+			errUnmarshalling = json.Unmarshal(req.JSONResponse, &err)
+			assert.Nil(t, errUnmarshalling)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}
 }
@@ -452,49 +595,43 @@ func TestQuestionDetailView(t *testing.T) {
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation1, Question: &question1})
 	type questionDetailTestCase struct {
 		user               interface{}
-		eventID            string
+		eventSlug          string
 		questionID         string
 		expectedStatusCode int
 		expectedErrorCode  string
 	}
 	testCases := []questionDetailTestCase{{
 		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		expectedStatusCode: http.StatusOK,
 	}, {
 		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question2.ID)),
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         "bad_question_id",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         "879654",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
-		eventID:            "4567890",
-		questionID:         "879654",
-		expectedStatusCode: http.StatusNotFound,
-		expectedErrorCode:  errEventNotFound.Code,
-	}, {
-		user:               userParticipant,
-		eventID:            "malformed",
+		eventSlug:          "random",
 		questionID:         "malformed",
 		expectedStatusCode: http.StatusNotFound,
-		expectedErrorCode:  errEventNotFound.Code,
+		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               "bad_user",
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		expectedStatusCode: http.StatusInternalServerError,
 	}}
@@ -504,16 +641,16 @@ func TestQuestionDetailView(t *testing.T) {
 		var req helios.MockRequest
 		req = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
-		req.URLParam["eventID"] = testCase.eventID
+		req.URLParam["eventSlug"] = testCase.eventSlug
 		req.URLParam["questionID"] = testCase.questionID
 
 		QuestionDetailView(&req)
 
-		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
 			json.Unmarshal(req.JSONResponse, &err)
-			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}
 }
@@ -531,60 +668,54 @@ func TestQuestionDeleteView(t *testing.T) {
 
 	type questionDeleteTestCase struct {
 		user               interface{}
-		eventID            string
+		eventSlug          string
 		questionID         string
 		expectedStatusCode int
 		expectedErrorCode  string
 	}
 	testCases := []questionDeleteTestCase{{
 		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		expectedStatusCode: http.StatusForbidden,
 		expectedErrorCode:  errQuestionChangeNotAuthorized.Code,
 	}, {
 		user:               userLocal,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		expectedStatusCode: http.StatusForbidden,
 		expectedErrorCode:  errQuestionChangeNotAuthorized.Code,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         "bad_question_id",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         "879654",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
-		eventID:            "4567890",
-		questionID:         "879654",
-		expectedStatusCode: http.StatusNotFound,
-		expectedErrorCode:  errEventNotFound.Code,
-	}, {
-		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
-		eventID:            "malformed",
+		eventSlug:          "4567890",
 		questionID:         "malformed",
 		expectedStatusCode: http.StatusNotFound,
-		expectedErrorCode:  errEventNotFound.Code,
+		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               "bad_user",
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		expectedStatusCode: http.StatusInternalServerError,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		expectedStatusCode: http.StatusOK,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
@@ -594,18 +725,18 @@ func TestQuestionDeleteView(t *testing.T) {
 		t.Logf("Test QuestionDelete testcase: %d", i)
 		req := helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
-		req.URLParam["eventID"] = testCase.eventID
+		req.URLParam["eventSlug"] = testCase.eventSlug
 		req.URLParam["questionID"] = testCase.questionID
 
 		QuestionDeleteView(&req)
 
-		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, "Unexpected status code")
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
 			var errUnmarshalling error
 			errUnmarshalling = json.Unmarshal(req.JSONResponse, &err)
 			assert.Nil(t, errUnmarshalling)
-			assert.Equal(t, testCase.expectedErrorCode, err["code"], "Different error code")
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}
 }
@@ -619,7 +750,7 @@ func TestSubmissionCreateView(t *testing.T) {
 	var question1 Question = *userQuestion.Question
 	type submissionCreateTestCase struct {
 		user               interface{}
-		eventID            string
+		eventSlug          string
 		questionID         string
 		requestData        string
 		expectedStatusCode int
@@ -627,47 +758,40 @@ func TestSubmissionCreateView(t *testing.T) {
 	}
 	testCases := []submissionCreateTestCase{{
 		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		requestData:        fmt.Sprintf(`{"answer":"%s"}`, question1.Choices[0].Text),
 		expectedStatusCode: http.StatusCreated,
 	}, {
 		user:               userParticipant,
-		eventID:            "malformed",
+		eventSlug:          "random",
 		questionID:         "malformed",
 		requestData:        `{"answer":"answer2"}`,
 		expectedStatusCode: http.StatusNotFound,
-		expectedErrorCode:  errEventNotFound.Code,
+		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
-		eventID:            "345678",
-		questionID:         "4567987",
-		requestData:        `{"answer":"answer3"}`,
-		expectedStatusCode: http.StatusNotFound,
-		expectedErrorCode:  errEventNotFound.Code,
-	}, {
-		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         "malformed",
 		requestData:        `{"answer":"answer4"}`,
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         "876789",
 		requestData:        `{"answer":"answer5"}`,
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		requestData:        `malformed`,
 		expectedStatusCode: http.StatusBadRequest,
 	}, {
 		user:               "bad_user",
-		eventID:            strconv.Itoa(int(event1.ID)),
+		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
 		requestData:        `{"answer":"answer7"}`,
 		expectedStatusCode: http.StatusInternalServerError,
@@ -677,7 +801,7 @@ func TestSubmissionCreateView(t *testing.T) {
 		t.Logf("Test SubmissionCreate testcase: %d", i)
 		var req helios.MockRequest = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
-		req.URLParam["eventID"] = testCase.eventID
+		req.URLParam["eventSlug"] = testCase.eventSlug
 		req.URLParam["questionID"] = testCase.questionID
 		req.RequestData = testCase.requestData
 

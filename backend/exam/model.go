@@ -11,7 +11,7 @@ import (
 // It also stores the start and end time
 type Event struct {
 	ID          uint   `gorm:"primary_key"`
-	Slug        string `gorm:"size:100"`
+	Slug        string `gorm:"size:100;unique"`
 	Title       string `gorm:"size:256"`
 	Description string `gorm:"type:text"`
 	StartsAt    time.Time

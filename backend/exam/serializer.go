@@ -9,6 +9,7 @@ import (
 // EventData is JSON representation of exam event.
 type EventData struct {
 	ID          uint   `json:"id"`
+	Slug        string `json:"slug"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	StartsAt    string `json:"startsAt"`
@@ -74,6 +75,7 @@ func DeserializeVenue(venueData VenueData, venue *Venue) helios.Error {
 func SerializeEvent(event Event) EventData {
 	eventData := EventData{
 		ID:          event.ID,
+		Slug:        event.Slug,
 		Title:       event.Title,
 		Description: event.Description,
 		StartsAt:    event.StartsAt.Local().Format(time.RFC3339),
@@ -130,6 +132,30 @@ func SerializeParticipation(participation Participation) ParticipationData {
 		VenueID:      participation.Venue.ID,
 	}
 	return participationData
+}
+
+// DeserializeParticipation convert JSON of participation to Participation object
+func DeserializeParticipation(participationData ParticipationData, participation *Participation) helios.Error {
+	var err helios.FormError
+	var valid bool = true
+
+	participation.ID = participationData.ID
+	participation.VenueID = participationData.VenueID
+
+	if participation.VenueID == 0 {
+		err.AddFieldError("vanueId", "Venue can't be empty")
+		valid = false
+	}
+
+	if participationData.UserUsername == "" {
+		err.AddFieldError("userUsername", "Username can't be empty")
+		valid = false
+	}
+
+	if !valid {
+		return err
+	}
+	return nil
 }
 
 // SerializeQuestion converts Question object question to JSON of question

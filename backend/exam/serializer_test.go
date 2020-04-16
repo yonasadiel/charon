@@ -73,12 +73,13 @@ func TestDeserializeVenue(t *testing.T) {
 func TestSerializeEvent(t *testing.T) {
 	var event Event = EventFactory(Event{
 		ID:          3,
+		Slug:        "math-final-exam",
 		Title:       "Math Final Exam",
 		Description: "desc",
 		StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
 		EndsAt:      time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
 	})
-	var expectedJSON string = `{"id":3,"title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"}`
+	var expectedJSON string = `{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"}`
 	var serialized EventData = SerializeEvent(event)
 	var serializedJSON []byte
 	var errMarshalling error
@@ -157,6 +158,56 @@ func TestSerializeParticipation(t *testing.T) {
 	serializedJSON, errMarshalling = json.Marshal(serialized)
 	assert.Nil(t, errMarshalling)
 	assert.Equal(t, expectedJSON, string(serializedJSON))
+}
+
+func TestDeserializeParticipation(t *testing.T) {
+	type deserializeParticipationTestCase struct {
+		participationDataJSON string
+		expectedParticipation Participation
+		expectedError         string
+	}
+	testCases := []deserializeParticipationTestCase{{
+		participationDataJSON: `{"id":2,"eventId":3,"venueId":4,"userId":5,"userUsername":"abc"}`,
+		expectedParticipation: Participation{
+			ID:      2,
+			VenueID: 4,
+		},
+	}, {
+		participationDataJSON: `{"venueId":4,"userUsername":"abc"}`,
+		expectedParticipation: Participation{
+			VenueID: 4,
+		},
+	}, {
+		participationDataJSON: `{}`,
+		expectedError:         `{"code":"form_error","message":{"_error":[],"userUsername":["Username can't be empty"],"vanueId":["Venue can't be empty"]}}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test DeserializeParticipation testcase: %d", i)
+		var participationData ParticipationData
+		var participation Participation
+		var errUnmarshalling error
+		var errDeserialization helios.Error
+		errUnmarshalling = json.Unmarshal([]byte(testCase.participationDataJSON), &participationData)
+		errDeserialization = DeserializeParticipation(participationData, &participation)
+		assert.Nil(t, errUnmarshalling)
+		if testCase.expectedError == "" {
+			assert.Nil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedParticipation.ID, participation.ID)
+			assert.Equal(t, testCase.expectedParticipation.VenueID, participation.VenueID)
+			assert.Equal(t, testCase.expectedParticipation.EventID, participation.EventID)
+			assert.Equal(t, testCase.expectedParticipation.UserID, participation.UserID)
+			assert.Nil(t, participation.Event)
+			assert.Nil(t, participation.User)
+			assert.Nil(t, participation.Venue)
+		} else {
+			var errDeserializationJSON []byte
+			var errMarshalling error
+			errDeserializationJSON, errMarshalling = json.Marshal(errDeserialization.GetMessage())
+			assert.Nil(t, errMarshalling)
+			assert.NotNil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedError, string(errDeserializationJSON))
+		}
+	}
 }
 
 func TestSerializeQuestion(t *testing.T) {
