@@ -201,24 +201,24 @@ func TestEventCreateView(t *testing.T) {
 	}
 	testCases := []eventCreateTestCase{{
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		requestData:        `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`,
+		requestData:        `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`,
 		expectedStatusCode: http.StatusCreated,
 		expectedEventCount: eventCountBefore + 1,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		requestData:        `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"INVALID_END_TIME"}`,
+		requestData:        `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"INVALID_END_TIME"}`,
 		expectedStatusCode: http.StatusBadRequest,
 		expectedErrorCode:  "form_error",
 		expectedEventCount: eventCountBefore + 1,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		requestData:        `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`,
+		requestData:        `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`,
 		expectedStatusCode: http.StatusBadRequest,
 		expectedErrorCode:  "form_error",
 		expectedEventCount: eventCountBefore + 1,
 	}, {
 		user:               "bad_user",
-		requestData:        `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`,
+		requestData:        `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T04:30:10Z"}`,
 		expectedStatusCode: http.StatusInternalServerError,
 		expectedErrorCode:  helios.ErrInternalServerError.Code,
 		expectedEventCount: eventCountBefore + 1,

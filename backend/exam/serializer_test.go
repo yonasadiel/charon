@@ -95,9 +95,10 @@ func TestDeserializeEvent(t *testing.T) {
 		expectedError string
 	}
 	testCases := []deserializeEventTestCase{{
-		eventDataJSON: `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:10Z","description":"desc"}`,
+		eventDataJSON: `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:10Z","description":"desc"}`,
 		expectedEvent: Event{
 			ID:          0,
+			Slug:        "math-final-exam",
 			Title:       "Math Final Exam",
 			Description: "desc",
 			StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
@@ -105,16 +106,16 @@ func TestDeserializeEvent(t *testing.T) {
 		},
 	}, {
 		// endsAt is before startsAt
-		eventDataJSON: `{"title":"Math Final Exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`,
+		eventDataJSON: `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`,
 		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["End time should be after start time"]}}`,
 	}, {
 		// wrong format endsAt and startsAt
-		eventDataJSON: `{"title":"Math Final Exam","startsAt":"bad_format","endsAt":"bad_format"}`,
+		eventDataJSON: `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"bad_format","endsAt":"bad_format"}`,
 		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["Failed to parse time"],"startsAt":["Failed to parse time"]}}`,
 	}, {
 		// empty fields
 		eventDataJSON: `{}`,
-		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["End time must be provided"],"startsAt":["Start time must be provided"],"title":["Title can't be empty"]}}`,
+		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["End time must be provided"],"slug":["Slug can't be empty"],"startsAt":["Start time must be provided"],"title":["Title can't be empty"]}}`,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test DeserializeEvent testcase: %d", i)
@@ -179,7 +180,7 @@ func TestDeserializeParticipation(t *testing.T) {
 		},
 	}, {
 		participationDataJSON: `{}`,
-		expectedError:         `{"code":"form_error","message":{"_error":[],"userUsername":["Username can't be empty"],"vanueId":["Venue can't be empty"]}}`,
+		expectedError:         `{"code":"form_error","message":{"_error":[],"userUsername":["Username can't be empty"],"venueId":["Venue can't be empty"]}}`,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test DeserializeParticipation testcase: %d", i)
@@ -284,6 +285,153 @@ func TestDeserializeQuestion(t *testing.T) {
 			for i := range testCase.expectedQuestion.Choices {
 				assert.Equal(t, testCase.expectedQuestion.Choices[i].Text, question.Choices[i].Text)
 			}
+		} else {
+			var errDeserializationJSON []byte
+			var errMarshalling error
+			errDeserializationJSON, errMarshalling = json.Marshal(errDeserialization.GetMessage())
+			assert.Nil(t, errMarshalling)
+			assert.NotNil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedError, string(errDeserializationJSON))
+		}
+	}
+}
+
+func TestSerializeSynchronizationData(t *testing.T) {
+	type serializeSynchronizationDataTestCase struct {
+		event          Event
+		questions      []Question
+		participations []Participation
+		users          []auth.User
+		expectedJSON   string
+	}
+	testCases := []serializeSynchronizationDataTestCase{{
+		event: Event{
+			ID:          3,
+			Slug:        "math-final-exam",
+			Title:       "Math Final Exam",
+			Description: "desc",
+			StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+			EndsAt:      time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
+		},
+		questions: []Question{{
+			ID:         2,
+			Content:    "Question Content",
+			Choices:    []QuestionChoice{{Text: "a"}, {Text: "b"}, {Text: "c"}},
+			UserAnswer: "answer2",
+		}, {}},
+		participations: []Participation{{
+			ID:    3,
+			User:  &auth.User{Username: "abc"},
+			Venue: &Venue{ID: 3},
+		}},
+		users: []auth.User{{
+			ID:       4,
+			Username: "def",
+			Role:     auth.UserRoleAdmin,
+			Name:     "abc",
+		}},
+		expectedJSON: `{` +
+			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"},` +
+			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"","choices":[],"answer":""}],` +
+			`"participations":[{"id":3,"userUsername":"abc","venueId":3}],` +
+			`"users":[{"name":"abc","username":"def","role":"admin"}]` +
+			`}`,
+	}, {
+		event:          Event{},
+		questions:      []Question{},
+		participations: []Participation{},
+		users:          []auth.User{},
+		expectedJSON: `{` +
+			`"event":{"id":0,"slug":"","title":"","description":"","startsAt":"0001-01-01T07:07:12+07:07","endsAt":"0001-01-01T07:07:12+07:07"},` +
+			`"questions":[],` +
+			`"participations":[],` +
+			`"users":[]` +
+			`}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test SerializeSynchronizationData testcase: %d", i)
+		var serialized SynchronizationData
+		var serializedJSON []byte
+		var errMarshalling error
+		serialized = SerializeSynchronizationData(testCase.event, testCase.questions, testCase.participations, testCase.users)
+		serializedJSON, errMarshalling = json.Marshal(serialized)
+		assert.Nil(t, errMarshalling)
+		assert.Equal(t, testCase.expectedJSON, string(serializedJSON))
+	}
+}
+
+func TestDeserializeSynchronizationData(t *testing.T) {
+	type deserializeQuestionTestCase struct {
+		synchronizationDataJSON     string
+		expectedEvent               Event
+		expectedQuestionLength      int
+		expectedParticipationLength int
+		expectedUserLength          int
+		expectedError               string
+	}
+	testCases := []deserializeQuestionTestCase{{
+		synchronizationDataJSON: `{` +
+			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"},` +
+			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"a","choices":[],"answer":""}],` +
+			`"participations":[{"id":3,"userUsername":"abc","venueId":3},{"id":3,"userUsername":"abc","venueId":3},{"id":3,"userUsername":"abc","venueId":3}],` +
+			`"users":[{"name":"abc","username":"def","role":"admin"}]` +
+			`}`,
+		expectedEvent: Event{
+			ID:          3,
+			Slug:        "math-final-exam",
+			Title:       "Math Final Exam",
+			Description: "desc",
+			StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+			EndsAt:      time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
+		},
+		expectedQuestionLength:      2,
+		expectedParticipationLength: 3,
+		expectedUserLength:          1,
+	}, {
+		synchronizationDataJSON: `{"event":{"endsAt":"2020-08-12T11:30:10+07:00","startsAt":"2020-08-12T09:30:10+07:00","title":"abc","slug":"abc"}}`,
+		expectedEvent: Event{
+			Title:    "abc",
+			Slug:     "abc",
+			StartsAt: time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+			EndsAt:   time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
+		},
+		expectedQuestionLength:      0,
+		expectedParticipationLength: 0,
+		expectedUserLength:          0,
+	}, {
+		synchronizationDataJSON: `{` +
+			`"event":{"endsAt":"2020-08-12T01:30:10+07:00","startsAt":"2020-08-12T09:30:10+07:00","title":"abc","slug":"abc"},` +
+			`"questions":[{}],` +
+			`"participations":[{"venueId":2},{"venueId":1,"userUsername":"a"}],` +
+			`"users":[{"name":"abc","role":"admin","username":"abc"},{"role":"admin","username":"abc"}]` +
+			`}`,
+		expectedError: `{"code":"form_error","message":{` +
+			`"_error":[],` +
+			`"event":{"endsAt":["End time should be after start time"]},` +
+			`"participations":[{"userUsername":["Username can't be empty"]},{}],` +
+			`"questions":[{"content":["Content can't be empty"]}],` +
+			`"users":[{},{"name":["Name can't be empty"]}]` +
+			`}}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test DeserializeSynchronizationData testcase: %d", i)
+		var synchronizationData SynchronizationData
+		var event Event
+		var questions []Question
+		var participations []Participation
+		var users []auth.User
+		var errUnmarshalling error
+		var errDeserialization helios.Error
+		errUnmarshalling = json.Unmarshal([]byte(testCase.synchronizationDataJSON), &synchronizationData)
+		errDeserialization = DeserializeSynchronizationData(synchronizationData, &event, &questions, &participations, &users)
+		assert.Nil(t, errUnmarshalling)
+		if testCase.expectedError == "" {
+			assert.Nil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedEvent.ID, event.ID)
+			assert.Equal(t, testCase.expectedEvent.Title, event.Title)
+			assert.Equal(t, testCase.expectedEvent.Description, event.Description)
+			assert.True(t, testCase.expectedEvent.StartsAt.Equal(event.StartsAt))
+			assert.True(t, testCase.expectedEvent.EndsAt.Equal(event.EndsAt))
 		} else {
 			var errDeserializationJSON []byte
 			var errMarshalling error

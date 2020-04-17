@@ -36,17 +36,14 @@ func SerializeUser(user User) UserData {
 
 // DeserializeUser serialize user to UserData
 func DeserializeUser(userData UserData, user *User) helios.Error {
-	var err helios.FormError
-	var valid bool = true
+	var err helios.ErrorForm = helios.NewErrorForm()
 	user.Name = userData.Name
 	user.Username = userData.Username
 	if user.Name == "" {
-		err.AddFieldError("name", "Name can't be empty")
-		valid = false
+		err.FieldError["name"] = helios.ErrorFormFieldAtomic{"Name can't be empty"}
 	}
 	if user.Username == "" {
-		err.AddFieldError("username", "Username can't be empty")
-		valid = false
+		err.FieldError["username"] = helios.ErrorFormFieldAtomic{"Username can't be empty"}
 	}
 	if userData.Role == "admin" {
 		user.Role = UserRoleAdmin
@@ -57,13 +54,11 @@ func DeserializeUser(userData UserData, user *User) helios.Error {
 	} else if userData.Role == "participant" {
 		user.Role = UserRoleParticipant
 	} else if userData.Role == "" {
-		err.AddFieldError("role", "Role can't be empty")
-		valid = false
+		err.FieldError["role"] = helios.ErrorFormFieldAtomic{"Role can't be empty"}
 	} else {
-		err.AddFieldError("role", "Role should be either admin, organizer, local, or participant")
-		valid = false
+		err.FieldError["role"] = helios.ErrorFormFieldAtomic{"Role should be either admin, organizer, local, or participant"}
 	}
-	if !valid {
+	if err.IsError() {
 		return err
 	}
 	return nil

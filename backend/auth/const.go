@@ -30,20 +30,19 @@ const (
 	userTokenIdxMax  = 63 / userTokenIdxBits   // # of userToken indices fitting in 63 bits
 )
 
-/*** Error of auth package ***/
-var errWrongUsernamePassword = helios.APIError{
+var errWrongUsernamePassword = helios.ErrorAPI{
 	StatusCode: http.StatusBadRequest,
 	Code:       "login_wrong_username_or_password",
 	Message:    "Wrong username / password",
 }
 
-var errUnauthorized = helios.APIError{
+var errUnauthorized = helios.ErrorAPI{
 	StatusCode: http.StatusUnauthorized,
 	Code:       "unauthorized",
 	Message:    "You need to log in first",
 }
 
-var errUserRoleTooHigh = helios.APIError{
+var errUserRoleTooHigh = helios.ErrorAPI{
 	StatusCode: http.StatusBadRequest,
 	Code:       "user_role_too_high",
 	Message:    "Can't create user with same or higher role",
