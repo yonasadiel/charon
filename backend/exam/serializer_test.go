@@ -423,7 +423,7 @@ func TestDeserializeSynchronizationData(t *testing.T) {
 		var errUnmarshalling error
 		var errDeserialization helios.Error
 		errUnmarshalling = json.Unmarshal([]byte(testCase.synchronizationDataJSON), &synchronizationData)
-		errDeserialization = DeserializeSynchronizationData(synchronizationData, &event, &questions, &participations, &users)
+		errDeserialization = DeserializeSynchronizationData(synchronizationData, &event, questions, participations, users)
 		assert.Nil(t, errUnmarshalling)
 		if testCase.expectedError == "" {
 			assert.Nil(t, errDeserialization)

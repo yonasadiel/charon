@@ -817,3 +817,62 @@ func TestSubmissionCreateView(t *testing.T) {
 		}
 	}
 }
+
+func TestSynchronizationDataView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var userParticipant auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var event1 Event = EventFactorySaved(Event{})
+	var event2 Event = EventFactorySaved(Event{})
+	ParticipationFactorySaved(Participation{User: &userLocal, Event: &event1})
+	ParticipationFactorySaved(Participation{User: &userParticipant, Event: &event1})
+	QuestionFactorySaved(Question{Event: &event1})
+	type synchronizationDataViewTestCase struct {
+		user               interface{}
+		eventSlug          string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []synchronizationDataViewTestCase{{
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
+		eventSlug:          event1.Slug,
+		expectedStatusCode: http.StatusForbidden,
+		expectedErrorCode:  errSynchronizationNotAuthorized.Code,
+	}, {
+		user:               userLocal,
+		eventSlug:          event2.Slug,
+		expectedStatusCode: http.StatusNotFound,
+		expectedErrorCode:  errEventNotFound.Code,
+	}, {
+		user:               userLocal,
+		eventSlug:          "random",
+		expectedStatusCode: http.StatusNotFound,
+		expectedErrorCode:  errEventNotFound.Code,
+	}, {
+		user:               "bad_user",
+		eventSlug:          event1.Slug,
+		expectedStatusCode: http.StatusInternalServerError,
+	}}
+
+	for i, testCase := range testCases {
+		t.Logf("Test SynchronizationDataView testcase: %d", i)
+		var req helios.MockRequest
+		req = helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventSlug"] = testCase.eventSlug
+
+		SynchronizationDataView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}

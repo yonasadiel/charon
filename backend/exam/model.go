@@ -14,6 +14,7 @@ type Event struct {
 	Slug        string `gorm:"size:100;unique"`
 	Title       string `gorm:"size:256"`
 	Description string `gorm:"type:text"`
+	Key         string `gorm:"size:48"`
 	StartsAt    time.Time
 	EndsAt      time.Time
 

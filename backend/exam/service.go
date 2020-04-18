@@ -407,3 +407,40 @@ func SubmitSubmission(user auth.User, eventSlug string, questionID uint, answer 
 	helios.DB.Save(&userQuestion)
 	return userQuestion.Question, nil
 }
+
+// GetSynchronizationData gets the synchronization data of user.
+// Onnly local user has the permission
+func GetSynchronizationData(user auth.User, eventSlug string) (*Event, []Question, []Participation, []auth.User, helios.Error) {
+	if !user.IsLocal() {
+		return nil, nil, nil, nil, errSynchronizationNotAuthorized
+	}
+
+	var participation Participation
+	helios.DB.
+		Table("participations").
+		Select("participations.*").
+		Preload("Venue").
+		Joins("inner join events on events.id = participations.event_id").
+		Where("participations.user_id = ?", user.ID).
+		Where("events.slug = ?", eventSlug).
+		First(&participation)
+	if participation.ID == 0 {
+		return nil, nil, nil, nil, errEventNotFound
+	}
+
+	var event Event
+	var questions []Question
+	var participations []Participation
+	var users []auth.User
+	helios.DB.Where("id = ?", participation.EventID).First(&event)
+	helios.DB.Preload("Choices").Where("event_id = ?", event.ID).Find(&questions)
+	helios.DB.Preload("User").Preload("Venue").Where("event_id = ?", event.ID).Where("venue_id = ?", participation.Venue.ID).Find(&participations)
+	helios.DB.
+		Select("users.*").
+		Joins("inner join participations on participations.user_id = users.id").
+		Where("participations.event_id = ?", event.ID).
+		Where("participations.venue_id = ?", participation.Venue.ID).
+		Find(&users)
+
+	return &event, questions, participations, users, nil
+}

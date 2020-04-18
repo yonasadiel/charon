@@ -952,3 +952,76 @@ func TestSubmitSubmission(t *testing.T) {
 		}
 	}
 }
+
+func TestGetSynchronizationData(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var venue Venue = VenueFactorySaved(Venue{})
+	var event1 Event = EventFactorySaved(Event{})
+	var event2 Event = EventFactorySaved(Event{})
+	QuestionFactorySaved(Question{Event: &event1})
+	QuestionFactorySaved(Question{Event: &event1})
+	QuestionFactorySaved(Question{Event: &event2})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal, Venue: &venue})
+	ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue})
+	ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue})
+	ParticipationFactorySaved(Participation{Event: &event1})
+	ParticipationFactorySaved(Participation{Event: &event1})
+	ParticipationFactorySaved(Participation{Event: &event2})
+	type getSynchronizationDataTestCase struct {
+		user                        auth.User
+		eventSlug                   string
+		expectedEvent               Event
+		expectedQuestionLength      int
+		expectedParticipationLength int
+		expectedUserLength          int
+		expectedError               helios.Error
+	}
+	testCases := []getSynchronizationDataTestCase{{
+		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
+		eventSlug:     event1.Slug,
+		expectedError: errSynchronizationNotAuthorized,
+	}, {
+		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:     event1.Slug,
+		expectedError: errSynchronizationNotAuthorized,
+	}, {
+		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant}),
+		eventSlug:     event1.Slug,
+		expectedError: errSynchronizationNotAuthorized,
+	}, {
+		user:          userLocal,
+		eventSlug:     "abc",
+		expectedError: errEventNotFound,
+	}, {
+		user:          userLocal,
+		eventSlug:     event2.Slug,
+		expectedError: errEventNotFound,
+	}, {
+		user:                        userLocal,
+		eventSlug:                   event1.Slug,
+		expectedEvent:               event1,
+		expectedQuestionLength:      2,
+		expectedParticipationLength: 3,
+		expectedUserLength:          3,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test GetSynchronizationData testcase: %d", i)
+		var event *Event
+		var questions []Question
+		var participations []Participation
+		var users []auth.User
+		var err helios.Error
+		event, questions, participations, users, err = GetSynchronizationData(testCase.user, testCase.eventSlug)
+		if testCase.expectedError == nil {
+			assert.Nil(t, err)
+			assert.Equal(t, testCase.expectedEvent.Title, event.Title)
+			assert.Equal(t, testCase.expectedQuestionLength, len(questions))
+			assert.Equal(t, testCase.expectedParticipationLength, len(participations))
+			assert.Equal(t, testCase.expectedUserLength, len(users))
+		} else {
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
+}

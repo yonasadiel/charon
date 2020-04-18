@@ -83,3 +83,9 @@ var errSubmissionNotAuthorized = helios.ErrorAPI{
 	Code:       "cannot_submit_submission",
 	Message:    "You are not allowed to submit to this question",
 }
+
+var errSynchronizationNotAuthorized = helios.ErrorAPI{
+	StatusCode: http.StatusForbidden,
+	Code:       "cannot_get_synchronization",
+	Message:    "You are not allowed to get the synchronziation data",
+}

@@ -346,3 +346,26 @@ func SubmissionCreateView(req helios.Request) {
 		req.SendJSON(questionData, http.StatusCreated)
 	}
 }
+
+// SynchronizationDataView gets the synchronization data of event
+func SynchronizationDataView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+	var eventSlug string = req.GetURLParam("eventSlug")
+	var event *Event
+	var questions []Question
+	var participations []Participation
+	var users []auth.User
+	var err helios.Error
+
+	event, questions, participations, users, err = GetSynchronizationData(user, eventSlug)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+	} else {
+		var synchronizationData SynchronizationData = SerializeSynchronizationData(*event, questions, participations, users)
+		req.SendJSON(synchronizationData, http.StatusOK)
+	}
+}

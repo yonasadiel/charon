@@ -221,7 +221,7 @@ func SerializeSynchronizationData(event Event, questions []Question, participati
 
 // DeserializeSynchronizationData converts event, questions, participations, and users
 // into SynchronizationData
-func DeserializeSynchronizationData(synchronizationData SynchronizationData, event *Event, questions *[]Question, participations *[]Participation, users *[]auth.User) helios.Error {
+func DeserializeSynchronizationData(synchronizationData SynchronizationData, event *Event, questions []Question, participations []Participation, users []auth.User) helios.Error {
 	var err helios.ErrorForm = helios.NewErrorForm()
 	var errEvent helios.Error = DeserializeEvent(synchronizationData.Event, event)
 	if errEvent != nil {
@@ -235,7 +235,7 @@ func DeserializeSynchronizationData(synchronizationData SynchronizationData, eve
 		var question Question
 		var errQuestion helios.Error = DeserializeQuestion(questionData, &question)
 		if errQuestion == nil {
-			*questions = append(*questions, question)
+			questions = append(questions, question)
 			errQuestions = append(errQuestions, helios.ErrorFormFieldNested{})
 		} else {
 			var errorQuestionForm helios.ErrorForm = errQuestion.(helios.ErrorForm)
@@ -253,7 +253,7 @@ func DeserializeSynchronizationData(synchronizationData SynchronizationData, eve
 		var participation Participation
 		var errParticipation helios.Error = DeserializeParticipation(participationData, &participation)
 		if errParticipation == nil {
-			*participations = append(*participations, participation)
+			participations = append(participations, participation)
 			errParticipations = append(errParticipations, helios.ErrorFormFieldNested{})
 		} else {
 			var errParticipationForm helios.ErrorForm = errParticipation.(helios.ErrorForm)
@@ -271,7 +271,7 @@ func DeserializeSynchronizationData(synchronizationData SynchronizationData, eve
 		var user auth.User
 		var errUser helios.Error = auth.DeserializeUser(userData, &user)
 		if errUser == nil {
-			*users = append(*users, user)
+			users = append(users, user)
 			errUsers = append(errUsers, helios.ErrorFormFieldNested{})
 		} else {
 			var errUserForm helios.ErrorForm = errUser.(helios.ErrorForm)
