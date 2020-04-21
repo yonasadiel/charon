@@ -347,8 +347,8 @@ func SubmissionCreateView(req helios.Request) {
 	}
 }
 
-// SynchronizationDataView gets the synchronization data of event
-func SynchronizationDataView(req helios.Request) {
+// GetSynchronizationDataView gets the synchronization data of event
+func GetSynchronizationDataView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
 	if !ok {
 		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
@@ -356,16 +356,51 @@ func SynchronizationDataView(req helios.Request) {
 	}
 	var eventSlug string = req.GetURLParam("eventSlug")
 	var event *Event
+	var venue *Venue
 	var questions []Question
-	var participations []Participation
 	var users []auth.User
 	var err helios.Error
 
-	event, questions, participations, users, err = GetSynchronizationData(user, eventSlug)
+	event, venue, questions, users, err = GetSynchronizationData(user, eventSlug)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 	} else {
-		var synchronizationData SynchronizationData = SerializeSynchronizationData(*event, questions, participations, users)
+		var synchronizationData SynchronizationData = SerializeSynchronizationData(*event, *venue, questions, users)
 		req.SendJSON(synchronizationData, http.StatusOK)
+	}
+}
+
+// PutSynchronizationDataView gets the synchronization data of event
+func PutSynchronizationDataView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var synchronizationData SynchronizationData
+	var errDeserialization helios.Error = req.DeserializeRequestData(&synchronizationData)
+	if errDeserialization != nil {
+		req.SendJSON(errDeserialization.GetMessage(), errDeserialization.GetStatusCode())
+		return
+	}
+
+	var event Event
+	var venue Venue
+	var questions []Question
+	var users []auth.User
+	var err helios.Error
+
+	err = DeserializeSynchronizationData(synchronizationData, &event, &venue, &questions, &users)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	err = PutSynchronizationData(user, event, venue, questions, users)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+	} else {
+		req.SendJSON("OK", http.StatusCreated)
 	}
 }

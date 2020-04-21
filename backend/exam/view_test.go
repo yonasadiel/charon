@@ -637,7 +637,7 @@ func TestQuestionDetailView(t *testing.T) {
 	}}
 
 	for i, testCase := range testCases {
-		t.Logf("Test QuestionDetail testcase: %d", i)
+		t.Logf("Test QuestionDetailView testcase: %d", i)
 		var req helios.MockRequest
 		req = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
@@ -722,7 +722,7 @@ func TestQuestionDeleteView(t *testing.T) {
 	}}
 
 	for i, testCase := range testCases {
-		t.Logf("Test QuestionDelete testcase: %d", i)
+		t.Logf("Test QuestionDeleteView testcase: %d", i)
 		req := helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
 		req.URLParam["eventSlug"] = testCase.eventSlug
@@ -798,7 +798,7 @@ func TestSubmissionCreateView(t *testing.T) {
 	}}
 
 	for i, testCase := range testCases {
-		t.Logf("Test SubmissionCreate testcase: %d", i)
+		t.Logf("Test SubmissionCreateView testcase: %d", i)
 		var req helios.MockRequest = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
 		req.URLParam["eventSlug"] = testCase.eventSlug
@@ -818,7 +818,7 @@ func TestSubmissionCreateView(t *testing.T) {
 	}
 }
 
-func TestSynchronizationDataView(t *testing.T) {
+func TestGetSynchronizationDataView(t *testing.T) {
 	helios.App.BeforeTest()
 
 	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
@@ -860,18 +860,86 @@ func TestSynchronizationDataView(t *testing.T) {
 	}}
 
 	for i, testCase := range testCases {
-		t.Logf("Test SynchronizationDataView testcase: %d", i)
+		t.Logf("Test GetSynchronizationDataView testcase: %d", i)
 		var req helios.MockRequest
 		req = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
 		req.URLParam["eventSlug"] = testCase.eventSlug
 
-		SynchronizationDataView(&req)
+		GetSynchronizationDataView(&req)
 
 		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}
 			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}
+
+func TestPutSynchronizationDataView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	type putSynchronizationDataViewTestCase struct {
+		user               interface{}
+		requestData        string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []putSynchronizationDataViewTestCase{{
+		user: auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal}),
+		requestData: `{` +
+			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"},` +
+			`"venue":{"id":10,"name":"venue1"},` +
+			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"a","choices":[],"answer":""}],` +
+			`"users":[{"name":"abc","username":"def","role":"admin"}]` +
+			`}`,
+		expectedStatusCode: http.StatusCreated,
+	}, {
+		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal}),
+		requestData:        `{}`,
+		expectedStatusCode: http.StatusBadRequest,
+		expectedErrorCode:  "form_error",
+	}, {
+		user: auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		requestData: `{` +
+			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"},` +
+			`"venue":{"id":10,"name":"venue1"},` +
+			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"a","choices":[],"answer":""}],` +
+			`"users":[{"name":"abc","username":"def","role":"admin"}]` +
+			`}`,
+		expectedStatusCode: http.StatusForbidden,
+		expectedErrorCode:  errSynchronizationNotAuthorized.Code,
+	}, {
+		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal}),
+		requestData:        "bad_format",
+		expectedStatusCode: http.StatusBadRequest,
+		expectedErrorCode:  helios.ErrJSONParseFailed.Code,
+	}, {
+		user: "bad_user",
+		requestData: `{` +
+			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"},` +
+			`"venue":{"id":10,"name":"venue1"},` +
+			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"a","choices":[],"answer":""}],` +
+			`"users":[{"name":"abc","username":"def","role":"admin"}]` +
+			`}`,
+		expectedStatusCode: http.StatusInternalServerError,
+	}}
+
+	for i, testCase := range testCases {
+		t.Logf("Test PutSynchronizationDataView testcase: %d", i)
+		var req helios.MockRequest = helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.RequestData = testCase.requestData
+
+		PutSynchronizationDataView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			var errUnmarshalling error
+			errUnmarshalling = json.Unmarshal(req.JSONResponse, &err)
+			assert.Nil(t, errUnmarshalling)
 			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
 	}

@@ -9,12 +9,13 @@ import (
 
 // EventData is JSON representation of exam event.
 type EventData struct {
-	ID          uint   `json:"id"`
-	Slug        string `json:"slug"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	StartsAt    string `json:"startsAt"`
-	EndsAt      string `json:"endsAt"`
+	ID                  uint   `json:"id"`
+	Slug                string `json:"slug"`
+	Title               string `json:"title"`
+	Description         string `json:"description"`
+	StartsAt            string `json:"startsAt"`
+	EndsAt              string `json:"endsAt"`
+	LastSynchronization string `json:"lastSynchronization"`
 }
 
 // VenueData is JSON representation of venue.
@@ -48,10 +49,10 @@ type SubmitSubmissionRequest struct {
 // SynchronizationData is JSON representation of encrypted data when
 // event data passed before exam starts
 type SynchronizationData struct {
-	Event          EventData           `json:"event"`
-	Questions      []QuestionData      `json:"questions"`
-	Participations []ParticipationData `json:"participations"`
-	Users          []auth.UserData     `json:"users"`
+	Event     EventData                   `json:"event"`
+	Venue     VenueData                   `json:"venue"`
+	Questions []QuestionData              `json:"questions"`
+	Users     []auth.UserWithPasswordData `json:"users"`
 }
 
 // SerializeVenue converts Venue object venue to JSON of venue
@@ -80,13 +81,18 @@ func DeserializeVenue(venueData VenueData, venue *Venue) helios.Error {
 
 // SerializeEvent converts Event object event to JSON of event
 func SerializeEvent(event Event) EventData {
+	var lastSynchronization string = ""
+	if !event.LastSynchronization.IsZero() {
+		lastSynchronization = event.LastSynchronization.Local().Format(time.RFC3339)
+	}
 	eventData := EventData{
-		ID:          event.ID,
-		Slug:        event.Slug,
-		Title:       event.Title,
-		Description: event.Description,
-		StartsAt:    event.StartsAt.Local().Format(time.RFC3339),
-		EndsAt:      event.EndsAt.Local().Format(time.RFC3339),
+		ID:                  event.ID,
+		Slug:                event.Slug,
+		Title:               event.Title,
+		Description:         event.Description,
+		StartsAt:            event.StartsAt.Local().Format(time.RFC3339),
+		EndsAt:              event.EndsAt.Local().Format(time.RFC3339),
+		LastSynchronization: lastSynchronization,
 	}
 	return eventData
 }
@@ -94,13 +100,14 @@ func SerializeEvent(event Event) EventData {
 // DeserializeEvent returns the Event from EventData
 func DeserializeEvent(eventData EventData, event *Event) helios.Error {
 	var err helios.ErrorForm = helios.NewErrorForm()
-	var errStartsAt, errEndsAt error
+	var errStartsAt, errEndsAt, errLastSynchronization error
 	event.ID = eventData.ID
 	event.Slug = eventData.Slug
 	event.Description = eventData.Description
 	event.Title = eventData.Title
 	event.StartsAt, errStartsAt = time.Parse(time.RFC3339, eventData.StartsAt)
 	event.EndsAt, errEndsAt = time.Parse(time.RFC3339, eventData.EndsAt)
+	event.LastSynchronization, errLastSynchronization = time.Parse(time.RFC3339, eventData.LastSynchronization)
 
 	if event.Title == "" {
 		err.FieldError["title"] = helios.ErrorFormFieldAtomic{"Title can't be empty"}
@@ -120,6 +127,11 @@ func DeserializeEvent(eventData EventData, event *Event) helios.Error {
 	}
 	if event.EndsAt.Before(event.StartsAt) {
 		err.FieldError["endsAt"] = helios.ErrorFormFieldAtomic{"End time should be after start time"}
+	}
+	if eventData.LastSynchronization == "" {
+		event.LastSynchronization = time.Time{}
+	} else if errLastSynchronization != nil {
+		err.FieldError["lastSynchronization"] = helios.ErrorFormFieldAtomic{"Failed to parse time"}
 	}
 	if err.IsError() {
 		return err
@@ -198,30 +210,26 @@ func DeserializeQuestion(questionData QuestionData, question *Question) helios.E
 
 // SerializeSynchronizationData converts event, questions, participations, and users
 // into SynchronizationData
-func SerializeSynchronizationData(event Event, questions []Question, participations []Participation, users []auth.User) SynchronizationData {
+func SerializeSynchronizationData(event Event, venue Venue, questions []Question, users []auth.User) SynchronizationData {
 	var questionsData []QuestionData = make([]QuestionData, 0)
-	var participationsData []ParticipationData = make([]ParticipationData, 0)
-	var usersData []auth.UserData = make([]auth.UserData, 0)
+	var usersData []auth.UserWithPasswordData = make([]auth.UserWithPasswordData, 0)
 	for _, question := range questions {
 		questionsData = append(questionsData, SerializeQuestion(question))
 	}
-	for _, participation := range participations {
-		participationsData = append(participationsData, SerializeParticipation(participation))
-	}
 	for _, user := range users {
-		usersData = append(usersData, auth.SerializeUser(user))
+		usersData = append(usersData, auth.SerializeUserWithPassword(user))
 	}
 	return SynchronizationData{
-		Event:          SerializeEvent(event),
-		Questions:      questionsData,
-		Participations: participationsData,
-		Users:          usersData,
+		Event:     SerializeEvent(event),
+		Venue:     SerializeVenue(venue),
+		Questions: questionsData,
+		Users:     usersData,
 	}
 }
 
 // DeserializeSynchronizationData converts event, questions, participations, and users
 // into SynchronizationData
-func DeserializeSynchronizationData(synchronizationData SynchronizationData, event *Event, questions []Question, participations []Participation, users []auth.User) helios.Error {
+func DeserializeSynchronizationData(synchronizationData SynchronizationData, event *Event, venue *Venue, questions *[]Question, users *[]auth.User) helios.Error {
 	var err helios.ErrorForm = helios.NewErrorForm()
 	var errEvent helios.Error = DeserializeEvent(synchronizationData.Event, event)
 	if errEvent != nil {
@@ -230,48 +238,40 @@ func DeserializeSynchronizationData(synchronizationData SynchronizationData, eve
 		err.NonFieldError = errEventForm.NonFieldError
 	}
 
+	var errVenue helios.Error = DeserializeVenue(synchronizationData.Venue, venue)
+	if errVenue != nil {
+		var errVenueForm helios.ErrorForm = errVenue.(helios.ErrorForm)
+		err.FieldError["venue"] = errVenueForm.FieldError
+		// Currently this is commented out because the deserialization doesn't have any non field error
+		// for _, nonFieldError := range errVenueForm.NonFieldError {
+		// 	err.NonFieldError = append(err.NonFieldError, nonFieldError)
+		// }
+	}
+
 	var errQuestions helios.ErrorFormFieldArray = make(helios.ErrorFormFieldArray, 0)
 	for _, questionData := range synchronizationData.Questions {
 		var question Question
 		var errQuestion helios.Error = DeserializeQuestion(questionData, &question)
 		if errQuestion == nil {
-			questions = append(questions, question)
+			*questions = append(*questions, question)
 			errQuestions = append(errQuestions, helios.ErrorFormFieldNested{})
 		} else {
-			var errorQuestionForm helios.ErrorForm = errQuestion.(helios.ErrorForm)
-			errQuestions = append(errQuestions, errorQuestionForm.FieldError)
+			var errQuestionForm helios.ErrorForm = errQuestion.(helios.ErrorForm)
+			errQuestions = append(errQuestions, errQuestionForm.FieldError)
 			// Currently this is commented out because the deserialization doesn't have any non field error
-			// for _, nonFieldError := range errorQuestionForm.NonFieldError {
+			// for _, nonFieldError := range errQuestionForm.NonFieldError {
 			// 	err.NonFieldError = append(err.NonFieldError, nonFieldError)
 			// }
 		}
 	}
 	err.FieldError["questions"] = errQuestions
 
-	var errParticipations helios.ErrorFormFieldArray = make(helios.ErrorFormFieldArray, 0)
-	for _, participationData := range synchronizationData.Participations {
-		var participation Participation
-		var errParticipation helios.Error = DeserializeParticipation(participationData, &participation)
-		if errParticipation == nil {
-			participations = append(participations, participation)
-			errParticipations = append(errParticipations, helios.ErrorFormFieldNested{})
-		} else {
-			var errParticipationForm helios.ErrorForm = errParticipation.(helios.ErrorForm)
-			errParticipations = append(errParticipations, errParticipationForm.FieldError)
-			// Currently this is commented out because the deserialization doesn't have any non field error
-			// for _, nonFieldError := range errParticipationForm.NonFieldError {
-			// 	err.NonFieldError = append(err.NonFieldError, nonFieldError)
-			// }
-		}
-	}
-	err.FieldError["participations"] = errParticipations
-
 	var errUsers helios.ErrorFormFieldArray = make(helios.ErrorFormFieldArray, 0)
 	for _, userData := range synchronizationData.Users {
 		var user auth.User
-		var errUser helios.Error = auth.DeserializeUser(userData, &user)
+		var errUser helios.Error = auth.DeserializeUserWithPassword(userData, &user)
 		if errUser == nil {
-			users = append(users, user)
+			*users = append(*users, user)
 			errUsers = append(errUsers, helios.ErrorFormFieldNested{})
 		} else {
 			var errUserForm helios.ErrorForm = errUser.(helios.ErrorForm)

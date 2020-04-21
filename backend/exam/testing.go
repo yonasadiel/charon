@@ -34,6 +34,12 @@ func EventFactory(event Event) Event {
 	if event.EndsAt.IsZero() {
 		event.EndsAt = event.StartsAt.Add(2 * time.Hour)
 	}
+	if event.SimKey == "" {
+		event.SimKey = fmt.Sprintf("%032d", eventSeq)
+	}
+	if event.DecryptedAt.IsZero() {
+		event.DecryptedAt = event.StartsAt.Add(-1 * time.Hour)
+	}
 	return event
 }
 

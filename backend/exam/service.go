@@ -1,6 +1,13 @@
 package exam
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/yonasadiel/charon/backend/auth"
@@ -116,9 +123,10 @@ func UpsertEvent(user auth.User, event *Event) helios.Error {
 	}
 
 	if event.ID == 0 {
-		helios.DB.Create(event)
+		event.SimKey = generateRandomToken(32)
+		helios.DB.Omit("last_synchronization").Create(event)
 	} else {
-		helios.DB.Save(event)
+		helios.DB.Omit("last_synchronization", "key").Save(event)
 	}
 
 	return nil
@@ -408,9 +416,9 @@ func SubmitSubmission(user auth.User, eventSlug string, questionID uint, answer 
 	return userQuestion.Question, nil
 }
 
-// GetSynchronizationData gets the synchronization data of user.
-// Onnly local user has the permission
-func GetSynchronizationData(user auth.User, eventSlug string) (*Event, []Question, []Participation, []auth.User, helios.Error) {
+// GetSynchronizationData gets the synchronization data of event.
+// Only local user has the permission
+func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, []Question, []auth.User, helios.Error) {
 	if !user.IsLocal() {
 		return nil, nil, nil, nil, errSynchronizationNotAuthorized
 	}
@@ -430,11 +438,9 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, []Questio
 
 	var event Event
 	var questions []Question
-	var participations []Participation
 	var users []auth.User
 	helios.DB.Where("id = ?", participation.EventID).First(&event)
 	helios.DB.Preload("Choices").Where("event_id = ?", event.ID).Find(&questions)
-	helios.DB.Preload("User").Preload("Venue").Where("event_id = ?", event.ID).Where("venue_id = ?", participation.Venue.ID).Find(&participations)
 	helios.DB.
 		Select("users.*").
 		Joins("inner join participations on participations.user_id = users.id").
@@ -442,5 +448,173 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, []Questio
 		Where("participations.venue_id = ?", participation.Venue.ID).
 		Find(&users)
 
-	return &event, questions, participations, users, nil
+	err := encryptQuestions(questions, event.SimKey)
+	if err != nil {
+		return nil, nil, nil, nil, helios.ErrInternalServerError
+	}
+
+	return &event, participation.Venue, questions, users, nil
+}
+
+// PutSynchronizationData puts the synchronization data of event.
+// Only local user has the permission
+func PutSynchronizationData(user auth.User, event Event, venue Venue, questions []Question, users []auth.User) helios.Error {
+	if !user.IsLocal() {
+		return errSynchronizationNotAuthorized
+	}
+
+	var eventSaved Event
+	var userParticipation Participation
+
+	tx := helios.DB.Begin()
+	tx.Create(&venue)
+
+	// Update or create event and user participation
+	tx.Where("slug = ?", event.Slug).First(&eventSaved)
+	event.LastSynchronization = time.Now()
+	if eventSaved.ID == 0 {
+		tx.Create(&event)
+	} else {
+		event.ID = eventSaved.ID
+		tx.Save(&event)
+	}
+
+	userParticipation = Participation{
+		UserID:  user.ID,
+		VenueID: venue.ID,
+		EventID: event.ID,
+	}
+	tx.Create(&userParticipation)
+
+	// update or create user
+	for _, user := range users {
+		var userSaved auth.User
+		tx.Where("username = ?", user.Username).First(&userSaved)
+		user.Role = auth.UserRoleParticipant
+		if userSaved.ID == 0 {
+			tx.Create(&user)
+		} else {
+			user.ID = userSaved.ID
+			tx.Save(&user)
+		}
+	}
+	// reset all questions and particpations
+	tx.Delete(Question{}, "event_id = ?", event.ID)
+	tx.Delete(Participation{}, "event_id = ?", event.ID)
+	// create all questions and participations
+	for i := range questions {
+		questions[i].ID = 0
+		questions[i].Event = &event
+		questions[i].EventID = event.ID
+		questions[i].Choices = []QuestionChoice{}
+		tx.Create(&questions[i])
+	}
+	for i := range users {
+		var participation Participation = Participation{
+			UserID:  users[i].ID,
+			VenueID: venue.ID,
+			EventID: event.ID,
+		}
+		tx.Create(&participation)
+	}
+	tx.Commit()
+	return nil
+}
+
+func encryptQuestions(questions []Question, encryptionKey string) error {
+	for i := range questions {
+		encryptedContent, err := encryptToBase64(encryptionKey, questions[i].Content)
+		if err != nil {
+			return err
+		}
+		questions[i].Content = encryptedContent
+		for j := range questions[i].Choices {
+			encryptedChoice, err := encryptToBase64(encryptionKey, questions[i].Choices[j].Text)
+			if err != nil {
+				return err
+			}
+			questions[i].Choices[j].Text = encryptedChoice
+		}
+	}
+	return nil
+}
+
+func decryptQuestions(questions []Question, decryptionKey string) error {
+	fmt.Println(len(questions))
+	for i := range questions {
+		decryptedContent, err := decryptFromBase64(decryptionKey, questions[i].Content)
+		if err != nil {
+			return err
+		}
+		questions[i].Content = decryptedContent
+		for j := range questions[i].Choices {
+			decryptedChoice, err := decryptFromBase64(decryptionKey, questions[i].Choices[j].Text)
+			if err != nil {
+				return err
+			}
+			questions[i].Choices[j].Text = decryptedChoice
+		}
+	}
+	return nil
+}
+
+// https://golang.org/pkg/crypto/cipher/#example_NewCFBEncrypter
+func encrypt(key, plaintext []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, err
+	}
+
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
+
+	return ciphertext, nil
+}
+
+func encryptToBase64(key, plaintext string) (string, error) {
+	var encryptedBytes []byte
+	var err error
+	encryptedBytes, err = encrypt([]byte(key), []byte(plaintext))
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(encryptedBytes), nil
+}
+
+// https://golang.org/pkg/crypto/cipher/#example_NewCFBDecrypter
+func decrypt(key []byte, ciphertext []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ciphertext) < aes.BlockSize {
+		return nil, errors.New("ciphertext too short")
+	}
+	plaintext := make([]byte, len(ciphertext)-aes.BlockSize)
+	iv := ciphertext[:aes.BlockSize]
+	copy(plaintext, ciphertext[aes.BlockSize:])
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+	stream.XORKeyStream(plaintext, plaintext)
+	return plaintext, nil
+}
+
+func decryptFromBase64(key, ciphertext string) (string, error) {
+	var encryptedBytes, decryptedBytes []byte
+	var err error
+	encryptedBytes, err = base64.StdEncoding.DecodeString(ciphertext)
+	if err != nil {
+		return "", err
+	}
+	decryptedBytes, err = decrypt([]byte(key), encryptedBytes)
+	if err != nil {
+		return "", err
+	}
+	return string(decryptedBytes), nil
 }

@@ -15,6 +15,15 @@ type UserData struct {
 	Role     string `json:"role"`
 }
 
+// UserWithPasswordData is JSON representation of User according to auth.UserData,
+// including password. Used for synchronization.
+type UserWithPasswordData struct {
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	Password string `json:"password"`
+}
+
 // SerializeUser serialize user to UserData
 func SerializeUser(user User) UserData {
 	var role string
@@ -34,7 +43,7 @@ func SerializeUser(user User) UserData {
 	}
 }
 
-// DeserializeUser serialize user to UserData
+// DeserializeUser deserialize UserData to User
 func DeserializeUser(userData UserData, user *User) helios.Error {
 	var err helios.ErrorForm = helios.NewErrorForm()
 	user.Name = userData.Name
@@ -59,6 +68,31 @@ func DeserializeUser(userData UserData, user *User) helios.Error {
 		err.FieldError["role"] = helios.ErrorFormFieldAtomic{"Role should be either admin, organizer, local, or participant"}
 	}
 	if err.IsError() {
+		return err
+	}
+	return nil
+}
+
+// SerializeUserWithPassword serialize user to UserWithPasswordData
+func SerializeUserWithPassword(user User) UserWithPasswordData {
+	var userData UserData = SerializeUser(user)
+	return UserWithPasswordData{
+		Username: userData.Username,
+		Name:     userData.Name,
+		Role:     userData.Role,
+		Password: user.Password,
+	}
+}
+
+// DeserializeUserWithPassword deserialize UserWithPasswordData to User
+func DeserializeUserWithPassword(userData UserWithPasswordData, user *User) helios.Error {
+	err := DeserializeUser(UserData{
+		Name:     userData.Name,
+		Username: userData.Username,
+		Role:     userData.Role,
+	}, user)
+	user.Password = userData.Password
+	if err != nil {
 		return err
 	}
 	return nil

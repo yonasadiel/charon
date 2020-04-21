@@ -72,14 +72,23 @@ func TestDeserializeVenue(t *testing.T) {
 
 func TestSerializeEvent(t *testing.T) {
 	var event Event = EventFactory(Event{
-		ID:          3,
-		Slug:        "math-final-exam",
-		Title:       "Math Final Exam",
-		Description: "desc",
-		StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
-		EndsAt:      time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
+		ID:                  3,
+		Slug:                "math-final-exam",
+		Title:               "Math Final Exam",
+		Description:         "desc",
+		StartsAt:            time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+		EndsAt:              time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
+		LastSynchronization: time.Date(2020, 8, 10, 1, 2, 3, 4, time.FixedZone("UTC", 0)),
 	})
-	var expectedJSON string = `{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"}`
+	var expectedJSON string = `{` +
+		`"id":3,` +
+		`"slug":"math-final-exam",` +
+		`"title":"Math Final Exam",` +
+		`"description":"desc",` +
+		`"startsAt":"2020-08-12T09:30:10+07:00",` +
+		`"endsAt":"2020-08-12T11:30:10+07:00",` +
+		`"lastSynchronization":"2020-08-10T08:02:03+07:00"` +
+		`}`
 	var serialized EventData = SerializeEvent(event)
 	var serializedJSON []byte
 	var errMarshalling error
@@ -95,23 +104,32 @@ func TestDeserializeEvent(t *testing.T) {
 		expectedError string
 	}
 	testCases := []deserializeEventTestCase{{
-		eventDataJSON: `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:10Z","description":"desc"}`,
+		eventDataJSON: `{` +
+			`"id":3,` +
+			`"slug":"math-final-exam",` +
+			`"title":"Math Final Exam",` +
+			`"description":"desc",` +
+			`"startsAt":"2020-08-12T09:30:10+07:00",` +
+			`"endsAt":"2020-08-12T11:30:10+07:00",` +
+			`"lastSynchronization":"2020-08-10T08:02:03+07:00"` +
+			`}`,
 		expectedEvent: Event{
-			ID:          0,
-			Slug:        "math-final-exam",
-			Title:       "Math Final Exam",
-			Description: "desc",
-			StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
-			EndsAt:      time.Date(2020, 8, 12, 2, 30, 10, 0, time.FixedZone("UTC", 0)),
+			ID:                  3,
+			Slug:                "math-final-exam",
+			Title:               "Math Final Exam",
+			Description:         "desc",
+			StartsAt:            time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+			EndsAt:              time.Date(2020, 8, 12, 11, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+			LastSynchronization: time.Date(2020, 8, 10, 8, 2, 3, 4, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
 		},
 	}, {
 		// endsAt is before startsAt
 		eventDataJSON: `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T02:30:09Z"}`,
 		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["End time should be after start time"]}}`,
 	}, {
-		// wrong format endsAt and startsAt
-		eventDataJSON: `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"bad_format","endsAt":"bad_format"}`,
-		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["Failed to parse time"],"startsAt":["Failed to parse time"]}}`,
+		// wrong format on time
+		eventDataJSON: `{"title":"Math Final Exam","slug":"math-final-exam","startsAt":"bad_format","endsAt":"bad_format","lastSynchronization":"bad_format"}`,
+		expectedError: `{"code":"form_error","message":{"_error":[],"endsAt":["Failed to parse time"],"lastSynchronization":["Failed to parse time"],"startsAt":["Failed to parse time"]}}`,
 	}, {
 		// empty fields
 		eventDataJSON: `{}`,
@@ -298,11 +316,11 @@ func TestDeserializeQuestion(t *testing.T) {
 
 func TestSerializeSynchronizationData(t *testing.T) {
 	type serializeSynchronizationDataTestCase struct {
-		event          Event
-		questions      []Question
-		participations []Participation
-		users          []auth.User
-		expectedJSON   string
+		event        Event
+		venue        Venue
+		questions    []Question
+		users        []auth.User
+		expectedJSON string
 	}
 	testCases := []serializeSynchronizationDataTestCase{{
 		event: Event{
@@ -313,38 +331,38 @@ func TestSerializeSynchronizationData(t *testing.T) {
 			StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
 			EndsAt:      time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
 		},
+		venue: Venue{
+			ID:   10,
+			Name: "venue1",
+		},
 		questions: []Question{{
 			ID:         2,
 			Content:    "Question Content",
 			Choices:    []QuestionChoice{{Text: "a"}, {Text: "b"}, {Text: "c"}},
 			UserAnswer: "answer2",
 		}, {}},
-		participations: []Participation{{
-			ID:    3,
-			User:  &auth.User{Username: "abc"},
-			Venue: &Venue{ID: 3},
-		}},
 		users: []auth.User{{
 			ID:       4,
 			Username: "def",
 			Role:     auth.UserRoleAdmin,
 			Name:     "abc",
+			Password: "ghi",
 		}},
 		expectedJSON: `{` +
-			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"},` +
+			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00","lastSynchronization":""},` +
+			`"venue":{"id":10,"name":"venue1"},` +
 			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"","choices":[],"answer":""}],` +
-			`"participations":[{"id":3,"userUsername":"abc","venueId":3}],` +
-			`"users":[{"name":"abc","username":"def","role":"admin"}]` +
+			`"users":[{"name":"abc","username":"def","role":"admin","password":"ghi"}]` +
 			`}`,
 	}, {
-		event:          Event{},
-		questions:      []Question{},
-		participations: []Participation{},
-		users:          []auth.User{},
+		event:     Event{},
+		venue:     Venue{},
+		questions: []Question{},
+		users:     []auth.User{},
 		expectedJSON: `{` +
-			`"event":{"id":0,"slug":"","title":"","description":"","startsAt":"0001-01-01T07:07:12+07:07","endsAt":"0001-01-01T07:07:12+07:07"},` +
+			`"event":{"id":0,"slug":"","title":"","description":"","startsAt":"0001-01-01T07:07:12+07:07","endsAt":"0001-01-01T07:07:12+07:07","lastSynchronization":""},` +
+			`"venue":{"id":0,"name":""},` +
 			`"questions":[],` +
-			`"participations":[],` +
 			`"users":[]` +
 			`}`,
 	}}
@@ -353,7 +371,7 @@ func TestSerializeSynchronizationData(t *testing.T) {
 		var serialized SynchronizationData
 		var serializedJSON []byte
 		var errMarshalling error
-		serialized = SerializeSynchronizationData(testCase.event, testCase.questions, testCase.participations, testCase.users)
+		serialized = SerializeSynchronizationData(testCase.event, testCase.venue, testCase.questions, testCase.users)
 		serializedJSON, errMarshalling = json.Marshal(serialized)
 		assert.Nil(t, errMarshalling)
 		assert.Equal(t, testCase.expectedJSON, string(serializedJSON))
@@ -362,18 +380,18 @@ func TestSerializeSynchronizationData(t *testing.T) {
 
 func TestDeserializeSynchronizationData(t *testing.T) {
 	type deserializeQuestionTestCase struct {
-		synchronizationDataJSON     string
-		expectedEvent               Event
-		expectedQuestionLength      int
-		expectedParticipationLength int
-		expectedUserLength          int
-		expectedError               string
+		synchronizationDataJSON string
+		expectedEvent           Event
+		expectedVenue           Venue
+		expectedQuestionLength  int
+		expectedUserLength      int
+		expectedError           string
 	}
 	testCases := []deserializeQuestionTestCase{{
 		synchronizationDataJSON: `{` +
 			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00"},` +
+			`"venue":{"id":10,"name":"venue1"},` +
 			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"a","choices":[],"answer":""}],` +
-			`"participations":[{"id":3,"userUsername":"abc","venueId":3},{"id":3,"userUsername":"abc","venueId":3},{"id":3,"userUsername":"abc","venueId":3}],` +
 			`"users":[{"name":"abc","username":"def","role":"admin"}]` +
 			`}`,
 		expectedEvent: Event{
@@ -384,54 +402,61 @@ func TestDeserializeSynchronizationData(t *testing.T) {
 			StartsAt:    time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
 			EndsAt:      time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
 		},
-		expectedQuestionLength:      2,
-		expectedParticipationLength: 3,
-		expectedUserLength:          1,
+		expectedVenue: Venue{
+			ID:   10,
+			Name: "venue1",
+		},
+		expectedQuestionLength: 2,
+		expectedUserLength:     1,
 	}, {
-		synchronizationDataJSON: `{"event":{"endsAt":"2020-08-12T11:30:10+07:00","startsAt":"2020-08-12T09:30:10+07:00","title":"abc","slug":"abc"}}`,
+		synchronizationDataJSON: `{"event":{"endsAt":"2020-08-12T11:30:10+07:00","startsAt":"2020-08-12T09:30:10+07:00","title":"abc","slug":"abc"},"venue":{"name":"abc"}}`,
 		expectedEvent: Event{
 			Title:    "abc",
 			Slug:     "abc",
 			StartsAt: time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
 			EndsAt:   time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
 		},
-		expectedQuestionLength:      0,
-		expectedParticipationLength: 0,
-		expectedUserLength:          0,
+		expectedVenue:          Venue{Name: "abc"},
+		expectedQuestionLength: 0,
+		expectedUserLength:     0,
 	}, {
 		synchronizationDataJSON: `{` +
 			`"event":{"endsAt":"2020-08-12T01:30:10+07:00","startsAt":"2020-08-12T09:30:10+07:00","title":"abc","slug":"abc"},` +
+			`"venue":{},` +
 			`"questions":[{}],` +
-			`"participations":[{"venueId":2},{"venueId":1,"userUsername":"a"}],` +
 			`"users":[{"name":"abc","role":"admin","username":"abc"},{"role":"admin","username":"abc"}]` +
 			`}`,
 		expectedError: `{"code":"form_error","message":{` +
 			`"_error":[],` +
 			`"event":{"endsAt":["End time should be after start time"]},` +
-			`"participations":[{"userUsername":["Username can't be empty"]},{}],` +
 			`"questions":[{"content":["Content can't be empty"]}],` +
-			`"users":[{},{"name":["Name can't be empty"]}]` +
+			`"users":[{},{"name":["Name can't be empty"]}],` +
+			`"venue":{"name":["Name can't be empty"]}` +
 			`}}`,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test DeserializeSynchronizationData testcase: %d", i)
 		var synchronizationData SynchronizationData
 		var event Event
+		var venue Venue
 		var questions []Question
-		var participations []Participation
 		var users []auth.User
 		var errUnmarshalling error
 		var errDeserialization helios.Error
 		errUnmarshalling = json.Unmarshal([]byte(testCase.synchronizationDataJSON), &synchronizationData)
-		errDeserialization = DeserializeSynchronizationData(synchronizationData, &event, questions, participations, users)
+		errDeserialization = DeserializeSynchronizationData(synchronizationData, &event, &venue, &questions, &users)
 		assert.Nil(t, errUnmarshalling)
 		if testCase.expectedError == "" {
 			assert.Nil(t, errDeserialization)
 			assert.Equal(t, testCase.expectedEvent.ID, event.ID)
 			assert.Equal(t, testCase.expectedEvent.Title, event.Title)
+			assert.Equal(t, testCase.expectedVenue.ID, venue.ID)
+			assert.Equal(t, testCase.expectedVenue.Name, venue.Name)
 			assert.Equal(t, testCase.expectedEvent.Description, event.Description)
 			assert.True(t, testCase.expectedEvent.StartsAt.Equal(event.StartsAt))
 			assert.True(t, testCase.expectedEvent.EndsAt.Equal(event.EndsAt))
+			assert.Equal(t, testCase.expectedQuestionLength, len(questions))
+			assert.Equal(t, testCase.expectedUserLength, len(users))
 		} else {
 			var errDeserializationJSON []byte
 			var errMarshalling error

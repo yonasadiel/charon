@@ -41,6 +41,11 @@ var errEventIsNotYetStarted = helios.ErrorAPI{
 	Code:       "event_is_not_yet_started",
 	Message:    "The event is not yet started",
 }
+var errEventIsEncrypted = helios.ErrorAPI{
+	StatusCode: http.StatusBadRequest,
+	Code:       "event_is_encrypted",
+	Message:    "Event is currently encrypted",
+}
 
 var errParticipationChangeNotAuthorized = helios.ErrorAPI{
 	StatusCode: http.StatusForbidden,

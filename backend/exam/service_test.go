@@ -237,6 +237,7 @@ func TestUpsertEvent(t *testing.T) {
 		if testCase.expectedError == nil {
 			assert.Nil(t, err)
 			assert.Equal(t, testCase.event.Title, eventSaved.Title, "If the event has already existed, it should be updated")
+			assert.NotEmpty(t, eventSaved.SimKey)
 		} else {
 			assert.Equal(t, testCase.expectedError, err)
 		}
@@ -970,13 +971,13 @@ func TestGetSynchronizationData(t *testing.T) {
 	ParticipationFactorySaved(Participation{Event: &event1})
 	ParticipationFactorySaved(Participation{Event: &event2})
 	type getSynchronizationDataTestCase struct {
-		user                        auth.User
-		eventSlug                   string
-		expectedEvent               Event
-		expectedQuestionLength      int
-		expectedParticipationLength int
-		expectedUserLength          int
-		expectedError               helios.Error
+		user                   auth.User
+		eventSlug              string
+		expectedEvent          Event
+		expectedVenue          Venue
+		expectedQuestionLength int
+		expectedUserLength     int
+		expectedError          helios.Error
 	}
 	testCases := []getSynchronizationDataTestCase{{
 		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
@@ -999,29 +1000,193 @@ func TestGetSynchronizationData(t *testing.T) {
 		eventSlug:     event2.Slug,
 		expectedError: errEventNotFound,
 	}, {
-		user:                        userLocal,
-		eventSlug:                   event1.Slug,
-		expectedEvent:               event1,
-		expectedQuestionLength:      2,
-		expectedParticipationLength: 3,
-		expectedUserLength:          3,
+		user:                   userLocal,
+		eventSlug:              event1.Slug,
+		expectedEvent:          event1,
+		expectedVenue:          venue,
+		expectedQuestionLength: 2,
+		expectedUserLength:     3,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test GetSynchronizationData testcase: %d", i)
 		var event *Event
+		var venue *Venue
 		var questions []Question
-		var participations []Participation
 		var users []auth.User
 		var err helios.Error
-		event, questions, participations, users, err = GetSynchronizationData(testCase.user, testCase.eventSlug)
+		event, venue, questions, users, err = GetSynchronizationData(testCase.user, testCase.eventSlug)
 		if testCase.expectedError == nil {
 			assert.Nil(t, err)
 			assert.Equal(t, testCase.expectedEvent.Title, event.Title)
+			assert.Equal(t, testCase.expectedVenue.Name, venue.Name)
 			assert.Equal(t, testCase.expectedQuestionLength, len(questions))
-			assert.Equal(t, testCase.expectedParticipationLength, len(participations))
 			assert.Equal(t, testCase.expectedUserLength, len(users))
 		} else {
 			assert.Equal(t, testCase.expectedError, err)
 		}
 	}
+}
+
+func TestPutSynchronizationData(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var userCountBefore, eventCountBefore, venueCountBefore, questionCountBefore, participationCountBefore int
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var userAdmin auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin})
+	var userParticipant1 auth.User = auth.UserFactory(auth.User{Role: auth.UserRoleParticipant})
+	var venue Venue = VenueFactorySaved(Venue{})
+	var oldEvent Event = EventFactorySaved(Event{})
+	var oldQuestions []Question = []Question{
+		QuestionFactorySaved(Question{Event: &oldEvent}),
+		QuestionFactorySaved(Question{Event: &oldEvent}),
+		QuestionFactorySaved(Question{Event: &oldEvent}),
+		QuestionFactorySaved(Question{Event: &oldEvent}),
+	}
+	var oldParticipations []Participation = []Participation{
+		ParticipationFactorySaved(Participation{Event: &oldEvent, Venue: &venue, User: &userParticipant1}),
+		ParticipationFactorySaved(Participation{Event: &oldEvent, Venue: &venue}),
+		ParticipationFactorySaved(Participation{Event: &oldEvent, Venue: &venue}),
+		ParticipationFactorySaved(Participation{Event: &oldEvent, Venue: &venue}),
+	}
+	helios.DB.Model(&auth.User{}).Count(&userCountBefore)
+	helios.DB.Model(&Event{}).Count(&eventCountBefore)
+	helios.DB.Model(&Venue{}).Count(&venueCountBefore)
+	helios.DB.Model(&Question{}).Count(&questionCountBefore)
+	helios.DB.Model(&Participation{}).Count(&participationCountBefore)
+	type putSynchronizationDataTestCase struct {
+		user                       auth.User
+		event                      Event
+		venue                      Venue
+		questions                  []Question
+		users                      []auth.User
+		expectedError              helios.Error
+		expectedEventCount         int
+		expectedVenueCount         int
+		expectedUserCount          int
+		expectedQuestionCount      int
+		expectedParticipationCount int
+	}
+	testCases := []putSynchronizationDataTestCase{{
+		user:                       userAdmin,
+		event:                      EventFactory(Event{}),
+		venue:                      VenueFactory(Venue{}),
+		questions:                  []Question{},
+		users:                      []auth.User{},
+		expectedError:              errSynchronizationNotAuthorized,
+		expectedUserCount:          userCountBefore,
+		expectedVenueCount:         venueCountBefore,
+		expectedEventCount:         eventCountBefore,
+		expectedQuestionCount:      questionCountBefore,
+		expectedParticipationCount: participationCountBefore,
+	}, {
+		user:                       userLocal,
+		event:                      EventFactory(Event{}),
+		venue:                      VenueFactory(Venue{}),
+		questions:                  []Question{QuestionFactory(Question{})},
+		users:                      []auth.User{auth.UserFactory(auth.User{Role: auth.UserRoleParticipant})},
+		expectedUserCount:          userCountBefore + 1,
+		expectedEventCount:         eventCountBefore + 1,
+		expectedVenueCount:         venueCountBefore + 1,
+		expectedQuestionCount:      questionCountBefore + 1,
+		expectedParticipationCount: participationCountBefore + 1,
+	}, {
+		user:                       userLocal,
+		event:                      oldEvent,
+		venue:                      VenueFactory(Venue{}),
+		questions:                  []Question{QuestionFactory(Question{})},
+		users:                      []auth.User{auth.UserFactory(auth.User{Role: auth.UserRoleParticipant}), userParticipant1},
+		expectedUserCount:          userCountBefore + 2,
+		expectedVenueCount:         venueCountBefore + 2,
+		expectedEventCount:         eventCountBefore + 1,
+		expectedQuestionCount:      questionCountBefore + 1 - len(oldQuestions) + 1,
+		expectedParticipationCount: participationCountBefore + 1 - len(oldParticipations) + 2,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test PutSynchronizationData testcase: %d", i)
+		var err helios.Error
+		err = PutSynchronizationData(testCase.user, testCase.event, testCase.venue, testCase.questions, testCase.users)
+		if testCase.expectedError == nil {
+			var userCount, eventCount, venueCount, questionCount, participationCount int
+			helios.DB.Model(&auth.User{}).Count(&userCount)
+			helios.DB.Model(&Event{}).Count(&eventCount)
+			helios.DB.Model(&Venue{}).Count(&venueCount)
+			helios.DB.Model(&Question{}).Count(&questionCount)
+			helios.DB.Model(&Participation{}).Count(&participationCount)
+			assert.Nil(t, err)
+			assert.Equal(t, testCase.expectedUserCount, userCount)
+			assert.Equal(t, testCase.expectedEventCount, eventCount)
+			assert.Equal(t, testCase.expectedVenueCount, venueCount)
+			assert.Equal(t, testCase.expectedQuestionCount, questionCount)
+			assert.Equal(t, testCase.expectedParticipationCount, participationCount)
+		} else {
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
+}
+
+func TestEncryption(t *testing.T) {
+	type encryptionTestCase struct {
+		plaintext  []byte
+		ciphertext []byte // ciphertext encrypted by https://gchq.github.io/CyberChef/ to ensure there is no mgiac behind algorithm
+		key        []byte
+	}
+	testCases := []encryptionTestCase{{
+		plaintext: []byte("16 chars secret!"),
+		ciphertext: []byte{
+			0x2d, 0x98, 0x9d, 0xf2, 0x33, 0x90, 0xeb, 0xc1, 0x6c, 0x27, 0xf8, 0x71, 0xc2, 0x95, 0x1b, 0x48, // iv
+			0x4c, 0x84, 0x23, 0xe0, 0x4e, 0x29, 0x68, 0x66, 0x0a, 0xd8, 0x56, 0x98, 0x9b, 0x35, 0x82, 0xc1, // ciphertext
+		},
+		key: []byte("32 characters super secret key!!"),
+	}, {
+		plaintext: []byte("secret text"),
+		ciphertext: []byte{
+			0xfa, 0x91, 0x76, 0x94, 0xaa, 0x73, 0x85, 0xf2, 0x37, 0xa3, 0xa2, 0x4a, 0xb6, 0xab, 0x7d, 0xc8, // iv
+			0x98, 0xda, 0xce, 0xf2, 0xf6, 0x1c, 0xfe, 0xca, 0x9b, 0xdc, 0x08, // ciphertext
+		},
+		key: []byte("32 characters super secret key!!"),
+	}, {
+		plaintext: []byte("secret text longer than 16 character to ensure cfb mode"),
+		ciphertext: []byte{
+			0x91, 0x50, 0x71, 0xbb, 0xab, 0x57, 0xa6, 0xa3, 0x87, 0x92, 0xb0, 0x2c, 0x3b, 0xb9, 0xfc, 0xa0, // iv
+			0xf7, 0x4d, 0x68, 0x73, 0xd9, 0x94, 0x51, 0x0f, 0x4a, 0xd8, 0xb2, 0x72, 0xef, 0x8d, 0xe1, 0x31, // ciphertext
+			0xa6, 0x81, 0xd9, 0x9f, 0x09, 0xc7, 0xfe, 0x7c, 0x2d, 0x90, 0x16, 0x8d, 0xff, 0xf3, 0x94, 0xcc,
+			0x85, 0x9d, 0xd3, 0x3c, 0x51, 0x88, 0xa6, 0xaf, 0x1c, 0xeb, 0x84, 0xae, 0x98, 0x95, 0x88, 0x41,
+			0xbf, 0xd3, 0x9a, 0x52, 0xc6, 0x32, 0xca,
+		},
+		key: []byte("another 32 char super secret key"),
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test encrypt/decrypt testcase: %d", i)
+		var err error
+		var encrypted, decrypted, result []byte
+		encrypted, err = encrypt(testCase.key, testCase.plaintext)
+		assert.Nil(t, err)
+		decrypted, err = decrypt(testCase.key, encrypted)
+		assert.Nil(t, err)
+		assert.Equal(t, testCase.plaintext, decrypted)
+		result, err = decrypt(testCase.key, testCase.ciphertext)
+		assert.Nil(t, err)
+		assert.Equal(t, testCase.plaintext, result, encrypted)
+	}
+}
+
+func TestEncryptQuestions(t *testing.T) {
+	var questions []Question = []Question{
+		QuestionFactory(Question{Content: "content1", Choices: []QuestionChoice{{Text: "choice1.1"}, {Text: "choice1.2"}}}),
+		QuestionFactory(Question{Content: "content2"}),
+	}
+	var key string = "32 characters super secret key!!"
+	var err error
+	err = encryptQuestions(questions, key)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "content1", questions[0].Content)
+	assert.NotEqual(t, "content2", questions[1].Content)
+	assert.NotEqual(t, "choice1.1", questions[0].Choices[0].Text)
+	assert.NotEqual(t, "choice1.2", questions[0].Choices[1].Text)
+	decryptQuestions(questions, key)
+	assert.Nil(t, err)
+	assert.Equal(t, "content1", questions[0].Content)
+	assert.Equal(t, "content2", questions[1].Content)
+	assert.Equal(t, "choice1.1", questions[0].Choices[0].Text)
+	assert.Equal(t, "choice1.2", questions[0].Choices[1].Text)
 }
