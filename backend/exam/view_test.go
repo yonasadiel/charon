@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -760,7 +761,7 @@ func TestSubmissionCreateView(t *testing.T) {
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
 		questionID:         strconv.Itoa(int(question1.ID)),
-		requestData:        fmt.Sprintf(`{"answer":"%s"}`, question1.Choices[0].Text),
+		requestData:        fmt.Sprintf(`{"answer":"%s"}`, strings.Split(question1.Choices, "|")[0]),
 		expectedStatusCode: http.StatusCreated,
 	}, {
 		user:               userParticipant,

@@ -35,3 +35,23 @@ func generateRandomToken(tokenLength int) string {
 
 	return sb.String()
 }
+
+// isAnswerValidChoice returns true if the answer is exist in one of question choices.
+// Returns true if the choices are empty. It means that the question is not multiple choices type of question.
+func isAnswerValidChoice(answer string, choices string) bool {
+	var exist bool = false
+	var choicesArr []string = strings.Split(choices, "|")
+	var isEmpty bool = true
+	for _, choice := range choicesArr {
+		if choice != "" {
+			isEmpty = false
+			if choice == answer {
+				exist = true
+			}
+		}
+	}
+	if isEmpty {
+		return true
+	}
+	return exist
+}

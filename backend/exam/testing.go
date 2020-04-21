@@ -2,6 +2,7 @@ package exam
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/yonasadiel/charon/backend/auth"
@@ -115,34 +116,6 @@ func ParticipationFactorySaved(participation Participation) Participation {
 	return participation
 }
 
-// QuestionChoiceFactory creates a question choice for testing. The given argument will be
-// completed if the attribute is empty.
-func QuestionChoiceFactory(choice QuestionChoice) QuestionChoice {
-	questionChoiceSeq = questionChoiceSeq + 1
-	if choice.Question == nil && choice.QuestionID == 0 {
-		question := QuestionFactory(Question{})
-		choice.Question = &question
-	}
-	if choice.Text == "" {
-		choice.Text = fmt.Sprintf("Choice %s.%d", choice.Question.Content, questionChoiceSeq)
-	}
-	return choice
-}
-
-// QuestionChoiceFactorySaved do exactly like QuestionChoiceFactory but the result
-// will be saved to database
-func QuestionChoiceFactorySaved(choice QuestionChoice) QuestionChoice {
-	if choice.ID == 0 {
-		choice = QuestionChoiceFactory(choice)
-		var question Question = QuestionFactorySaved(*choice.Question)
-		choice.Question = nil
-		choice.QuestionID = question.ID
-		helios.DB.Create(&choice)
-		choice.Question = &question
-	}
-	return choice
-}
-
 // QuestionFactory creates a question for testing. The given argument will be
 // completed if the attribute is empty.
 func QuestionFactory(question Question) Question {
@@ -154,10 +127,12 @@ func QuestionFactory(question Question) Question {
 		event := EventFactory(Event{})
 		question.Event = &event
 	}
-	if question.Choices == nil {
+	if question.Choices == "" {
+		var choices []string
 		for i := 0; i < 4; i++ {
-			question.Choices = append(question.Choices, QuestionChoiceFactory(QuestionChoice{Question: &question}))
+			choices = append(choices, fmt.Sprintf("choice%d.%d", questionSeq, i+1))
 		}
+		question.Choices = strings.Join(choices, "|")
 	}
 	return question
 }
@@ -167,15 +142,7 @@ func QuestionFactory(question Question) Question {
 func QuestionFactorySaved(question Question) Question {
 	if question.ID == 0 {
 		question = QuestionFactory(question)
-		var choices []QuestionChoice = question.Choices
-		question.Choices = []QuestionChoice{}
 		helios.DB.Create(&question)
-		for i := range choices {
-			choices[i].Question = &question
-			choices[i].QuestionID = question.ID
-			choices[i] = QuestionChoiceFactorySaved(choices[i])
-		}
-		question.Choices = choices
 	}
 	return question
 }

@@ -61,22 +61,9 @@ type Question struct {
 	Content    string `gorm:"type:text"`
 	EventID    uint
 	UserAnswer string `gorm:"-"`
+	Choices    string // pipe (|) separated list of choices
 
-	Event   *Event           `gorm:"foreignkey:EventID"`
-	Choices []QuestionChoice `gorm:"foreignkey:QuestionID"`
-
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time
-}
-
-// QuestionChoice is choice of question with multiple choices type
-type QuestionChoice struct {
-	ID         uint `gorm:"primray_key"`
-	Text       string
-	QuestionID uint
-
-	Question *Question `gorm:"foreignkey:QuestionID"`
+	Event *Event `gorm:"foreignkey:EventID"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -104,7 +91,6 @@ func init() {
 	helios.App.RegisterModel(Event{})
 	helios.App.RegisterModel(Venue{})
 	helios.App.RegisterModel(Participation{})
-	helios.App.RegisterModel(QuestionChoice{})
 	helios.App.RegisterModel(Question{})
 	helios.App.RegisterModel(UserQuestion{})
 }

@@ -238,14 +238,14 @@ func TestSerializeQuestion(t *testing.T) {
 		question: Question{
 			ID:      2,
 			Content: "Question Content",
-			Choices: []QuestionChoice{},
+			Choices: "",
 		},
 		expectedJSON: `{"id":2,"content":"Question Content","choices":[],"answer":""}`,
 	}, {
 		question: Question{
 			ID:         2,
 			Content:    "Question Content",
-			Choices:    []QuestionChoice{{Text: "a"}, {Text: "b"}, {Text: "c"}},
+			Choices:    "a|b|c",
 			UserAnswer: "answer2",
 		},
 		expectedJSON: `{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"}`,
@@ -273,14 +273,14 @@ func TestDeserializeQuestion(t *testing.T) {
 		expectedQuestion: Question{
 			ID:      2,
 			Content: "Question Content",
-			Choices: []QuestionChoice(nil),
+			Choices: "",
 		},
 	}, {
 		questionDataJSON: `{"id":2,"content":"Question Content","choices":["a","","b","","c", ""],"answer":""}`,
 		expectedQuestion: Question{
 			ID:      2,
 			Content: "Question Content",
-			Choices: []QuestionChoice{{Text: "a"}, {Text: "b"}, {Text: "c"}},
+			Choices: "a|b|c",
 		},
 	}, {
 		questionDataJSON: `{"id":2,"content":"","choices":[],"answer":""}`,
@@ -299,10 +299,7 @@ func TestDeserializeQuestion(t *testing.T) {
 			assert.Nil(t, errDeserialization)
 			assert.Equal(t, testCase.expectedQuestion.ID, question.ID)
 			assert.Equal(t, testCase.expectedQuestion.Content, question.Content)
-			assert.Equal(t, len(testCase.expectedQuestion.Choices), len(question.Choices))
-			for i := range testCase.expectedQuestion.Choices {
-				assert.Equal(t, testCase.expectedQuestion.Choices[i].Text, question.Choices[i].Text)
-			}
+			assert.Equal(t, testCase.expectedQuestion.Choices, question.Choices)
 		} else {
 			var errDeserializationJSON []byte
 			var errMarshalling error
@@ -338,7 +335,7 @@ func TestSerializeSynchronizationData(t *testing.T) {
 		questions: []Question{{
 			ID:         2,
 			Content:    "Question Content",
-			Choices:    []QuestionChoice{{Text: "a"}, {Text: "b"}, {Text: "c"}},
+			Choices:    "a|b|c",
 			UserAnswer: "answer2",
 		}, {}},
 		users: []auth.User{{

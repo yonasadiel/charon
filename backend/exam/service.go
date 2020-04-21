@@ -241,12 +241,11 @@ func GetAllQuestionOfUserAndEvent(user auth.User, eventSlug string) ([]Question,
 
 	// Querying for user questions and user submissions
 	if user.IsAdmin() || user.IsOrganizer() || user.IsLocal() {
-		helios.DB.Preload("Choices").Where("event_id = ?", event.ID).Find(&questions)
+		helios.DB.Where("event_id = ?", event.ID).Find(&questions)
 	} else {
 		helios.DB.
 			Select("questions.*, user_questions.answer as user_answer").
 			Table("questions").
-			Preload("Choices").
 			Joins("inner join user_questions on user_questions.question_id = questions.id").
 			Joins("inner join participations on participations.id = user_questions.participation_id").
 			Where("questions.event_id = ?", event.ID).
@@ -275,29 +274,11 @@ func UpsertQuestion(user auth.User, eventSlug string, question *Question) helios
 	}
 
 	tx := helios.DB.Begin()
+	question.Event = &event
 	if question.ID == 0 {
-		choices := question.Choices
-		question.Choices = []QuestionChoice{}
-		question.Event = &event
 		tx.Create(question)
-		for _, choice := range choices {
-			choice.ID = 0
-			choice.QuestionID = question.ID
-			tx.Create(&choice)
-		}
-		question.Choices = choices
 	} else {
-		choices := question.Choices
-		question.Choices = []QuestionChoice{}
-		question.Event = &event
-		tx.Delete(QuestionChoice{}, "question_id = ?", question.ID)
 		tx.Save(question)
-		for _, choice := range choices {
-			choice.ID = 0
-			choice.QuestionID = question.ID
-			tx.Create(&choice)
-		}
-		question.Choices = choices
 	}
 	tx.Commit()
 
@@ -326,7 +307,6 @@ func GetQuestionOfEventAndUser(user auth.User, eventSlug string, questionID uint
 		helios.DB.
 			Select("questions.*, user_questions.answer as user_answer").
 			Table("questions").
-			Preload("Choices").
 			Joins("inner join user_questions on user_questions.question_id = questions.id").
 			Joins("inner join participations on participations.id = user_questions.participation_id").
 			Where("questions.event_id = ?", event.ID).
@@ -364,7 +344,6 @@ func DeleteQuestion(user auth.User, eventSlug string, questionID uint) (*Questio
 	}
 	tx := helios.DB.Begin()
 	tx.Where("question_id = ?", questionID).Delete(UserQuestion{})
-	tx.Where("question_id = ?", questionID).Delete(QuestionChoice{})
 	tx.Delete(&question)
 	tx.Commit()
 	return &question, nil
@@ -393,7 +372,6 @@ func SubmitSubmission(user auth.User, eventSlug string, questionID uint, answer 
 		Select("user_questions.*").
 		Table("user_questions").
 		Preload("Question").
-		Preload("Question.Choices").
 		Joins("inner join questions on questions.id = user_questions.question_id").
 		Joins("inner join participations on participations.id = user_questions.participation_id").
 		Where("questions.event_id = ?", event.ID).
@@ -440,7 +418,7 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, [
 	var questions []Question
 	var users []auth.User
 	helios.DB.Where("id = ?", participation.EventID).First(&event)
-	helios.DB.Preload("Choices").Where("event_id = ?", event.ID).Find(&questions)
+	helios.DB.Where("event_id = ?", event.ID).Find(&questions)
 	helios.DB.
 		Select("users.*").
 		Joins("inner join participations on participations.user_id = users.id").
@@ -499,6 +477,7 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 		}
 	}
 	// reset all questions and particpations
+	tx.Table("user_questions").Joins("inner join questions on questions.id = user_questions.question_id").Where("questions.event_id = ?", event.ID).Delete(UserQuestion{})
 	tx.Delete(Question{}, "event_id = ?", event.ID)
 	tx.Delete(Participation{}, "event_id = ?", event.ID)
 	// create all questions and participations
@@ -506,7 +485,6 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 		questions[i].ID = 0
 		questions[i].Event = &event
 		questions[i].EventID = event.ID
-		questions[i].Choices = []QuestionChoice{}
 		tx.Create(&questions[i])
 	}
 	for i := range users {
@@ -523,18 +501,18 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 
 func encryptQuestions(questions []Question, encryptionKey string) error {
 	for i := range questions {
-		encryptedContent, err := encryptToBase64(encryptionKey, questions[i].Content)
+		var encryptedContent, encryptedChoices string
+		var err error
+		encryptedContent, err = encryptToBase64(encryptionKey, questions[i].Content)
 		if err != nil {
 			return err
 		}
 		questions[i].Content = encryptedContent
-		for j := range questions[i].Choices {
-			encryptedChoice, err := encryptToBase64(encryptionKey, questions[i].Choices[j].Text)
-			if err != nil {
-				return err
-			}
-			questions[i].Choices[j].Text = encryptedChoice
+		encryptedChoices, err = encryptToBase64(encryptionKey, questions[i].Choices)
+		if err != nil {
+			return err
 		}
+		questions[i].Choices = encryptedChoices
 	}
 	return nil
 }
@@ -542,18 +520,18 @@ func encryptQuestions(questions []Question, encryptionKey string) error {
 func decryptQuestions(questions []Question, decryptionKey string) error {
 	fmt.Println(len(questions))
 	for i := range questions {
-		decryptedContent, err := decryptFromBase64(decryptionKey, questions[i].Content)
+		var decryptedContent, decryptedChoices string
+		var err error
+		decryptedContent, err = decryptFromBase64(decryptionKey, questions[i].Content)
 		if err != nil {
 			return err
 		}
 		questions[i].Content = decryptedContent
-		for j := range questions[i].Choices {
-			decryptedChoice, err := decryptFromBase64(decryptionKey, questions[i].Choices[j].Text)
-			if err != nil {
-				return err
-			}
-			questions[i].Choices[j].Text = decryptedChoice
+		decryptedChoices, err = decryptFromBase64(decryptionKey, questions[i].Choices)
+		if err != nil {
+			return err
 		}
+		questions[i].Choices = decryptedChoices
 	}
 	return nil
 }

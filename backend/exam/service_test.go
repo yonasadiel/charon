@@ -1,6 +1,7 @@
 package exam
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -544,7 +545,7 @@ func TestGetAllQuestionOfUserAndEvent(t *testing.T) {
 
 func TestUpsertQuestion(t *testing.T) {
 	helios.App.BeforeTest()
-	var questionCountBefore, choiceCountBefore int
+	var questionCountBefore int
 
 	var userParticipant auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
 	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
@@ -560,65 +561,54 @@ func TestUpsertQuestion(t *testing.T) {
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation1, Question: &question2, Ordering: 10, Answer: "def"})
 
 	helios.DB.Model(&Question{}).Count(&questionCountBefore)
-	helios.DB.Model(&QuestionChoice{}).Count(&choiceCountBefore)
 
 	type questionUpsertTestCase struct {
-		user          auth.User
-		eventSlug     string
-		question      Question
-		questionCount int
-		choiceCount   int
-		expectedError helios.Error
+		user                  auth.User
+		eventSlug             string
+		question              Question
+		expectedQuestionCount int
+		expectedError         helios.Error
 	}
 	testCases := []questionUpsertTestCase{{
-		user:          userParticipant,
-		eventSlug:     event1.Slug,
-		question:      Question{Content: "Content 1", EventID: event1.ID},
-		questionCount: questionCountBefore,
-		choiceCount:   choiceCountBefore,
-		expectedError: errQuestionChangeNotAuthorized,
+		user:                  userParticipant,
+		eventSlug:             event1.Slug,
+		question:              Question{Content: "Content 1", EventID: event1.ID},
+		expectedQuestionCount: questionCountBefore,
+		expectedError:         errQuestionChangeNotAuthorized,
 	}, {
-		user:          userLocal,
-		eventSlug:     event1.Slug,
-		question:      Question{Content: "Content 2", EventID: event1.ID},
-		questionCount: questionCountBefore,
-		choiceCount:   choiceCountBefore,
-		expectedError: errQuestionChangeNotAuthorized,
+		user:                  userLocal,
+		eventSlug:             event1.Slug,
+		question:              Question{Content: "Content 2", EventID: event1.ID},
+		expectedQuestionCount: questionCountBefore,
+		expectedError:         errQuestionChangeNotAuthorized,
 	}, {
-		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
-		eventSlug:     "9999",
-		question:      Question{Content: "Content 3", EventID: event1.ID},
-		questionCount: questionCountBefore,
-		choiceCount:   choiceCountBefore,
-		expectedError: errEventNotFound,
+		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
+		eventSlug:             "9999",
+		question:              Question{Content: "Content 3", EventID: event1.ID},
+		expectedQuestionCount: questionCountBefore,
+		expectedError:         errEventNotFound,
 	}, {
-		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
-		eventSlug:     event1.Slug,
-		question:      Question{Content: "Content 4", EventID: event1.ID},
-		questionCount: questionCountBefore + 1,
-		choiceCount:   choiceCountBefore,
-		expectedError: nil,
+		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
+		eventSlug:             event1.Slug,
+		question:              Question{Content: "Content 4", EventID: event1.ID},
+		expectedQuestionCount: questionCountBefore + 1,
+		expectedError:         nil,
 	}, {
-		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
-		eventSlug:     event1.Slug,
-		question:      Question{ID: question1.ID, Content: "Content 5", EventID: event2.ID},
-		questionCount: questionCountBefore + 1,
-		choiceCount:   choiceCountBefore - len(question1.Choices),
-		expectedError: nil,
+		user:                  auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:             event1.Slug,
+		question:              Question{ID: question1.ID, Content: "Content 5", EventID: event2.ID},
+		expectedQuestionCount: questionCountBefore + 1,
+		expectedError:         nil,
 	}, {
 		user:      auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		eventSlug: event1.Slug,
 		question: Question{
 			Content: "Content 6",
 			EventID: event1.ID,
-			Choices: []QuestionChoice{
-				{ID: question2.Choices[0].ID, Text: "Choice 6.1"}, // the ID will be ignored
-				{Text: "Choice 6.2"},
-			},
+			Choices: "Choice 6.1|Choice 6.2",
 		},
-		questionCount: questionCountBefore + 2,
-		choiceCount:   choiceCountBefore - len(question1.Choices) + 2,
-		expectedError: nil,
+		expectedQuestionCount: questionCountBefore + 2,
+		expectedError:         nil,
 	}, {
 		user:      auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		eventSlug: event1.Slug,
@@ -626,27 +616,20 @@ func TestUpsertQuestion(t *testing.T) {
 			ID:      question2.ID,
 			Content: "Content 7",
 			EventID: event1.ID,
-			Choices: []QuestionChoice{
-				{ID: question2.Choices[0].ID, Text: "Choice 7.1"},
-				{Text: "Choice 7.2"},
-			},
+			Choices: "Choice 7.1|Choice 7.2",
 		},
-		questionCount: questionCountBefore + 2,
-		choiceCount:   choiceCountBefore - len(question1.Choices) + 2 - len(question2.Choices) + 2,
-		expectedError: nil,
+		expectedQuestionCount: questionCountBefore + 2,
+		expectedError:         nil,
 	}}
 
 	for i, testCase := range testCases {
 		var questionCount int
-		var choiceCount int
 		var questionSaved Question
 		t.Logf("Test UpsertQuestion testcase: %d", i)
 		err := UpsertQuestion(testCase.user, testCase.eventSlug, &testCase.question)
 		helios.DB.Model(&Question{}).Count(&questionCount)
-		helios.DB.Model(&QuestionChoice{}).Count(&choiceCount)
 		helios.DB.Where("id = ?", testCase.question.ID).First(&questionSaved)
-		assert.Equal(t, testCase.questionCount, questionCount)
-		assert.Equal(t, testCase.choiceCount, choiceCount)
+		assert.Equal(t, testCase.expectedQuestionCount, questionCount)
 		if testCase.expectedError == nil {
 			assert.Nil(t, err)
 			assert.Equal(t, testCase.question.Content, questionSaved.Content)
@@ -759,9 +742,8 @@ func TestDeleteQuestion(t *testing.T) {
 	var question2 Question = QuestionFactorySaved(Question{Event: &event1})
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation1, Question: &question1, Ordering: 20, Answer: "abc"})
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation1, Question: &question2, Ordering: 10, Answer: "def"})
-	var questionCountBefore, choiceCountBefore, userQuestionCountBefore int
+	var questionCountBefore, userQuestionCountBefore int
 	helios.DB.Model(&Question{}).Count(&questionCountBefore)
-	helios.DB.Model(&QuestionChoice{}).Count(&choiceCountBefore)
 	helios.DB.Model(&UserQuestion{}).Count(&userQuestionCountBefore)
 
 	type deleteQuestionTestCase struct {
@@ -770,7 +752,6 @@ func TestDeleteQuestion(t *testing.T) {
 		questionID                uint
 		expectedQuestion          Question
 		expectedQuestionCount     int
-		expectedChoiceCount       int
 		expectedUserQuestionCount int
 		expectedError             helios.Error
 	}
@@ -779,7 +760,6 @@ func TestDeleteQuestion(t *testing.T) {
 		eventSlug:                 event1.Slug,
 		questionID:                question1.ID,
 		expectedQuestionCount:     questionCountBefore,
-		expectedChoiceCount:       choiceCountBefore,
 		expectedUserQuestionCount: userQuestionCountBefore,
 		expectedError:             errQuestionChangeNotAuthorized,
 	}, {
@@ -787,7 +767,6 @@ func TestDeleteQuestion(t *testing.T) {
 		eventSlug:                 event1.Slug,
 		questionID:                question1.ID,
 		expectedQuestionCount:     questionCountBefore,
-		expectedChoiceCount:       choiceCountBefore,
 		expectedUserQuestionCount: userQuestionCountBefore,
 		expectedError:             errQuestionChangeNotAuthorized,
 	}, {
@@ -795,7 +774,6 @@ func TestDeleteQuestion(t *testing.T) {
 		eventSlug:                 event1.Slug,
 		questionID:                23987,
 		expectedQuestionCount:     questionCountBefore,
-		expectedChoiceCount:       choiceCountBefore,
 		expectedUserQuestionCount: userQuestionCountBefore,
 		expectedError:             errQuestionNotFound,
 	}, {
@@ -803,7 +781,6 @@ func TestDeleteQuestion(t *testing.T) {
 		eventSlug:                 "23987",
 		questionID:                question1.ID,
 		expectedQuestionCount:     questionCountBefore,
-		expectedChoiceCount:       choiceCountBefore,
 		expectedUserQuestionCount: userQuestionCountBefore,
 		expectedError:             errEventNotFound,
 	}, {
@@ -811,7 +788,6 @@ func TestDeleteQuestion(t *testing.T) {
 		eventSlug:                 event2.Slug,
 		questionID:                question1.ID,
 		expectedQuestionCount:     questionCountBefore,
-		expectedChoiceCount:       choiceCountBefore,
 		expectedUserQuestionCount: userQuestionCountBefore,
 		expectedError:             errQuestionNotFound,
 	}, {
@@ -820,21 +796,17 @@ func TestDeleteQuestion(t *testing.T) {
 		questionID:                question1.ID,
 		expectedQuestion:          question1,
 		expectedQuestionCount:     questionCountBefore - 1,
-		expectedChoiceCount:       choiceCountBefore - len(question1.Choices),
 		expectedUserQuestionCount: userQuestionCountBefore - 1,
 	}}
 
 	for i, testCase := range testCases {
 		var questionCount int
-		var choiceCount int
 		var userQuestionCount int
 		t.Logf("Test DeleteQuestion testcase: %d", i)
 		questionDeleted, err := DeleteQuestion(testCase.user, testCase.eventSlug, testCase.questionID)
 		helios.DB.Model(&Question{}).Count(&questionCount)
-		helios.DB.Model(&QuestionChoice{}).Count(&choiceCount)
 		helios.DB.Model(&UserQuestion{}).Count(&userQuestionCount)
 		assert.Equal(t, testCase.expectedQuestionCount, questionCount)
-		assert.Equal(t, testCase.expectedChoiceCount, choiceCount)
 		assert.Equal(t, testCase.expectedUserQuestionCount, userQuestionCount)
 		if testCase.expectedError == nil {
 			assert.Nil(t, err)
@@ -852,10 +824,9 @@ func TestSubmitSubmission(t *testing.T) {
 	var event1 Event = EventFactorySaved(Event{})
 	var event2 Event = EventFactorySaved(Event{StartsAt: time.Now().Add(2 * time.Hour)})
 	var question1 Question = QuestionFactorySaved(Question{Event: &event1})
-	var question2 Question = QuestionFactorySaved(Question{Event: &event1, Choices: []QuestionChoice{}})
+	var question2 Question = QuestionFactorySaved(Question{Event: &event1, Choices: "|"})
 	var question3 Question = QuestionFactorySaved(Question{Event: &event1})
 	var question4 Question = QuestionFactorySaved(Question{Event: &event2})
-	var randomChoice QuestionChoice = QuestionChoiceFactorySaved(QuestionChoice{})
 	var participation1 Participation = ParticipationFactorySaved(Participation{User: &userParticipant, Event: &event1})
 	ParticipationFactorySaved(Participation{Event: &event2, User: &userParticipant})
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation1, Question: &question1})
@@ -871,53 +842,53 @@ func TestSubmitSubmission(t *testing.T) {
 		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
 		eventSlug:     event1.Slug,
 		questionID:    question1.ID,
-		answer:        question1.Choices[0].Text,
+		answer:        strings.Split(question1.Choices, "|")[0],
 		expectedError: errSubmissionNotAuthorized,
 	}, {
 		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		eventSlug:     event1.Slug,
 		questionID:    question1.ID,
-		answer:        question1.Choices[0].Text,
+		answer:        strings.Split(question1.Choices, "|")[0],
 		expectedError: errSubmissionNotAuthorized,
 	}, {
 		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal}),
 		eventSlug:     event1.Slug,
 		questionID:    question1.ID,
-		answer:        question1.Choices[0].Text,
+		answer:        strings.Split(question1.Choices, "|")[0],
 		expectedError: errSubmissionNotAuthorized,
 	}, {
 		user:          userParticipant,
 		eventSlug:     event2.Slug,
 		questionID:    question4.ID,
-		answer:        randomChoice.Text,
+		answer:        "random",
 		expectedError: errEventIsNotYetStarted,
 	}, {
 		user:          userParticipant,
 		eventSlug:     event1.Slug,
 		questionID:    question1.ID,
-		answer:        randomChoice.Text,
+		answer:        "random",
 		expectedError: errAnswerNotValid,
 	}, {
 		user:       userParticipant,
 		eventSlug:  event1.Slug,
 		questionID: question1.ID,
-		answer:     question1.Choices[0].Text,
+		answer:     strings.Split(question1.Choices, "|")[0],
 	}, {
 		user:       userParticipant,
 		eventSlug:  event1.Slug,
 		questionID: question1.ID,
-		answer:     question1.Choices[1].Text,
+		answer:     strings.Split(question1.Choices, "|")[1],
 	}, {
 		user:          userParticipant,
 		eventSlug:     "999999",
 		questionID:    question1.ID,
-		answer:        question1.Choices[1].Text,
+		answer:        strings.Split(question1.Choices, "|")[1],
 		expectedError: errEventNotFound,
 	}, {
 		user:          userParticipant,
 		eventSlug:     event1.Slug,
 		questionID:    999999,
-		answer:        question1.Choices[1].Text,
+		answer:        strings.Split(question1.Choices, "|")[1],
 		expectedError: errQuestionNotFound,
 	}, {
 		user:       userParticipant,
@@ -928,7 +899,7 @@ func TestSubmitSubmission(t *testing.T) {
 		user:          userParticipant,
 		eventSlug:     event1.Slug,
 		questionID:    question3.ID,
-		answer:        question3.Choices[0].Text,
+		answer:        strings.Split(question3.Choices, "|")[0],
 		expectedError: errQuestionNotFound,
 	}}
 	for i, testCase := range testCases {
@@ -1030,7 +1001,7 @@ func TestGetSynchronizationData(t *testing.T) {
 func TestPutSynchronizationData(t *testing.T) {
 	helios.App.BeforeTest()
 
-	var userCountBefore, eventCountBefore, venueCountBefore, questionCountBefore, participationCountBefore int
+	var userCountBefore, eventCountBefore, venueCountBefore, questionCountBefore, participationCountBefore, userQuestionCountBefore int
 	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
 	var userAdmin auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin})
 	var userParticipant1 auth.User = auth.UserFactory(auth.User{Role: auth.UserRoleParticipant})
@@ -1048,11 +1019,13 @@ func TestPutSynchronizationData(t *testing.T) {
 		ParticipationFactorySaved(Participation{Event: &oldEvent, Venue: &venue}),
 		ParticipationFactorySaved(Participation{Event: &oldEvent, Venue: &venue}),
 	}
+	UserQuestionFactorySaved(UserQuestion{Question: &oldQuestions[0], Participation: &oldParticipations[0]})
 	helios.DB.Model(&auth.User{}).Count(&userCountBefore)
 	helios.DB.Model(&Event{}).Count(&eventCountBefore)
 	helios.DB.Model(&Venue{}).Count(&venueCountBefore)
 	helios.DB.Model(&Question{}).Count(&questionCountBefore)
 	helios.DB.Model(&Participation{}).Count(&participationCountBefore)
+	helios.DB.Model(&UserQuestion{}).Count(&userQuestionCountBefore)
 	type putSynchronizationDataTestCase struct {
 		user                       auth.User
 		event                      Event
@@ -1065,6 +1038,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		expectedUserCount          int
 		expectedQuestionCount      int
 		expectedParticipationCount int
+		expectedUserQuestionCount  int
 	}
 	testCases := []putSynchronizationDataTestCase{{
 		user:                       userAdmin,
@@ -1078,6 +1052,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		expectedEventCount:         eventCountBefore,
 		expectedQuestionCount:      questionCountBefore,
 		expectedParticipationCount: participationCountBefore,
+		expectedUserQuestionCount:  userQuestionCountBefore,
 	}, {
 		user:                       userLocal,
 		event:                      EventFactory(Event{}),
@@ -1089,6 +1064,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		expectedVenueCount:         venueCountBefore + 1,
 		expectedQuestionCount:      questionCountBefore + 1,
 		expectedParticipationCount: participationCountBefore + 1,
+		expectedUserQuestionCount:  userQuestionCountBefore,
 	}, {
 		user:                       userLocal,
 		event:                      oldEvent,
@@ -1100,6 +1076,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		expectedEventCount:         eventCountBefore + 1,
 		expectedQuestionCount:      questionCountBefore + 1 - len(oldQuestions) + 1,
 		expectedParticipationCount: participationCountBefore + 1 - len(oldParticipations) + 2,
+		expectedUserQuestionCount:  userQuestionCountBefore - 1,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test PutSynchronizationData testcase: %d", i)
@@ -1172,7 +1149,7 @@ func TestEncryption(t *testing.T) {
 
 func TestEncryptQuestions(t *testing.T) {
 	var questions []Question = []Question{
-		QuestionFactory(Question{Content: "content1", Choices: []QuestionChoice{{Text: "choice1.1"}, {Text: "choice1.2"}}}),
+		QuestionFactory(Question{Content: "content1", Choices: "choice1.1|choice1.2"}),
 		QuestionFactory(Question{Content: "content2"}),
 	}
 	var key string = "32 characters super secret key!!"
@@ -1181,12 +1158,10 @@ func TestEncryptQuestions(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEqual(t, "content1", questions[0].Content)
 	assert.NotEqual(t, "content2", questions[1].Content)
-	assert.NotEqual(t, "choice1.1", questions[0].Choices[0].Text)
-	assert.NotEqual(t, "choice1.2", questions[0].Choices[1].Text)
+	assert.NotEqual(t, "choice1.1|choice1.2", questions[0].Choices)
 	decryptQuestions(questions, key)
 	assert.Nil(t, err)
 	assert.Equal(t, "content1", questions[0].Content)
 	assert.Equal(t, "content2", questions[1].Content)
-	assert.Equal(t, "choice1.1", questions[0].Choices[0].Text)
-	assert.Equal(t, "choice1.2", questions[0].Choices[1].Text)
+	assert.Equal(t, "choice1.1|choice1.2", questions[0].Choices)
 }

@@ -1,6 +1,7 @@
 package exam
 
 import (
+	"strings"
 	"time"
 
 	"github.com/yonasadiel/charon/backend/auth"
@@ -170,9 +171,12 @@ func DeserializeParticipation(participationData ParticipationData, participation
 
 // SerializeQuestion converts Question object question to JSON of question
 func SerializeQuestion(question Question) QuestionData {
-	choices := make([]string, 0)
-	for _, choice := range question.Choices {
-		choices = append(choices, choice.Text)
+	var choicesArr []string = strings.Split(question.Choices, "|")
+	var choices []string = make([]string, 0)
+	for _, choice := range choicesArr {
+		if len(choice) > 0 {
+			choices = append(choices, choice)
+		}
 	}
 	questionData := QuestionData{
 		ID:      question.ID,
@@ -187,17 +191,15 @@ func SerializeQuestion(question Question) QuestionData {
 // DeserializeQuestion convert JSON of question to Question object
 func DeserializeQuestion(questionData QuestionData, question *Question) helios.Error {
 	var err helios.ErrorForm = helios.NewErrorForm()
-	var questionChoices []QuestionChoice
-	for _, choiceText := range questionData.Choices {
-		if choiceText != "" {
-			questionChoices = append(questionChoices, QuestionChoice{
-				Text: choiceText,
-			})
-		}
-	}
 	question.ID = questionData.ID
 	question.Content = questionData.Content
-	question.Choices = questionChoices
+	var choices []string = make([]string, 0)
+	for _, choice := range questionData.Choices {
+		if len(choice) > 0 {
+			choices = append(choices, choice)
+		}
+	}
+	question.Choices = strings.Join(choices, "|")
 
 	if question.Content == "" {
 		err.FieldError["content"] = helios.ErrorFormFieldAtomic{"Content can't be empty"}
