@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/yonasadiel/charon/backend/auth"
@@ -943,5 +944,56 @@ func TestPutSynchronizationDataView(t *testing.T) {
 			assert.Nil(t, errUnmarshalling)
 			assert.Equal(t, testCase.expectedErrorCode, err["code"])
 		}
+	}
+}
+
+func TestDecryptEventDataView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var event1 Event = EventFactorySaved(Event{})
+	var simKey string = event1.SimKey
+	event1.DecryptedAt = time.Time{}
+	event1.SimKey = ""
+	event1.PrvKey = ""
+	fmt.Println(event1.Slug)
+	helios.DB.Save(&event1)
+	ParticipationFactorySaved(Participation{User: &userLocal, Event: &event1})
+	_, er := GetEventOfUser(userLocal, event1.Slug)
+	fmt.Println(er)
+
+	type decryptEventDataViewTestCase struct {
+		user               interface{}
+		eventSlug          string
+		requestData        string
+		expectedStatusCode int
+	}
+	testCases := []decryptEventDataViewTestCase{{
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		requestData:        fmt.Sprintf(`{"key":"%s"}`, simKey),
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               "bad_user",
+		eventSlug:          event1.Slug,
+		requestData:        fmt.Sprintf(`{"key":"%s"}`, simKey),
+		expectedStatusCode: http.StatusInternalServerError,
+	}, {
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		requestData:        "bad_format",
+		expectedStatusCode: http.StatusBadRequest,
+	}}
+
+	for i, testCase := range testCases {
+		t.Logf("Test DecryptEventDataView testcase: %d", i)
+		var req helios.MockRequest = helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.RequestData = testCase.requestData
+		req.URLParam["eventSlug"] = testCase.eventSlug
+
+		DecryptEventDataView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode, req.JSONResponse)
 	}
 }

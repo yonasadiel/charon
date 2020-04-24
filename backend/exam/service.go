@@ -1,12 +1,15 @@
 package exam
 
 import (
+	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"time"
 
@@ -123,7 +126,22 @@ func UpsertEvent(user auth.User, event *Event) helios.Error {
 	}
 
 	if event.ID == 0 {
+		var err error
+		var prvKey *rsa.PrivateKey
+		var simKeySign []byte
 		event.SimKey = generateRandomToken(32)
+		prvKey, err = rsa.GenerateKey(rand.Reader, 1024)
+		if err != nil {
+			return helios.ErrInternalServerError
+		}
+		event.PrvKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(prvKey))
+		event.PubKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&prvKey.PublicKey))
+		simKeyHashed := sha256.Sum256([]byte(event.SimKey))
+		simKeySign, err = rsa.SignPKCS1v15(rand.Reader, prvKey, crypto.SHA256, simKeyHashed[:])
+		if err != nil {
+			return helios.ErrInternalServerError
+		}
+		event.SimKeySign = base64.StdEncoding.EncodeToString(simKeySign)
 		helios.DB.Omit("last_synchronization").Create(event)
 	} else {
 		helios.DB.Omit("last_synchronization", "key").Save(event)
@@ -477,7 +495,14 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 		}
 	}
 	// reset all questions and particpations
-	tx.Table("user_questions").Joins("inner join questions on questions.id = user_questions.question_id").Where("questions.event_id = ?", event.ID).Delete(UserQuestion{})
+	tx.Exec(`UPDATE user_questions
+		SET deleted_at = time('now')
+		WHERE id IN (
+			SELECT user_questions.id
+			FROM user_questions
+			INNER JOIN questions ON questions.id = user_questions.question_id
+			WHERE questions.event_id = ?
+		)`, event.ID)
 	tx.Delete(Question{}, "event_id = ?", event.ID)
 	tx.Delete(Participation{}, "event_id = ?", event.ID)
 	// create all questions and participations
@@ -494,6 +519,61 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 			EventID: event.ID,
 		}
 		tx.Create(&participation)
+	}
+	tx.Commit()
+	return nil
+}
+
+// DecryptEventData decrypts all event data that is encrypted on synchronization data
+func DecryptEventData(user auth.User, eventSlug string, simKey string) helios.Error {
+	if !user.IsLocal() {
+		return errDecryptEventForbidden
+	}
+	var event Event
+	var errGetEvent helios.Error
+	event, errGetEvent = GetEventOfUser(user, eventSlug)
+	if errGetEvent != nil {
+		return errGetEvent
+	}
+	if !event.DecryptedAt.IsZero() {
+		// Already decrypted
+		return nil
+	}
+
+	var simKeySign, pubKeyMarshalled []byte
+	var err error
+	var pubKey *rsa.PublicKey
+	simKeySign, err = base64.StdEncoding.DecodeString(event.SimKeySign)
+	if err != nil {
+		return helios.ErrInternalServerError
+	}
+	simKeyHashed := sha256.Sum256([]byte(simKey))
+	pubKeyMarshalled, err = base64.StdEncoding.DecodeString(event.PubKey)
+	if err != nil {
+		return helios.ErrInternalServerError
+	}
+	pubKey, err = x509.ParsePKCS1PublicKey(pubKeyMarshalled)
+	if err != nil {
+		return helios.ErrInternalServerError
+	}
+	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, simKeyHashed[:], simKeySign)
+	if err != nil {
+		return helios.ErrInternalServerError
+	}
+
+	var questions []Question
+	tx := helios.DB.Begin()
+	event.DecryptedAt = time.Now()
+	event.SimKey = simKey
+	tx.Save(&event)
+	tx.Where("event_id = ?", event.ID).Find(&questions)
+	err = decryptQuestions(questions, simKey)
+	if err != nil {
+		tx.Rollback()
+		return helios.ErrInternalServerError
+	}
+	for _, question := range questions {
+		tx.Save(&question)
 	}
 	tx.Commit()
 	return nil
@@ -518,7 +598,6 @@ func encryptQuestions(questions []Question, encryptionKey string) error {
 }
 
 func decryptQuestions(questions []Question, decryptionKey string) error {
-	fmt.Println(len(questions))
 	for i := range questions {
 		var decryptedContent, decryptedChoices string
 		var err error

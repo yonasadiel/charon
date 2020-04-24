@@ -239,6 +239,11 @@ func TestUpsertEvent(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, testCase.event.Title, eventSaved.Title, "If the event has already existed, it should be updated")
 			assert.NotEmpty(t, eventSaved.SimKey)
+			assert.NotEmpty(t, eventSaved.PubKey)
+			assert.NotEmpty(t, eventSaved.PrvKey)
+			assert.NotEmpty(t, testCase.event.SimKey)
+			assert.NotEmpty(t, testCase.event.PubKey)
+			assert.NotEmpty(t, testCase.event.PrvKey)
 		} else {
 			assert.Equal(t, testCase.expectedError, err)
 		}
@@ -1081,20 +1086,96 @@ func TestPutSynchronizationData(t *testing.T) {
 	for i, testCase := range testCases {
 		t.Logf("Test PutSynchronizationData testcase: %d", i)
 		var err helios.Error
+		var userCount, eventCount, venueCount, questionCount, participationCount, userQuestionCount int
 		err = PutSynchronizationData(testCase.user, testCase.event, testCase.venue, testCase.questions, testCase.users)
+		helios.DB.Model(&auth.User{}).Count(&userCount)
+		helios.DB.Model(&Event{}).Count(&eventCount)
+		helios.DB.Model(&Venue{}).Count(&venueCount)
+		helios.DB.Model(&Question{}).Count(&questionCount)
+		helios.DB.Model(&Participation{}).Count(&participationCount)
+		helios.DB.Model(&UserQuestion{}).Count(&userQuestionCount)
+		assert.Equal(t, testCase.expectedUserCount, userCount)
+		assert.Equal(t, testCase.expectedEventCount, eventCount)
+		assert.Equal(t, testCase.expectedVenueCount, venueCount)
+		assert.Equal(t, testCase.expectedQuestionCount, questionCount)
+		assert.Equal(t, testCase.expectedParticipationCount, participationCount)
+		assert.Equal(t, testCase.expectedUserQuestionCount, userQuestionCount)
 		if testCase.expectedError == nil {
-			var userCount, eventCount, venueCount, questionCount, participationCount int
-			helios.DB.Model(&auth.User{}).Count(&userCount)
-			helios.DB.Model(&Event{}).Count(&eventCount)
-			helios.DB.Model(&Venue{}).Count(&venueCount)
-			helios.DB.Model(&Question{}).Count(&questionCount)
-			helios.DB.Model(&Participation{}).Count(&participationCount)
 			assert.Nil(t, err)
-			assert.Equal(t, testCase.expectedUserCount, userCount)
-			assert.Equal(t, testCase.expectedEventCount, eventCount)
-			assert.Equal(t, testCase.expectedVenueCount, venueCount)
-			assert.Equal(t, testCase.expectedQuestionCount, questionCount)
-			assert.Equal(t, testCase.expectedParticipationCount, participationCount)
+		} else {
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
+}
+
+func TestDecryptEventData(t *testing.T) {
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var event3 Event = EventFactorySaved(Event{})
+	var event2 Event = EventFactorySaved(Event{})
+	var event1 Event = EventFactorySaved(Event{})
+	var simKey string = event1.SimKey
+	event1.DecryptedAt = time.Time{}
+	event1.SimKey = ""
+	event1.PrvKey = ""
+	helios.DB.Save(&event1)
+	var questions []Question = []Question{
+		QuestionFactorySaved(Question{Event: &event1, Content: "content"}),
+		QuestionFactorySaved(Question{Event: &event1, Content: "content"}),
+		QuestionFactorySaved(Question{Event: &event1, Content: "content"}),
+	}
+	var err error = encryptQuestions(questions, simKey)
+	assert.Nil(t, err)
+	ParticipationFactorySaved(Participation{User: &userLocal, Event: &event1})
+	ParticipationFactorySaved(Participation{User: &userLocal, Event: &event3})
+	for _, question := range questions {
+		t.Log(question.Content)
+		helios.DB.Save(&question)
+	}
+	type decryptEventDataTestCase struct {
+		user          auth.User
+		eventSlug     string
+		simKey        string
+		expectedError helios.Error
+	}
+	testCases := []decryptEventDataTestCase{{
+		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
+		eventSlug:     event1.Slug,
+		simKey:        simKey,
+		expectedError: errDecryptEventForbidden,
+	}, {
+		user:          userLocal,
+		eventSlug:     event2.Slug,
+		simKey:        simKey,
+		expectedError: errEventNotFound,
+	}, {
+		user:          userLocal,
+		eventSlug:     event1.Slug,
+		simKey:        "wrong_key",
+		expectedError: helios.ErrInternalServerError,
+	}, {
+		user:      userLocal,
+		eventSlug: event1.Slug,
+		simKey:    simKey,
+	}, {
+		user:      userLocal,
+		eventSlug: event1.Slug,
+		simKey:    simKey,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test DecryptEventData testcase: %d", i)
+		var err helios.Error
+		err = DecryptEventData(testCase.user, testCase.eventSlug, testCase.simKey)
+		if testCase.expectedError == nil {
+			var eventSaved Event
+			helios.DB.Where("id = ?", event1.ID).First(&eventSaved)
+			assert.Nil(t, err)
+			assert.NotEmpty(t, eventSaved.DecryptedAt)
+			assert.NotEmpty(t, eventSaved.SimKey)
+			for _, question := range questions {
+				var questionSaved Question
+				helios.DB.Where("id = ?", question.ID).First(&questionSaved)
+				assert.Equal(t, "content", questionSaved.Content)
+			}
 		} else {
 			assert.Equal(t, testCase.expectedError, err)
 		}

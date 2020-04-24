@@ -16,6 +16,10 @@ type EventData struct {
 	Description         string `json:"description"`
 	StartsAt            string `json:"startsAt"`
 	EndsAt              string `json:"endsAt"`
+	SimKey              string `json:"simKey"`
+	SimKeySign          string `json:"simKeySign"`
+	PubKey              string `json:"pubKey"`
+	DecryptedAt         string `json:"decryptedAt"`
 	LastSynchronization string `json:"lastSynchronization"`
 }
 
@@ -56,6 +60,12 @@ type SynchronizationData struct {
 	Users     []auth.UserWithPasswordData `json:"users"`
 }
 
+// DecryptRequest is JSON representation of submitting key for
+// decrypting event data
+type DecryptRequest struct {
+	SimKey string `json:"key"`
+}
+
 // SerializeVenue converts Venue object venue to JSON of venue
 func SerializeVenue(venue Venue) VenueData {
 	venueData := VenueData{
@@ -82,9 +92,12 @@ func DeserializeVenue(venueData VenueData, venue *Venue) helios.Error {
 
 // SerializeEvent converts Event object event to JSON of event
 func SerializeEvent(event Event) EventData {
-	var lastSynchronization string = ""
+	var lastSynchronization, decryptedAt string
 	if !event.LastSynchronization.IsZero() {
 		lastSynchronization = event.LastSynchronization.Local().Format(time.RFC3339)
+	}
+	if !event.DecryptedAt.IsZero() {
+		decryptedAt = event.DecryptedAt.Local().Format(time.RFC3339)
 	}
 	eventData := EventData{
 		ID:                  event.ID,
@@ -93,6 +106,10 @@ func SerializeEvent(event Event) EventData {
 		Description:         event.Description,
 		StartsAt:            event.StartsAt.Local().Format(time.RFC3339),
 		EndsAt:              event.EndsAt.Local().Format(time.RFC3339),
+		SimKey:              event.SimKey,
+		SimKeySign:          event.SimKeySign,
+		PubKey:              event.PubKey,
+		DecryptedAt:         decryptedAt,
 		LastSynchronization: lastSynchronization,
 	}
 	return eventData
@@ -106,6 +123,8 @@ func DeserializeEvent(eventData EventData, event *Event) helios.Error {
 	event.Slug = eventData.Slug
 	event.Description = eventData.Description
 	event.Title = eventData.Title
+	event.SimKeySign = eventData.SimKeySign
+	event.PubKey = eventData.PubKey
 	event.StartsAt, errStartsAt = time.Parse(time.RFC3339, eventData.StartsAt)
 	event.EndsAt, errEndsAt = time.Parse(time.RFC3339, eventData.EndsAt)
 	event.LastSynchronization, errLastSynchronization = time.Parse(time.RFC3339, eventData.LastSynchronization)

@@ -55,8 +55,6 @@ func CreateRouter() (router *mux.Router) {
 	router.HandleFunc("/exam/{eventSlug}/sync/", helios.WithMiddleware(exam.GetSynchronizationDataView, loggedInMiddlewares)).Methods(http.MethodGet)
 	router.HandleFunc("/exam/{eventSlug}/sync/", helios.WithMiddleware(exam.PutSynchronizationDataView, loggedInMiddlewares)).Methods(http.MethodPost)
 	router.HandleFunc("/exam/{eventSlug}/sync/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
-	router.HandleFunc("/exam/{eventSlug}/decrypt/", helios.WithMiddleware(exam.DecryptEventDataView, loggedInMiddlewares)).Methods(http.MethodPost)
-	router.HandleFunc("/exam/{eventSlug}/decrypt/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 	router.HandleFunc("/exam/{eventSlug}/question/", helios.WithMiddleware(exam.QuestionListView, loggedInMiddlewares)).Methods(http.MethodGet)
 	router.HandleFunc("/exam/{eventSlug}/question/", helios.WithMiddleware(exam.QuestionCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
 	router.HandleFunc("/exam/{eventSlug}/question/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)

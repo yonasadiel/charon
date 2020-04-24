@@ -15,8 +15,9 @@ type Event struct {
 	Title               string `gorm:"size:256"`
 	Description         string `gorm:"type:text"`
 	SimKey              string `gorm:"size:48"`
-	PrvKey              string `gorm:"size:256"`
-	PubKey              string `gorm:"size:256"`
+	SimKeySign          string `gorm:"size:1024"`
+	PrvKey              string `gorm:"size:1024"`
+	PubKey              string `gorm:"size:1024"`
 	DecryptedAt         time.Time
 	LastSynchronization time.Time
 	StartsAt            time.Time
@@ -45,9 +46,9 @@ type Participation struct {
 	UserID  uint
 	VenueID uint
 
-	Event *Event     `gorm:"foreignkey:EventID"`
-	User  *auth.User `gorm:"foreignkey:UserID"`
-	Venue *Venue     `gorm:"foreignkey:VenueID"`
+	Event *Event     `gorm:"foreignkey:EventID;association_autoupdate:false"`
+	User  *auth.User `gorm:"foreignkey:UserID;association_autoupdate:false"`
+	Venue *Venue     `gorm:"foreignkey:VenueID;association_autoupdate:false"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -63,7 +64,7 @@ type Question struct {
 	UserAnswer string `gorm:"-"`
 	Choices    string // pipe (|) separated list of choices
 
-	Event *Event `gorm:"foreignkey:EventID"`
+	Event *Event `gorm:"foreignkey:EventID;association_autoupdate:false"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -79,8 +80,8 @@ type UserQuestion struct {
 	Ordering        uint
 	Answer          string `gorm:"type:text"`
 
-	Participation *Participation `gorm:"foreignkey:ParticipationID"`
-	Question      *Question      `gorm:"foreignkey:QuestionID"`
+	Participation *Participation `gorm:"foreignkey:ParticipationID;association_autoupdate:false"`
+	Question      *Question      `gorm:"foreignkey:QuestionID;association_autoupdate:false"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -78,6 +78,10 @@ func TestSerializeEvent(t *testing.T) {
 		Description:         "desc",
 		StartsAt:            time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
 		EndsAt:              time.Date(2020, 8, 12, 4, 30, 10, 0, time.FixedZone("UTC", 0)),
+		SimKey:              "sim_key",
+		SimKeySign:          "sim_key_signature",
+		PubKey:              "public_key_for_verifying_sim_key",
+		DecryptedAt:         time.Date(2020, 8, 10, 1, 2, 8, 4, time.FixedZone("UTC", 0)),
 		LastSynchronization: time.Date(2020, 8, 10, 1, 2, 3, 4, time.FixedZone("UTC", 0)),
 	})
 	var expectedJSON string = `{` +
@@ -87,6 +91,10 @@ func TestSerializeEvent(t *testing.T) {
 		`"description":"desc",` +
 		`"startsAt":"2020-08-12T09:30:10+07:00",` +
 		`"endsAt":"2020-08-12T11:30:10+07:00",` +
+		`"simKey":"sim_key",` +
+		`"simKeySign":"sim_key_signature",` +
+		`"pubKey":"public_key_for_verifying_sim_key",` +
+		`"decryptedAt":"2020-08-10T08:02:08+07:00",` +
 		`"lastSynchronization":"2020-08-10T08:02:03+07:00"` +
 		`}`
 	var serialized EventData = SerializeEvent(event)
@@ -111,6 +119,10 @@ func TestDeserializeEvent(t *testing.T) {
 			`"description":"desc",` +
 			`"startsAt":"2020-08-12T09:30:10+07:00",` +
 			`"endsAt":"2020-08-12T11:30:10+07:00",` +
+			`"simKey":"sim_key",` +
+			`"simKeySign":"sim_key_signature",` +
+			`"pubKey":"public_key_for_verifying_sim_key",` +
+			`"decryptedAt":"2020-08-10T08:02:08+07:00",` +
 			`"lastSynchronization":"2020-08-10T08:02:03+07:00"` +
 			`}`,
 		expectedEvent: Event{
@@ -120,7 +132,9 @@ func TestDeserializeEvent(t *testing.T) {
 			Description:         "desc",
 			StartsAt:            time.Date(2020, 8, 12, 9, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
 			EndsAt:              time.Date(2020, 8, 12, 11, 30, 10, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
-			LastSynchronization: time.Date(2020, 8, 10, 8, 2, 3, 4, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
+			SimKeySign:          "sim_key_signature",
+			PubKey:              "public_key_for_verifying_sim_key",
+			LastSynchronization: time.Date(2020, 8, 10, 8, 2, 3, 0, time.FixedZone("Asia/Jakarta", int((7*time.Hour).Seconds()))),
 		},
 	}, {
 		// endsAt is before startsAt
@@ -151,6 +165,12 @@ func TestDeserializeEvent(t *testing.T) {
 			assert.Equal(t, testCase.expectedEvent.Description, event.Description)
 			assert.True(t, testCase.expectedEvent.StartsAt.Equal(event.StartsAt))
 			assert.True(t, testCase.expectedEvent.EndsAt.Equal(event.EndsAt))
+			assert.True(t, testCase.expectedEvent.EndsAt.Equal(event.EndsAt))
+			assert.Equal(t, testCase.expectedEvent.SimKey, event.SimKey)
+			assert.Equal(t, testCase.expectedEvent.SimKeySign, event.SimKeySign)
+			assert.Equal(t, testCase.expectedEvent.PubKey, event.PubKey)
+			assert.True(t, testCase.expectedEvent.DecryptedAt.Equal(event.DecryptedAt))
+			assert.True(t, testCase.expectedEvent.LastSynchronization.Equal(event.LastSynchronization))
 		} else {
 			var errDeserializationJSON []byte
 			var errMarshalling error
@@ -346,7 +366,11 @@ func TestSerializeSynchronizationData(t *testing.T) {
 			Password: "ghi",
 		}},
 		expectedJSON: `{` +
-			`"event":{"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc","startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00","lastSynchronization":""},` +
+			`"event":{` +
+			`"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc",` +
+			`"startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00",` +
+			`"simKey":"","simKeySign":"","pubKey":"","decryptedAt":"","lastSynchronization":""` +
+			`},` +
 			`"venue":{"id":10,"name":"venue1"},` +
 			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"","choices":[],"answer":""}],` +
 			`"users":[{"name":"abc","username":"def","role":"admin","password":"ghi"}]` +
@@ -357,7 +381,11 @@ func TestSerializeSynchronizationData(t *testing.T) {
 		questions: []Question{},
 		users:     []auth.User{},
 		expectedJSON: `{` +
-			`"event":{"id":0,"slug":"","title":"","description":"","startsAt":"0001-01-01T07:07:12+07:07","endsAt":"0001-01-01T07:07:12+07:07","lastSynchronization":""},` +
+			`"event":{` +
+			`"id":0,"slug":"","title":"","description":"",` +
+			`"startsAt":"0001-01-01T07:07:12+07:07","endsAt":"0001-01-01T07:07:12+07:07",` +
+			`"simKey":"","simKeySign":"","pubKey":"","decryptedAt":"","lastSynchronization":""` +
+			`},` +
 			`"venue":{"id":0,"name":""},` +
 			`"questions":[],` +
 			`"users":[]` +

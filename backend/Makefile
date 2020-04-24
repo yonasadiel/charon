@@ -1,6 +1,7 @@
 all:
 	go build -o bin/createuser ./cmd/createuser/
 	go build -o bin/localserver ./cmd/localserver/
+	go build -o bin/centralserver ./cmd/centralserver/
 	chmod +x ./bin/*
 	@echo "Build done"
 

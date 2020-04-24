@@ -404,3 +404,28 @@ func PutSynchronizationDataView(req helios.Request) {
 		req.SendJSON("OK", http.StatusCreated)
 	}
 }
+
+// DecryptEventDataView decrypts all the event data using the key
+func DecryptEventDataView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var eventSlug string = req.GetURLParam("eventSlug")
+	var decryptRequest DecryptRequest
+	var errDeserialization helios.Error = req.DeserializeRequestData(&decryptRequest)
+	if errDeserialization != nil {
+		req.SendJSON(errDeserialization.GetMessage(), errDeserialization.GetStatusCode())
+		return
+	}
+
+	var err helios.Error
+	err = DecryptEventData(user, eventSlug, decryptRequest.SimKey)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+	} else {
+		req.SendJSON("OK", http.StatusOK)
+	}
+}

@@ -94,3 +94,9 @@ var errSynchronizationNotAuthorized = helios.ErrorAPI{
 	Code:       "cannot_get_synchronization",
 	Message:    "You are not allowed to get the synchronziation data",
 }
+
+var errDecryptEventForbidden = helios.ErrorAPI{
+	StatusCode: http.StatusForbidden,
+	Code:       "decrypt_forbidden",
+	Message:    "You are not allowed to decrypt the exam",
+}

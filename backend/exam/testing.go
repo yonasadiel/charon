@@ -1,6 +1,12 @@
 package exam
 
 import (
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -35,8 +41,16 @@ func EventFactory(event Event) Event {
 	if event.EndsAt.IsZero() {
 		event.EndsAt = event.StartsAt.Add(2 * time.Hour)
 	}
-	if event.SimKey == "" {
-		event.SimKey = fmt.Sprintf("%032d", eventSeq)
+	if event.SimKey == "" && event.PubKey == "" && event.PrvKey == "" && event.SimKeySign == "" {
+		var prvKey *rsa.PrivateKey
+		var simKeySign []byte
+		event.SimKey = generateRandomToken(32)
+		prvKey, _ = rsa.GenerateKey(rand.Reader, 1024)
+		event.PrvKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(prvKey))
+		event.PubKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&prvKey.PublicKey))
+		simKeyHashed := sha256.Sum256([]byte(event.SimKey))
+		simKeySign, _ = rsa.SignPKCS1v15(rand.Reader, prvKey, crypto.SHA256, simKeyHashed[:])
+		event.SimKeySign = base64.StdEncoding.EncodeToString(simKeySign)
 	}
 	if event.DecryptedAt.IsZero() {
 		event.DecryptedAt = event.StartsAt.Add(-1 * time.Hour)
