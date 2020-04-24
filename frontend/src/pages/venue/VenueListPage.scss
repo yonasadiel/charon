@@ -1,0 +1,21 @@
+@import '../../styles/base';
+
+.venue-page {
+  @extend .container;
+  padding-top: 20px;
+
+  h1.title {
+    font-size: 2em;
+    margin-bottom: .5em;
+  }
+
+  .venues {
+    display: flex;
+    flex-direction: column;
+
+    .venue {
+      padding: 8px 0;
+      margin-bottom: 1em;
+    }
+  }
+}

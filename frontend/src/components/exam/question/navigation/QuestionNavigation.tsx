@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 import { Question } from '../../../../modules/charon/exam/api';
-import { generateUrlWithParams } from '../../../../modules/routes';
+import { generateUrlWithParams } from '../../../../modules/util/routes';
 import './QuestionNavigation.scss';
 import { ROUTE_EVENT_QUESTION_DETAIL } from '../../../../pages/routes';
 

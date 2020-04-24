@@ -1,18 +1,26 @@
 import keyBy from 'lodash/keyBy';
 
-import { PUT_EVENTS, PUT_QUESTIONS } from './action';
-import { Event } from './api';
+import { PUT_EVENTS, PUT_QUESTIONS, PUT_VENUES } from './action';
+import { Event, Venue } from './api';
 
 export interface CharonExamState {
+  venues: { [id: number]: Venue } | null,
   events: { [id: number]: Event } | null,
 };
 
 const initialState: CharonExamState = {
+  venues: null,
   events: null,
 };
 
 export function charonExamReducer (state: CharonExamState = initialState, action: any) {
   switch (action.type) {
+    case PUT_VENUES: {
+      return {
+        ...state,
+        venues: action.venues === null ? null : keyBy(action.venues, 'id'),
+      };
+    }
     case PUT_EVENTS: {
       return {
         ...state,

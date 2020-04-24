@@ -3,7 +3,7 @@ import { matchPath } from 'react-router';
 import { Link } from 'react-router-dom';
 
 
-import { generateUrlWithParams } from '../../../../modules/routes';
+import { generateUrlWithParams } from '../../../../modules/util/routes';
 import { ROUTE_EVENT_DETAIL_OVERVIEW, ROUTE_EVENT_QUESTION_DETAIL, ROUTE_EVENT_QUESTION_EDIT } from '../../../../pages/routes';
 import './EventNavigation.scss';
 

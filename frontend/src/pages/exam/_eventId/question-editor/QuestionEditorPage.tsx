@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import * as charonExamActions from '../../../../modules/charon/exam/action';
 import * as charonExamSelectors from '../../../../modules/charon/exam/selector';
 import { Question } from '../../../../modules/charon/exam/api';
-import { generateUrlWithParams } from '../../../../modules/routes';
+import { generateUrlWithParams } from '../../../../modules/util/routes';
 import { AppState } from '../../../../modules/store';
 import { ROUTE_EVENT_QUESTION_EDIT_CREATE } from '../../../../pages/routes';
 import QuestionEdit from './QuestionEdit';

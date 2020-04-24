@@ -10,7 +10,7 @@ import { Event } from '../../modules/charon/exam/api';
 import * as charonExamActions from '../../modules/charon/exam/action';
 import * as charonExamSelectors from '../../modules/charon/exam/selector';
 import { CharonFormError } from '../../modules/charon/http';
-import { generateUrlWithParams } from '../../modules/routes';
+import { generateUrlWithParams } from '../../modules/util/routes';
 import { AppState } from '../../modules/store';
 import { ROUTE_EVENT_DETAIL } from '../routes';
 import './EventListPage.scss';

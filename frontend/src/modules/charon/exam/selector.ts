@@ -2,11 +2,16 @@ import flatMap from 'lodash/flatMap';
 
 import { AppState } from '../../store';
 import { getCharonState } from '../selector';
-import { Event, Question } from './api';
+import { Event, Question, Venue } from './api';
 import { CharonExamState } from './reducer';
 
 export function getCharonExamState(state: AppState): CharonExamState {
   return getCharonState(state).exam;
+}
+
+export function getVenues(state: AppState): Venue[] | null {
+  const { venues } = getCharonExamState(state);
+  return !!venues ? flatMap(venues) : venues;
 }
 
 export function getEvents(state: AppState): Event[] | null {

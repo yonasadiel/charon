@@ -6,7 +6,7 @@ import { useHistory, withRouter, RouteComponentProps } from 'react-router-dom';
 import QuestionForm, { QuestionFormData } from '../../../../../components/exam/question/form/QuestionForm';
 import { Event, Question } from '../../../../../modules/charon/exam/api';
 import * as charonExamActions from '../../../../../modules/charon/exam/action';
-import { generateUrlWithParams } from '../../../../../modules/routes';
+import { generateUrlWithParams } from '../../../../../modules/util/routes';
 import { ROUTE_EVENT_QUESTION_EDIT } from '../../../../routes';
 
 interface ConnectedQuestionCreatePageProps extends RouteComponentProps<{ eventId: string }>, QuestionCreatePageProps {
