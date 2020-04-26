@@ -12,7 +12,7 @@ import * as charonExamSelectors from '../../modules/charon/exam/selector';
 import { CharonFormError } from '../../modules/charon/http';
 import { generateUrlWithParams } from '../../modules/util/routes';
 import { AppState } from '../../modules/store';
-import { ROUTE_EVENT_DETAIL } from '../routes';
+import { ROUTE_EVENT } from '../routes';
 import { durationText } from '../../modules/util/time';
 import './EventListPage.scss';
 
@@ -40,7 +40,7 @@ const renderEvents = (events: Event[] | null) => {
   return (
     <div>
       {events.map((event: Event) => (
-        <Link to={generateUrlWithParams(ROUTE_EVENT_DETAIL, { eventId: event.id })} key={event.id}>
+        <Link to={generateUrlWithParams(ROUTE_EVENT, { eventId: event.id })} key={event.id}>
           <Card className="event-card">
             <h2 className="event-title">{event.title}</h2>
             <p>

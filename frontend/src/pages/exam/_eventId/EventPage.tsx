@@ -13,8 +13,8 @@ import * as charonSessionSelectors from '../../../modules/session/selector';
 import { generateUrlWithParams } from '../../../modules/util/routes';
 import { AppState } from '../../../modules/store';
 import {
-  ROUTE_EVENT_DETAIL,
-  ROUTE_EVENT_DETAIL_OVERVIEW,
+  ROUTE_EVENT,
+  ROUTE_EVENT_OVERVIEW,
   ROUTE_EVENT_QUESTION,
   ROUTE_EVENT_QUESTION_DETAIL,
   ROUTE_EVENT_QUESTION_EDIT,
@@ -47,7 +47,7 @@ const EventDetailPage = (props: EventDetailPageProps) => {
   if (!event) return <p>Loading</p>;
 
   const showEditQuestion = !!user ? canEditQuestion(user) : false;
-  const eventDetailLink = generateUrlWithParams(ROUTE_EVENT_DETAIL_OVERVIEW, { eventId: event.id });
+  const eventDetailLink = generateUrlWithParams(ROUTE_EVENT_OVERVIEW, { eventId: event.id });
   const questionDetailLink = generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { eventId: event.id, questionNumber: 1 });
 
   return (
@@ -76,10 +76,10 @@ const EventDetailPage = (props: EventDetailPageProps) => {
           <Route path={ROUTE_EVENT_QUESTION}>
             <Redirect to={questionDetailLink} />
           </Route>
-          <Route path={ROUTE_EVENT_DETAIL_OVERVIEW}>
+          <Route path={ROUTE_EVENT_OVERVIEW}>
             <EventDetail event={event} />
           </Route>
-          <Route path={ROUTE_EVENT_DETAIL}>
+          <Route path={ROUTE_EVENT}>
             <Redirect to={eventDetailLink} />
           </Route>
         </Switch>

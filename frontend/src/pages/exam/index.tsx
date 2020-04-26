@@ -6,7 +6,7 @@ import { User } from '../../modules/charon/auth/api';
 import * as charonExamActions from '../../modules/charon/exam/action';
 import * as sessionSelectors from '../../modules/session/selector';
 import { AppState } from '../../modules/store';
-import { ROUTE_LOGIN, ROUTE_EVENT_LIST, ROUTE_EVENT_DETAIL } from '../routes';
+import { ROUTE_LOGIN, ROUTE_EVENT_LIST, ROUTE_EVENT } from '../routes';
 import EventListPage from './EventListPage';
 import EventPage from './_eventId/EventPage';
 
@@ -26,7 +26,7 @@ const ExamRoute = (props: ExamRouteProps) => {
 
   return (
     <Switch>
-      <Route path={ROUTE_EVENT_DETAIL}><EventPage /></Route>
+      <Route path={ROUTE_EVENT}><EventPage /></Route>
       <Route path={ROUTE_EVENT_LIST}><EventListPage user={user} /></Route>
     </Switch>
   );
