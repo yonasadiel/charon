@@ -24,6 +24,18 @@ export function login(username: string, password: string): AppThunk<void> {
   };
 };
 
+export function logout(): AppThunk<void> {
+  return async function (dispatch, _, { charonAuthApi }) {
+    return charonAuthApi.logout()
+      .then(() => {
+        dispatch(putUser(null));
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonAPIError(err);
+      });
+  };
+};
+
 export function getUsers(): AppThunk<Promise<void>> {
   return async function (dispatch, _, { charonAuthApi }) {
     dispatch(putUsers(null));

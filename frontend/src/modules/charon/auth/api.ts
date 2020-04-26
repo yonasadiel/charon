@@ -18,7 +18,8 @@ export interface User {
 };
 
 export interface CharonAuthApi {
-  login: (username: string, password: string) => Promise<AxiosResponse<any>>;
+  login: (username: string, password: string) => Promise<AxiosResponse<void>>;
+  logout: () => Promise<AxiosResponse<void>>;
 
   getUsers: () => Promise<AxiosResponse<User[]>>;
   createUser: (user: User) => Promise<AxiosResponse<void>>;
@@ -26,6 +27,7 @@ export interface CharonAuthApi {
 
 export default {
   login: (username: string, password: string) => http.post(`${conf.charonApiUrl}/auth/login/`, { username, password }),
+  logout: () => http.post(`${conf.charonApiUrl}/auth/logout/`),
 
   getUsers: () => http.get(`${conf.charonApiUrl}/auth/user/`),
   createUser: (user: User) => http.post(`${conf.charonApiUrl}/auth/user/`, user),

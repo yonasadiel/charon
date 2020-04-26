@@ -13,6 +13,7 @@ import { CharonFormError } from '../../modules/charon/http';
 import { generateUrlWithParams } from '../../modules/util/routes';
 import { AppState } from '../../modules/store';
 import { ROUTE_EVENT_DETAIL } from '../routes';
+import { durationText } from '../../modules/util/time';
 import './EventListPage.scss';
 
 interface EventListPageProps {
@@ -42,7 +43,10 @@ const renderEvents = (events: Event[] | null) => {
         <Link to={generateUrlWithParams(ROUTE_EVENT_DETAIL, { eventId: event.id })} key={event.id}>
           <Card className="event-card">
             <h2 className="event-title">{event.title}</h2>
-            <p>{event.startsAt.toLocaleDateString()} {event.startsAt.toLocaleTimeString()}</p>
+            <p>
+              Dimulai {event.startsAt.toLocaleDateString()} {event.startsAt.toLocaleTimeString()}.
+              Durasi {durationText(event.startsAt, event.endsAt)}.
+            </p>
           </Card>
         </Link>
       ))}

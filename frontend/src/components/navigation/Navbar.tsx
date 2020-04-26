@@ -6,17 +6,22 @@ import logo from '../../assets/logo.svg';
 import profileIcon from '../../assets/profile.svg';
 import conf from '../../conf';
 import { User } from '../../modules/charon/auth/api';
+import * as charonAuthActions from '../../modules/charon/auth/action';
 import * as sessionSelectors from '../../modules/session/selector';
 import { AppState } from '../../modules/store';
-import { ROUTE_HOME, ROUTE_LOGIN } from '../../pages/routes';
+import { ROUTE_HOME } from '../../pages/routes';
 import './Navbar.scss';
 
-export interface NavbarProps {
+export interface ConnectedNavbarProps {
   user: User | null;
+  logoutAction: () => void,
 }
 
-const Navbar = (props: NavbarProps) => {
-  const { user } = props;
+const Navbar = (props: ConnectedNavbarProps) => {
+  const { logoutAction, user } = props;
+  const handleLogoutClick = () => {
+    logoutAction();
+  };
   return (
     <div className="navbar">
       <Link to={ROUTE_HOME} className="app">
@@ -24,10 +29,10 @@ const Navbar = (props: NavbarProps) => {
         <h1 className="title">{conf.appName}</h1>
       </Link>
       <div className="divider" />
-      <Link to={ROUTE_LOGIN} className="user">
+      <div className="user" onClick={handleLogoutClick}>
         {!!user && (<img src={profileIcon} alt="profile-icon" />)}
         <span>{!!user ? user.name : "Login"}</span>
-      </Link>
+      </div>
     </div>
   );
 }
@@ -36,4 +41,8 @@ const mapStateToProps = (state: AppState) => ({
   user: sessionSelectors.getUser(state),
 });
 
-export default connect(mapStateToProps)(Navbar);
+const mapDispatchToProps = {
+  logoutAction: charonAuthActions.logout,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Navbar);

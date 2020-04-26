@@ -13,6 +13,7 @@ import * as charonSessionSelectors from '../../../modules/session/selector';
 import { generateUrlWithParams } from '../../../modules/util/routes';
 import { AppState } from '../../../modules/store';
 import {
+  ROUTE_EVENT_DETAIL,
   ROUTE_EVENT_DETAIL_OVERVIEW,
   ROUTE_EVENT_QUESTION,
   ROUTE_EVENT_QUESTION_DETAIL,
@@ -46,6 +47,7 @@ const EventDetailPage = (props: EventDetailPageProps) => {
   if (!event) return <p>Loading</p>;
 
   const showEditQuestion = !!user ? canEditQuestion(user) : false;
+  const eventDetailLink = generateUrlWithParams(ROUTE_EVENT_DETAIL_OVERVIEW, { eventId: event.id });
   const questionDetailLink = generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { eventId: event.id, questionNumber: 1 });
 
   return (
@@ -76,6 +78,9 @@ const EventDetailPage = (props: EventDetailPageProps) => {
           </Route>
           <Route path={ROUTE_EVENT_DETAIL_OVERVIEW}>
             <EventDetail event={event} />
+          </Route>
+          <Route path={ROUTE_EVENT_DETAIL}>
+            <Redirect to={eventDetailLink} />
           </Route>
         </Switch>
       </div>

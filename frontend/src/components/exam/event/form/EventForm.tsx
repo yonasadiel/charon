@@ -16,6 +16,10 @@ const renderTitleField = (field: WrappedFieldProps) => (
   <TextInput {...field.input} errorText={field.meta.error} placeholder="Judul" type="text" />
 );
 
+const renderSlugField = (field: WrappedFieldProps) => (
+  <TextInput {...field.input} errorText={field.meta.error} placeholder="Slug" type="text" />
+);
+
 const renderStartsAtField = (field: WrappedFieldProps) => (
   <TextInput {...field.input} errorText={field.meta.error} placeholder="Waktu mulai" type="text" />
 );
@@ -29,13 +33,14 @@ const EventForm = (props: EventFormProps) => {
   return (
     <form className="event-form" onSubmit={handleSubmit}>
       <Field name="title" component={renderTitleField} />
+      <Field name="slug" component={renderSlugField} />
       <Field name="startsAt" component={renderStartsAtField} />
       <Field name="endsAt" component={renderEndsAtField} />
 
       <small className="error">{ error }</small>
 
       <div className="event-button-row">
-        <Button buttonType={BUTTON_TYPE_CONTAINED}>
+        <Button buttonType={BUTTON_TYPE_CONTAINED} type="submit">
           { !submitting ? (<strong>BUAT</strong>) : <LoadingCircle /> }
         </Button>
       </div>

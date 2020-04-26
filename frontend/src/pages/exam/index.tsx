@@ -8,7 +8,7 @@ import * as sessionSelectors from '../../modules/session/selector';
 import { AppState } from '../../modules/store';
 import { ROUTE_LOGIN, ROUTE_EVENT_LIST, ROUTE_EVENT_DETAIL } from '../routes';
 import EventListPage from './EventListPage';
-import EventDetailPage from './_eventId/EventPage';
+import EventPage from './_eventId/EventPage';
 
 export interface ExamRouteProps {
   getEvents: () => void;
@@ -26,7 +26,7 @@ const ExamRoute = (props: ExamRouteProps) => {
 
   return (
     <Switch>
-      <Route path={ROUTE_EVENT_DETAIL}><EventDetailPage /></Route>
+      <Route path={ROUTE_EVENT_DETAIL}><EventPage /></Route>
       <Route path={ROUTE_EVENT_LIST}><EventListPage user={user} /></Route>
     </Switch>
   );
