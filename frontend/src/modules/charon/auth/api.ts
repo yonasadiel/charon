@@ -13,15 +13,20 @@ export const USER_ROLE = {
 export interface User {
   name: string;
   username: string;
+  password: string;
   role: 'local' | 'participant' | 'organizer' | 'admin';
 };
 
 export interface CharonAuthApi {
   login: (username: string, password: string) => Promise<AxiosResponse<any>>;
+
+  getUsers: () => Promise<AxiosResponse<User[]>>;
+  createUser: (user: User) => Promise<AxiosResponse<void>>;
 }
 
 export default {
-  login: (username: string, password: string) => {
-    return http.post(`${conf.charonApiUrl}/auth/login/`, { username, password });
-  },
+  login: (username: string, password: string) => http.post(`${conf.charonApiUrl}/auth/login/`, { username, password }),
+
+  getUsers: () => http.get(`${conf.charonApiUrl}/auth/user/`),
+  createUser: (user: User) => http.post(`${conf.charonApiUrl}/auth/user/`, user),
 }

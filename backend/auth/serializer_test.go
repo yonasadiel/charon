@@ -169,3 +169,49 @@ func TestDeserializeUserWithPassword(t *testing.T) {
 		}
 	}
 }
+
+func TestDeserializeUserWithUnencryptedPassword(t *testing.T) {
+	type deserializeUserWithUnencryptedPasswordTestCase struct {
+		userDataJSON  string
+		expectedUser  User
+		expectedError string
+	}
+	testCases := []deserializeUserWithUnencryptedPasswordTestCase{{
+		userDataJSON: `{"name":"User 1","username":"user1","role":"participant","password":"abcd"}`,
+		expectedUser: User{
+			Name:     "User 1",
+			Username: "user1",
+			Role:     UserRoleParticipant,
+			Password: "abcd",
+		},
+	}, {
+		userDataJSON:  `{"name":"User 5","username":"user5","role":"random","password":"abc"}`,
+		expectedError: `{"code":"form_error","message":{"_error":[],"role":["Role should be either admin, organizer, local, or participant"]}}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test DeserializeUserWithPassword testcase: %d", i)
+		var user User
+		var userData UserWithPasswordData
+		var errUnmarshalling error
+		var errDeserialization helios.Error
+		errUnmarshalling = json.Unmarshal([]byte(testCase.userDataJSON), &userData)
+		errDeserialization = DeserializeUserWithUnencryptedPassword(userData, &user)
+		assert.Nil(t, errUnmarshalling)
+		if testCase.expectedError == "" {
+			assert.Nil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedUser.ID, user.ID, "Empty id on json will give 0")
+			assert.Equal(t, testCase.expectedUser.Name, user.Name)
+			assert.Equal(t, testCase.expectedUser.Username, user.Username)
+			assert.Equal(t, testCase.expectedUser.Role, user.Role)
+			assert.NotEmpty(t, user.Password)
+			assert.NotEqual(t, testCase.expectedUser.Password, user.Password)
+		} else {
+			var errDeserializationJSON []byte
+			var errMarshalling error
+			errDeserializationJSON, errMarshalling = json.Marshal(errDeserialization.GetMessage())
+			assert.Nil(t, errMarshalling)
+			assert.NotNil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedError, string(errDeserializationJSON))
+		}
+	}
+}

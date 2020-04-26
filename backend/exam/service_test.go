@@ -1151,7 +1151,7 @@ func TestDecryptEventData(t *testing.T) {
 		user:          userLocal,
 		eventSlug:     event1.Slug,
 		simKey:        "wrong_key",
-		expectedError: helios.ErrInternalServerError,
+		expectedError: errDecryptEventFailed,
 	}, {
 		user:      userLocal,
 		eventSlug: event1.Slug,

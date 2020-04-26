@@ -33,7 +33,12 @@ func LogoutView(req helios.Request) {
 func UserListView(req helios.Request) {
 	var user User = req.GetContextData(UserTokenSessionKey).(User)
 	var users []User = GetAllUser(user)
-	req.SendJSON(users, http.StatusOK)
+
+	serializedUsers := make([]UserData, 0)
+	for _, user := range users {
+		serializedUsers = append(serializedUsers, SerializeUser(user))
+	}
+	req.SendJSON(serializedUsers, http.StatusOK)
 }
 
 // UserCreateView creates the user
@@ -44,7 +49,7 @@ func UserCreateView(req helios.Request) {
 		return
 	}
 
-	var userData UserData
+	var userData UserWithPasswordData
 	var newUser User
 	var err helios.Error
 	err = req.DeserializeRequestData(&userData)
@@ -52,7 +57,7 @@ func UserCreateView(req helios.Request) {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
 	}
-	err = DeserializeUser(userData, &newUser)
+	err = DeserializeUserWithPassword(userData, &newUser)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return

@@ -2,6 +2,9 @@ export const ROUTE_HOME = '/';
 
 export const ROUTE_LOGIN = ROUTE_HOME + 'login/';
 
+export const ROUTE_USER = ROUTE_HOME + 'user/'
+export const ROUTE_USER_LIST = ROUTE_USER;
+
 export const ROUTE_VENUE = ROUTE_HOME + 'venue/';
 export const ROUTE_VENUE_LIST = ROUTE_VENUE;
 

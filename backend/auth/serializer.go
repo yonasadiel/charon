@@ -97,3 +97,17 @@ func DeserializeUserWithPassword(userData UserWithPasswordData, user *User) heli
 	}
 	return nil
 }
+
+// DeserializeUserWithUnencryptedPassword deserialize UserWithPasswordData to User
+func DeserializeUserWithUnencryptedPassword(userData UserWithPasswordData, user *User) helios.Error {
+	err := DeserializeUser(UserData{
+		Name:     userData.Name,
+		Username: userData.Username,
+		Role:     userData.Role,
+	}, user)
+	user.Password = hashPassword(userData.Password)
+	if err != nil {
+		return err
+	}
+	return nil
+}

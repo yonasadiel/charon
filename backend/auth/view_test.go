@@ -105,7 +105,8 @@ func TestLogoutView(t *testing.T) {
 func TestUserListView(t *testing.T) {
 	helios.App.BeforeTest()
 
-	var user User = UserFactorySaved(User{})
+	var user User = UserFactorySaved(User{Role: UserRoleAdmin})
+	UserFactorySaved(User{Role: UserRoleOrganizer})
 	var req helios.MockRequest
 	req = helios.NewMockRequest()
 	req.SetContextData(UserContextKey, user)

@@ -558,7 +558,7 @@ func DecryptEventData(user auth.User, eventSlug string, simKey string) helios.Er
 	}
 	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, simKeyHashed[:], simKeySign)
 	if err != nil {
-		return helios.ErrInternalServerError
+		return errDecryptEventFailed
 	}
 
 	var questions []Question

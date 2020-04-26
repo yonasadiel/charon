@@ -971,6 +971,11 @@ func TestDecryptEventDataView(t *testing.T) {
 	testCases := []decryptEventDataViewTestCase{{
 		user:               userLocal,
 		eventSlug:          event1.Slug,
+		requestData:        `{"key":"wrong_key"}`,
+		expectedStatusCode: http.StatusBadRequest,
+	}, {
+		user:               userLocal,
+		eventSlug:          event1.Slug,
 		requestData:        fmt.Sprintf(`{"key":"%s"}`, simKey),
 		expectedStatusCode: http.StatusOK,
 	}, {

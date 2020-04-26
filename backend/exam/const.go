@@ -100,3 +100,9 @@ var errDecryptEventForbidden = helios.ErrorAPI{
 	Code:       "decrypt_forbidden",
 	Message:    "You are not allowed to decrypt the exam",
 }
+
+var errDecryptEventFailed = helios.ErrorAPI{
+	StatusCode: http.StatusBadRequest,
+	Code:       "decrypt_failed",
+	Message:    "Failed to decrypt event. Make sure the key given is correct.",
+}

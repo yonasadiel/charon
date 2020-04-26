@@ -1,0 +1,42 @@
+@import '../../styles/base';
+
+.user-page {
+  @extend .container;
+  padding-top: 20px;
+
+  .title-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 10px;
+
+    h1.title {
+      font-size: 2em;
+      margin-bottom: .5em;
+    }
+  }
+
+  .create-user-modal-title {
+    font-size: 1.5em;
+  }
+
+  .users {
+    display: flex;
+    flex-direction: column;
+
+    .user {
+      padding: 8px 0;
+      margin-bottom: 2px;
+
+      &.admin { background-color: #ff93f0; }
+      &.organizer { background-color: #deb5ff; }
+      &.local { background-color: #b5c5ff; }
+      &.participant { background-color: #beffb5; }
+
+      .username {
+        font-size: .8em;
+        opacity: .8;
+      }
+    }
+  }
+}

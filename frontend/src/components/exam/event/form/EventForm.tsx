@@ -10,7 +10,6 @@ export interface EventFormData extends Partial<Event> {
 };
 
 export interface EventFormProps extends InjectedFormProps<EventFormData> {
-  event?: Event;
 };
 
 const renderTitleField = (field: WrappedFieldProps) => (
@@ -26,10 +25,9 @@ const renderEndsAtField = (field: WrappedFieldProps) => (
 );
 
 const EventForm = (props: EventFormProps) => {
-  const { error, event, handleSubmit, submitting } = props;
+  const { error, handleSubmit, submitting } = props;
   return (
     <form className="event-form" onSubmit={handleSubmit}>
-      <h2 className="title">{!!event ? 'Ubah Ujian' : 'Buat Ujian'}</h2>
       <Field name="title" component={renderTitleField} />
       <Field name="startsAt" component={renderStartsAtField} />
       <Field name="endsAt" component={renderEndsAtField} />
