@@ -463,12 +463,14 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 	var userParticipation Participation
 
 	tx := helios.DB.Begin()
+	venue.ID = 0
 	tx.Create(&venue)
 
 	// Update or create event and user participation
 	tx.Where("slug = ?", event.Slug).First(&eventSaved)
 	event.LastSynchronization = time.Now()
 	if eventSaved.ID == 0 {
+		event.ID = 0
 		tx.Create(&event)
 	} else {
 		event.ID = eventSaved.ID
@@ -483,15 +485,15 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 	tx.Create(&userParticipation)
 
 	// update or create user
-	for _, user := range users {
+	for i := range users {
 		var userSaved auth.User
-		tx.Where("username = ?", user.Username).First(&userSaved)
-		user.Role = auth.UserRoleParticipant
+		tx.Where("username = ?", users[i].Username).First(&userSaved)
 		if userSaved.ID == 0 {
-			tx.Create(&user)
+			users[i].ID = 0
+			tx.Create(&users[i])
 		} else {
-			user.ID = userSaved.ID
-			tx.Save(&user)
+			users[i].ID = userSaved.ID
+			tx.Save(&users[i])
 		}
 	}
 	// reset all questions and particpations

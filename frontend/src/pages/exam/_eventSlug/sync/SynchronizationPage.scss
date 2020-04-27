@@ -1,0 +1,24 @@
+@import '../../../../styles/base';
+
+.synchronization-page {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  .title {
+    font-size: 1.5em;
+    margin-bottom: .5em;
+  }
+
+  .action-row {
+    margin-bottom: 10px;
+
+    *:not(:first-child) {
+      margin-left: 10px;
+    }
+  }
+
+  .sync-data {
+    width: 100%;
+  }
+}

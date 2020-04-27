@@ -10,7 +10,7 @@ import { generateUrlWithParams } from '../../../../modules/util/routes';
 import { AppState } from '../../../../modules/store';
 import { ROUTE_EVENT_QUESTION_EDIT_CREATE } from '../../../routes';
 import QuestionEdit from './QuestionEdit';
-import QuestionLoading from './QuestionEditLoading';
+import QuestionEditorLoadingPage from './QuestionEditorLoadingPage';
 import './QuestionEditorPage.scss';
 
 interface QuestionEditorPageProps {
@@ -38,11 +38,7 @@ const QuestionEditorPage = (props: ConnectedQuestionEditorPageProps) => {
   };
 
   if (!questions || isDeleting) {
-    return (
-      <Card className="question-editor">
-        {[0, 1, 2].map((idx) => <QuestionLoading key={idx} />)}
-      </Card>
-    );
+    return <QuestionEditorLoadingPage />;
   }
   return (
     <Card className="question-editor">

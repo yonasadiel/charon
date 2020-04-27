@@ -84,6 +84,8 @@ const EventListPage = (props: EventListPageProps) => {
         <EventForm onSubmit={submitNewEvent} />
       </Modal>
 
+      <h1>Daftar Ujian</h1>
+
       {(user.role === USER_ROLE.ADMIN || user.role === USER_ROLE.ORGANIZER) && (
         <div className="create-button-row">
           <Button onClick={() => setShowingCreateModal(true)}>

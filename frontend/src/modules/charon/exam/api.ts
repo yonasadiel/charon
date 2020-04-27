@@ -55,6 +55,9 @@ export interface CharonExamApi {
   getQuestionsOfEvent: (eventSlug: string) => Promise<AxiosResponse<Question[]>>;
   createQuestion: (eventSlug: string, question: Question) => Promise<AxiosResponse<void>>;
   deleteQuestion: (eventSlug: string, questionId: number) => Promise<AxiosResponse<Question>>;
+
+  getSynchronizationData: (eventSlug: string) => Promise<AxiosResponse<SynchronizationData>>;
+  putSynchronizationData: (eventSlug: string, syncData: SynchronizationData) => Promise<AxiosResponse<SynchronizationData>>;
 };
 
 export default {
@@ -70,4 +73,7 @@ export default {
   getQuestionsOfEvent: (eventSlug: string) => http.get(`${conf.charonApiUrl}/exam/${eventSlug}/question/`),
   createQuestion: (eventSlug: string, question: Question) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/question/`, question),
   deleteQuestion: (eventSlug: string, questionId: number) => http.delete(`${conf.charonApiUrl}/exam/${eventSlug}/question/${questionId}/`),
+
+  getSynchronizationData: (eventSlug: string) => http.get(`${conf.charonApiUrl}/exam/${eventSlug}/sync/`),
+  putSynchronizationData: (eventSlug: string, syncData: SynchronizationData) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/sync/`, syncData),
 } as CharonExamApi;

@@ -1,7 +1,5 @@
 import React from 'react';
 import { matchPath } from 'react-router';
-import { Link } from 'react-router-dom';
-
 
 import { generateUrlWithParams } from '../../../../modules/util/routes';
 import {
@@ -9,47 +7,55 @@ import {
   ROUTE_EVENT_PARTICIPATION,
   ROUTE_EVENT_QUESTION_DETAIL,
   ROUTE_EVENT_QUESTION_EDIT,
+  ROUTE_EVENT_SYNC,
 } from '../../../../pages/routes';
+import EventNavigationItem from './EventNavigationItem';
 import './EventNavigation.scss';
 
 interface EventNavigationProps {
   currentPath: string;
   eventSlug: string;
-  hasEditPermission: boolean;
+  menus: string[];
 }
 
 const EventNavigation = (props: EventNavigationProps) => {
-  const { currentPath, eventSlug, hasEditPermission } = props;
+  const { currentPath, eventSlug, menus } = props;
   const urlParams = { eventSlug };
 
   const isActive = (path: string) =>
     !!matchPath(currentPath, { path, exact: true })
   return (
     <div className="event-navigation">
-      <Link to={generateUrlWithParams(ROUTE_EVENT_OVERVIEW, urlParams)}>
-        <div className={`nav-item ${isActive(ROUTE_EVENT_OVERVIEW) ? 'active' : ''}`}>
-          <i className="fas fa-info-circle" /> Detail
-        </div>
-      </Link>
-      {hasEditPermission && (
-        <Link to={generateUrlWithParams(ROUTE_EVENT_PARTICIPATION, urlParams)}>
-        <div className={`nav-item ${isActive(ROUTE_EVENT_PARTICIPATION) ? 'active' : ''}`}>
-            <i className="fas fa-user-friends" /> Peserta
-          </div>
-        </Link>
-      )}
-      <Link to={generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { ...urlParams, questionId: 1 })}>
-        <div className={`nav-item ${isActive(ROUTE_EVENT_QUESTION_DETAIL) ? 'active' : ''}`}>
-          <i className="fas fa-book-open" /> Soal
-        </div>
-      </Link>
-      {hasEditPermission && (
-        <Link to={generateUrlWithParams(ROUTE_EVENT_QUESTION_EDIT, urlParams)}>
-        <div className={`nav-item ${isActive(ROUTE_EVENT_QUESTION_EDIT) ? 'active' : ''}`}>
-            <i className="fas fa-edit" /> Ubah Soal
-          </div>
-        </Link>
-      )}
+      {(menus.includes(ROUTE_EVENT_OVERVIEW)) && (
+        <EventNavigationItem
+          icon="fa-info-circle"
+          isActive={isActive(ROUTE_EVENT_OVERVIEW)}
+          route={generateUrlWithParams(ROUTE_EVENT_OVERVIEW, urlParams)}
+          text="Detail" /> )}
+      {(menus.includes(ROUTE_EVENT_PARTICIPATION)) && (
+        <EventNavigationItem
+          icon="fa-user-friends"
+          isActive={isActive(ROUTE_EVENT_PARTICIPATION)}
+          route={generateUrlWithParams(ROUTE_EVENT_PARTICIPATION, urlParams)}
+          text="Peserta" /> )}
+      {(menus.includes(ROUTE_EVENT_QUESTION_DETAIL)) && (
+        <EventNavigationItem
+          icon="fa-book-open"
+          isActive={isActive(ROUTE_EVENT_QUESTION_DETAIL)}
+          route={generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { ...urlParams, questionId: 1 })}
+          text="Soal" /> )}
+      {(menus.includes(ROUTE_EVENT_QUESTION_EDIT)) && (
+        <EventNavigationItem
+          icon="fa-edit"
+          isActive={isActive(ROUTE_EVENT_QUESTION_EDIT)}
+          route={generateUrlWithParams(ROUTE_EVENT_QUESTION_EDIT, urlParams)}
+          text="Ubah Soal" /> )}
+      {(menus.includes(ROUTE_EVENT_SYNC)) && (
+        <EventNavigationItem
+          icon="fa-sync"
+          isActive={isActive(ROUTE_EVENT_SYNC)}
+          route={generateUrlWithParams(ROUTE_EVENT_SYNC, urlParams)}
+          text="Sinkronisasi" /> )}
     </div>
   );
 };

@@ -34,11 +34,17 @@ const renderChoice = (member: string, index: number, fields: FieldArrayFieldsPro
 
 const renderChoices = (props: WrappedFieldArrayProps<string>) => {
   const { fields } = props;
+  const addFourMoreChoices = () => {
+    fields.push('');
+    fields.push('');
+    fields.push('');
+    fields.push('');
+  }
   return (
     <div>
       {fields.map(renderChoice)}
       <div className="field-row add-choice">
-        <Button buttonType="outlined" onClick={() => fields.push("")}><i className="fas fa-plus"></i>Tambah pilihan jawaban</Button>
+        <Button buttonType="outlined" onClick={addFourMoreChoices}><i className="fas fa-plus"></i>Tambah pilihan jawaban</Button>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps, Switch, Route, Redirect } from 'react-router-dom';
 
-import { User, USER_ROLE } from '../../../modules/charon/auth/api';
+import { User } from '../../../modules/charon/auth/api';
 import EventDetail from '../../../components/exam/event/EventDetail';
 import EventNavigation from '../../../components/exam/event/navigation/EventNavigation';
 import { Event, Question } from '../../../modules/charon/exam/api';
@@ -19,11 +19,14 @@ import {
   ROUTE_EVENT_QUESTION_DETAIL,
   ROUTE_EVENT_QUESTION_EDIT,
   ROUTE_EVENT_QUESTION_EDIT_CREATE,
+  ROUTE_EVENT_SYNC,
 } from '../../routes';
+import { hasPermissionForMenu, menuByRole } from './menu';
 import ParticipationPage from './participation/ParticipationPage';
+import QuestionPage from './question/QuestionPage';
 import EventQuestionCreatePage from './question-editor/create/QuestionCreatePage';
 import QuestionEditorPage from './question-editor/QuestionEditorPage';
-import QuestionPage from './question/QuestionPage';
+import SynchronizationPage from './sync/SynchronizationPage';
 import './EventPage.scss';
 
 interface EventDetailPageProps extends RouteComponentProps<{ eventSlug: string }> {
@@ -33,7 +36,6 @@ interface EventDetailPageProps extends RouteComponentProps<{ eventSlug: string }
   getQuestionsOfEvent: (eventSlug: string) => Promise<void>;
 };
 
-const canEditEvent = (user: User) => (user.role === USER_ROLE.ADMIN || user.role === USER_ROLE.ORGANIZER);
 
 const renderEventDetailLoadingPage = (pathname: string, eventSlug: string) => (
   <div className="event-detail-page">
@@ -41,7 +43,7 @@ const renderEventDetailLoadingPage = (pathname: string, eventSlug: string) => (
       <h1><span className="skeleton">Judul ujian</span></h1>
     </div>
     <div className="menubar">
-      <EventNavigation currentPath={pathname} eventSlug={eventSlug} hasEditPermission={false} />
+      <EventNavigation currentPath={pathname} eventSlug={eventSlug} menus={[]} />
     </div>
     <div className="content">
       <EventDetail />
@@ -61,7 +63,6 @@ const EventDetailPage = (props: EventDetailPageProps) => {
 
   if (!event) return renderEventDetailLoadingPage(pathname, eventSlug);
 
-  const hasEditPermission = !!user ? canEditEvent(user) : false;
   const eventDetailLink = generateUrlWithParams(ROUTE_EVENT_OVERVIEW, { eventSlug: event.slug });
   const questionDetailLink = generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { eventSlug: event.slug, questionNumber: 1 });
 
@@ -71,17 +72,17 @@ const EventDetailPage = (props: EventDetailPageProps) => {
         <h1>{event.title}</h1>
       </div>
       <div className="menubar">
-        <EventNavigation currentPath={pathname} eventSlug={eventSlug} hasEditPermission={hasEditPermission} />
+        <EventNavigation currentPath={pathname} eventSlug={eventSlug} menus={!!user ? menuByRole[user.role] : []} />
       </div>
       <div className="content">
         <Switch>
           <Route path={ROUTE_EVENT_QUESTION_EDIT_CREATE}>
-            {hasEditPermission
+            {hasPermissionForMenu(user, ROUTE_EVENT_QUESTION_EDIT_CREATE)
               ? <EventQuestionCreatePage event={event} />
               : <Redirect to={questionDetailLink} />}
           </Route>
           <Route path={ROUTE_EVENT_QUESTION_EDIT}>
-            {hasEditPermission
+            {hasPermissionForMenu(user, ROUTE_EVENT_QUESTION_EDIT)
               ? <QuestionEditorPage eventSlug={eventSlug} />
               : <Redirect to={questionDetailLink} />}
           </Route>
@@ -92,7 +93,14 @@ const EventDetailPage = (props: EventDetailPageProps) => {
             <Redirect to={questionDetailLink} />
           </Route>
           <Route path={ROUTE_EVENT_PARTICIPATION}>
-            <ParticipationPage />
+            {hasPermissionForMenu(user, ROUTE_EVENT_PARTICIPATION)
+                ? <ParticipationPage />
+                : <Redirect to={eventDetailLink} />}
+          </Route>
+          <Route path={ROUTE_EVENT_SYNC}>
+            {hasPermissionForMenu(user, ROUTE_EVENT_SYNC)
+                ? <SynchronizationPage />
+                : <Redirect to={eventDetailLink} />}
           </Route>
           <Route path={ROUTE_EVENT_OVERVIEW}>
             <EventDetail event={event} />

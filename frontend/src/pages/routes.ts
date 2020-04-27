@@ -17,3 +17,4 @@ export const ROUTE_EVENT_QUESTION = ROUTE_EVENT + 'question/';
 export const ROUTE_EVENT_QUESTION_DETAIL = ROUTE_EVENT_QUESTION + ':questionNumber/';
 export const ROUTE_EVENT_QUESTION_EDIT = ROUTE_EVENT + 'question-editor/';
 export const ROUTE_EVENT_QUESTION_EDIT_CREATE = ROUTE_EVENT_QUESTION_EDIT + 'new/';
+export const ROUTE_EVENT_SYNC = ROUTE_EVENT + 'sync/';
