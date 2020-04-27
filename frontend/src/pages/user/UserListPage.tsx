@@ -52,7 +52,7 @@ const UserListPage = (props: ConnectedUserListPageProps) => {
   React.useEffect(() => { document.title = 'Daftar Akun'; }, []);
   React.useEffect(() => { getUsers(); }, [getUsers]);
 
-  const [isShowingCreateModal, setShowingCreateModal] = React.useState(true);
+  const [isShowingCreateModal, setShowingCreateModal] = React.useState(false);
   const submitNewUser = async (data: UserFormData) => {
     return createUser({ id: 0, ...data } as User)
       .then(() => {

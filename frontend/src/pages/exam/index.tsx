@@ -8,7 +8,7 @@ import * as sessionSelectors from '../../modules/session/selector';
 import { AppState } from '../../modules/store';
 import { ROUTE_LOGIN, ROUTE_EVENT_LIST, ROUTE_EVENT } from '../routes';
 import EventListPage from './EventListPage';
-import EventPage from './_eventId/EventPage';
+import EventPage from './_eventSlug/EventPage';
 
 export interface ExamRouteProps {
   getEvents: () => void;

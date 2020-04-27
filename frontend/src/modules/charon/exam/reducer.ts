@@ -1,11 +1,11 @@
 import keyBy from 'lodash/keyBy';
 
-import { PUT_EVENTS, PUT_QUESTIONS, PUT_VENUES } from './action';
+import { PUT_EVENTS, PUT_PARTICIPATIONS, PUT_QUESTIONS, PUT_VENUES } from './action';
 import { Event, Venue } from './api';
 
 export interface CharonExamState {
   venues: { [id: number]: Venue } | null,
-  events: { [id: number]: Event } | null,
+  events: { [slug: string]: Event } | null,
 };
 
 const initialState: CharonExamState = {
@@ -24,18 +24,30 @@ export function charonExamReducer (state: CharonExamState = initialState, action
     case PUT_EVENTS: {
       return {
         ...state,
-        events: action.events === null ? null : keyBy(action.events, 'id'),
+        events: action.events === null ? null : keyBy(action.events, 'slug'),
+      };
+    }
+    case PUT_PARTICIPATIONS: {
+      const oldEvent = !!state.events ? state.events[action.eventSlug] : null;
+      const newEvent = Object.assign({}, !!oldEvent ? oldEvent : {} as Event);
+      newEvent.participations = action.participations === null ? null : keyBy(action.participations, 'id');
+      return {
+        ...state,
+        events: {
+          ...state.events,
+          [action.eventSlug]: newEvent,
+        },
       };
     }
     case PUT_QUESTIONS: {
-      const oldEvent = !!state.events ? state.events[action.eventId] : null;
+      const oldEvent = !!state.events ? state.events[action.eventSlug] : null;
       const newEvent = Object.assign({}, !!oldEvent ? oldEvent : {} as Event);
       newEvent.questions = action.questions === null ? null : keyBy(action.questions, 'id');
       return {
         ...state,
         events: {
           ...state.events,
-          [action.eventId]: newEvent,
+          [action.eventSlug]: newEvent,
         },
       };
     }

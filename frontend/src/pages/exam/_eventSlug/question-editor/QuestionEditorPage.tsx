@@ -8,31 +8,31 @@ import * as charonExamSelectors from '../../../../modules/charon/exam/selector';
 import { Question } from '../../../../modules/charon/exam/api';
 import { generateUrlWithParams } from '../../../../modules/util/routes';
 import { AppState } from '../../../../modules/store';
-import { ROUTE_EVENT_QUESTION_EDIT_CREATE } from '../../../../pages/routes';
+import { ROUTE_EVENT_QUESTION_EDIT_CREATE } from '../../../routes';
 import QuestionEdit from './QuestionEdit';
 import QuestionLoading from './QuestionEditLoading';
 import './QuestionEditorPage.scss';
 
 interface QuestionEditorPageProps {
-  eventId: number;
+  eventSlug: string;
 }
 
 interface ConnectedQuestionEditorPageProps extends QuestionEditorPageProps {
-  deleteQuestion: (eventId: number, questionId: number) => Promise<void>;
-  getQuestionsOfEvent: (eventId: number) => void;
+  deleteQuestion: (eventSlug: string, questionId: number) => Promise<void>;
+  getQuestionsOfEvent: (eventSlug: string) => void;
   questions: Question[] | null;
 }
 
 const QuestionEditorPage = (props: ConnectedQuestionEditorPageProps) => {
-  const { deleteQuestion, eventId, getQuestionsOfEvent, questions } = props;
+  const { deleteQuestion, eventSlug, getQuestionsOfEvent, questions } = props;
 
-  React.useEffect(() => { if (!questions) getQuestionsOfEvent(eventId); }, [getQuestionsOfEvent, eventId, questions]);
+  React.useEffect(() => { if (!questions) getQuestionsOfEvent(eventSlug); }, [getQuestionsOfEvent, eventSlug, questions]);
   const [isDeleting, setIsDeleting] = React.useState(false);
-  const urlParam = { eventId };
+  const urlParam = { eventSlug };
   const handleDeleteQuestion = (questionId: number) => () => {
     setIsDeleting(true);
-    deleteQuestion(eventId, questionId).then(() => {
-      getQuestionsOfEvent(eventId);
+    deleteQuestion(eventSlug, questionId).then(() => {
+      getQuestionsOfEvent(eventSlug);
       setIsDeleting(false);
     });
   };
@@ -60,7 +60,7 @@ const QuestionEditorPage = (props: ConnectedQuestionEditorPageProps) => {
 };
 
 const mapStateToProps = (state: AppState, props: QuestionEditorPageProps) => ({
-  questions: charonExamSelectors.getQuestions(state, props.eventId),
+  questions: charonExamSelectors.getQuestions(state, props.eventSlug),
 });
 
 const mapDispatchToProps = {

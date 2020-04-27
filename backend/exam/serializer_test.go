@@ -94,7 +94,7 @@ func TestSerializeEvent(t *testing.T) {
 		`"simKey":"sim_key",` +
 		`"simKeySign":"sim_key_signature",` +
 		`"pubKey":"public_key_for_verifying_sim_key",` +
-		`"decryptedAt":"2020-08-10T08:02:08+07:00",` +
+		`"isDecrypted":true,` +
 		`"lastSynchronization":"2020-08-10T08:02:03+07:00"` +
 		`}`
 	var serialized EventData = SerializeEvent(event)
@@ -122,7 +122,7 @@ func TestDeserializeEvent(t *testing.T) {
 			`"simKey":"sim_key",` +
 			`"simKeySign":"sim_key_signature",` +
 			`"pubKey":"public_key_for_verifying_sim_key",` +
-			`"decryptedAt":"2020-08-10T08:02:08+07:00",` +
+			`"isDecrypted":true,` +
 			`"lastSynchronization":"2020-08-10T08:02:03+07:00"` +
 			`}`,
 		expectedEvent: Event{
@@ -369,7 +369,7 @@ func TestSerializeSynchronizationData(t *testing.T) {
 			`"event":{` +
 			`"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc",` +
 			`"startsAt":"2020-08-12T09:30:10+07:00","endsAt":"2020-08-12T11:30:10+07:00",` +
-			`"simKey":"","simKeySign":"","pubKey":"","decryptedAt":"","lastSynchronization":""` +
+			`"simKey":"","simKeySign":"","pubKey":"","isDecrypted":false,"lastSynchronization":""` +
 			`},` +
 			`"venue":{"id":10,"name":"venue1"},` +
 			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"","choices":[],"answer":""}],` +
@@ -384,7 +384,7 @@ func TestSerializeSynchronizationData(t *testing.T) {
 			`"event":{` +
 			`"id":0,"slug":"","title":"","description":"",` +
 			`"startsAt":"0001-01-01T07:07:12+07:07","endsAt":"0001-01-01T07:07:12+07:07",` +
-			`"simKey":"","simKeySign":"","pubKey":"","decryptedAt":"","lastSynchronization":""` +
+			`"simKey":"","simKeySign":"","pubKey":"","isDecrypted":false,"lastSynchronization":""` +
 			`},` +
 			`"venue":{"id":0,"name":""},` +
 			`"questions":[],` +

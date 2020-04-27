@@ -10,7 +10,7 @@ export const ROUTE_VENUE_LIST = ROUTE_VENUE;
 
 export const ROUTE_EXAM = ROUTE_HOME + 'exam/';
 export const ROUTE_EVENT_LIST = ROUTE_EXAM;
-export const ROUTE_EVENT = ROUTE_EXAM + ':eventId/';
+export const ROUTE_EVENT = ROUTE_EXAM + ':eventSlug/';
 export const ROUTE_EVENT_OVERVIEW = ROUTE_EVENT + 'overview/';
 export const ROUTE_EVENT_PARTICIPATION = ROUTE_EVENT + 'participation/';
 export const ROUTE_EVENT_QUESTION = ROUTE_EVENT + 'question/';

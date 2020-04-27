@@ -19,7 +19,7 @@ type EventData struct {
 	SimKey              string `json:"simKey"`
 	SimKeySign          string `json:"simKeySign"`
 	PubKey              string `json:"pubKey"`
-	DecryptedAt         string `json:"decryptedAt"`
+	IsDecrypted         bool   `json:"isDecrypted"`
 	LastSynchronization string `json:"lastSynchronization"`
 }
 
@@ -92,12 +92,9 @@ func DeserializeVenue(venueData VenueData, venue *Venue) helios.Error {
 
 // SerializeEvent converts Event object event to JSON of event
 func SerializeEvent(event Event) EventData {
-	var lastSynchronization, decryptedAt string
+	var lastSynchronization string
 	if !event.LastSynchronization.IsZero() {
 		lastSynchronization = event.LastSynchronization.Local().Format(time.RFC3339)
-	}
-	if !event.DecryptedAt.IsZero() {
-		decryptedAt = event.DecryptedAt.Local().Format(time.RFC3339)
 	}
 	eventData := EventData{
 		ID:                  event.ID,
@@ -109,7 +106,7 @@ func SerializeEvent(event Event) EventData {
 		SimKey:              event.SimKey,
 		SimKeySign:          event.SimKeySign,
 		PubKey:              event.PubKey,
-		DecryptedAt:         decryptedAt,
+		IsDecrypted:         !event.DecryptedAt.IsZero(),
 		LastSynchronization: lastSynchronization,
 	}
 	return eventData

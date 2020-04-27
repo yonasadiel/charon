@@ -1,0 +1,22 @@
+@import '../../../../styles/base';
+
+.participation-page {
+  .title {
+    font-size: 1.5em;
+    margin-bottom: .5em;
+  }
+
+  .participations {
+    margin-bottom: 10px;
+
+    .participation {
+      display: flex;
+      flex-direction: row;
+      margin-bottom: 10px;
+
+      .user, .venue {
+        flex: 1 1;
+      }
+    }
+  }
+}

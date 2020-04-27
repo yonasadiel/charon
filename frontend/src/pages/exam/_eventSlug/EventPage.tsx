@@ -1,4 +1,3 @@
-import parseInt from 'lodash/parseInt';
 import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps, Switch, Route, Redirect } from 'react-router-dom';
@@ -15,40 +14,56 @@ import { AppState } from '../../../modules/store';
 import {
   ROUTE_EVENT,
   ROUTE_EVENT_OVERVIEW,
+  ROUTE_EVENT_PARTICIPATION,
   ROUTE_EVENT_QUESTION,
   ROUTE_EVENT_QUESTION_DETAIL,
   ROUTE_EVENT_QUESTION_EDIT,
   ROUTE_EVENT_QUESTION_EDIT_CREATE,
 } from '../../routes';
+import ParticipationPage from './participation/ParticipationPage';
 import EventQuestionCreatePage from './question-editor/create/QuestionCreatePage';
 import QuestionEditorPage from './question-editor/QuestionEditorPage';
 import QuestionPage from './question/QuestionPage';
 import './EventPage.scss';
 
-interface EventDetailPageProps extends RouteComponentProps<{ eventId: string }> {
+interface EventDetailPageProps extends RouteComponentProps<{ eventSlug: string }> {
   event: Event | null;
   user: User | null;
-  createQuestion: (eventId: number, question: Question) => Promise<void>;
-  getQuestionsOfEvent: (eventId: number) => Promise<void>;
+  createQuestion: (eventSlug: string, question: Question) => Promise<void>;
+  getQuestionsOfEvent: (eventSlug: string) => Promise<void>;
 };
 
-const canEditQuestion = (user: User) => (user.role === USER_ROLE.ADMIN || user.role === USER_ROLE.ORGANIZER);
+const canEditEvent = (user: User) => (user.role === USER_ROLE.ADMIN || user.role === USER_ROLE.ORGANIZER);
+
+const renderEventDetailLoadingPage = (pathname: string, eventSlug: string) => (
+  <div className="event-detail-page">
+    <div className="titlebar">
+      <h1><span className="skeleton">Judul ujian</span></h1>
+    </div>
+    <div className="menubar">
+      <EventNavigation currentPath={pathname} eventSlug={eventSlug} hasEditPermission={false} />
+    </div>
+    <div className="content">
+      <EventDetail />
+    </div>
+  </div>
+);
 
 const EventDetailPage = (props: EventDetailPageProps) => {
   const {
     location: { pathname },
-    match: { params: { eventId } },
+    match: { params: { eventSlug } },
     event,
     user,
   } = props;
 
   React.useEffect(() => { document.title = event?.title || 'Ujian'; }, [event]);
 
-  if (!event) return <p>Loading</p>;
+  if (!event) return renderEventDetailLoadingPage(pathname, eventSlug);
 
-  const showEditQuestion = !!user ? canEditQuestion(user) : false;
-  const eventDetailLink = generateUrlWithParams(ROUTE_EVENT_OVERVIEW, { eventId: event.id });
-  const questionDetailLink = generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { eventId: event.id, questionNumber: 1 });
+  const hasEditPermission = !!user ? canEditEvent(user) : false;
+  const eventDetailLink = generateUrlWithParams(ROUTE_EVENT_OVERVIEW, { eventSlug: event.slug });
+  const questionDetailLink = generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { eventSlug: event.slug, questionNumber: 1 });
 
   return (
     <div className="event-detail-page">
@@ -56,25 +71,28 @@ const EventDetailPage = (props: EventDetailPageProps) => {
         <h1>{event.title}</h1>
       </div>
       <div className="menubar">
-        <EventNavigation currentPath={pathname} eventId={eventId} showEditQuestion={showEditQuestion} />
+        <EventNavigation currentPath={pathname} eventSlug={eventSlug} hasEditPermission={hasEditPermission} />
       </div>
       <div className="content">
         <Switch>
           <Route path={ROUTE_EVENT_QUESTION_EDIT_CREATE}>
-            {showEditQuestion
+            {hasEditPermission
               ? <EventQuestionCreatePage event={event} />
               : <Redirect to={questionDetailLink} />}
           </Route>
           <Route path={ROUTE_EVENT_QUESTION_EDIT}>
-            {showEditQuestion
-              ? <QuestionEditorPage eventId={event.id} />
+            {hasEditPermission
+              ? <QuestionEditorPage eventSlug={eventSlug} />
               : <Redirect to={questionDetailLink} />}
           </Route>
           <Route path={ROUTE_EVENT_QUESTION_DETAIL}>
-            <QuestionPage eventId={event.id} />
+            <QuestionPage />
           </Route>
           <Route path={ROUTE_EVENT_QUESTION}>
             <Redirect to={questionDetailLink} />
+          </Route>
+          <Route path={ROUTE_EVENT_PARTICIPATION}>
+            <ParticipationPage />
           </Route>
           <Route path={ROUTE_EVENT_OVERVIEW}>
             <EventDetail event={event} />
@@ -88,8 +106,8 @@ const EventDetailPage = (props: EventDetailPageProps) => {
   );
 };
 
-const mapStateToProps = (state: AppState, props: RouteComponentProps<{ eventId: string }>) => ({
-  event: charonExamSelectors.getEvent(state, parseInt(props.match.params.eventId)),
+const mapStateToProps = (state: AppState, props: RouteComponentProps<{ eventSlug: string }>) => ({
+  event: charonExamSelectors.getEvent(state, props.match.params.eventSlug),
   user: charonSessionSelectors.getUser(state),
 });
 

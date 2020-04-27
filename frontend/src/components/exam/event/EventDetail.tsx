@@ -2,38 +2,42 @@ import React from 'react';
 import { Card } from 'react-hephaestus';
 
 import { Event } from '../../../modules/charon/exam/api';
+import { durationText } from '../../../modules/util/time';
 import './EventDetail.scss';
 
 interface EventDetailProps {
-  event: Event;
+  event: Event | null;
 };
+
+const EventDetailLoading = () => (
+  <Card className="event-detail">
+    <p><span className="skeleton">Deskripsi event</span></p>
+    <ul>
+      <li><span className="skeleton">Waktu mulai: 01/01/2020 09:00</span></li>
+      <li><span className="skeleton">Durasi: 0 jam 0 menit 0 detik</span></li>
+    </ul>
+  </Card>
+);
 
 const EventDetail = (props: EventDetailProps) => {
   const { event } = props;
-  const diff = event.endsAt.getTime() - event.startsAt.getTime();
-  const durationDays = Math.floor(diff / (24 * 60 * 60 * 1000));
-  const durationHours = Math.floor(diff / (60 * 60 * 1000)) % 24;
-  const durationMinutes = Math.floor(diff / (60 * 1000)) % 60;
-  const durationSeconds = Math.floor(diff / (1000)) % 60;
-  let durationText = '';
-  if (durationDays > 0) {
-    durationText = `${durationDays} hari ${durationHours} jam ${durationMinutes} menit ${durationSeconds} detik`;
-  } else if (durationHours > 0) {
-    durationText = `${durationHours} jam ${durationMinutes} menit ${durationSeconds} detik`;
-  } else if (durationMinutes > 0) {
-    durationText = `${durationMinutes} menit ${durationSeconds} detik`;
-  } else if (durationSeconds > 0) {
-    durationText = `${durationSeconds} detik`;
-  }
+
+  if (!event) return <EventDetailLoading />;
+
+  const duration = durationText(event.startsAt, event.endsAt);
   return (
     <Card className="event-detail">
       <p>{event.description}</p>
       <ul>
         <li>Waktu mulai: {event.startsAt.toLocaleDateString()} {event.startsAt.toLocaleTimeString()}</li>
-        <li>Durasi: {durationText}</li>
+        <li>Durasi: {duration}</li>
       </ul>
     </Card>
   );
+};
+
+EventDetail.defaultProps = {
+  event: null,
 };
 
 export default EventDetail;

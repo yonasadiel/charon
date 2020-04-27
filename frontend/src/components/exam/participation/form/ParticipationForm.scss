@@ -1,0 +1,22 @@
+@import '../../../../styles/base';
+
+.participation-form {
+  .field-row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+
+    .venue-select, .user-select {
+      flex: 1 1;
+      margin-right: 5px;
+
+      select {
+        padding: 8px 0;
+      }
+    }
+
+    .error {
+      color: $danger-color;
+    }
+  }
+}

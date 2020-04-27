@@ -9,14 +9,14 @@ import * as charonExamActions from '../../../../../modules/charon/exam/action';
 import { generateUrlWithParams } from '../../../../../modules/util/routes';
 import { ROUTE_EVENT_QUESTION_EDIT } from '../../../../routes';
 
-interface ConnectedQuestionCreatePageProps extends RouteComponentProps<{ eventId: string }>, QuestionCreatePageProps {
-  createQuestion: (eventId: number, question: Question) => Promise<void>;
-  getQuestionsOfEvent: (eventId: number) => Promise<void>;
-};
-
 interface QuestionCreatePageProps {
   event: Event;
-}
+};
+
+interface ConnectedQuestionCreatePageProps extends RouteComponentProps<{ eventSlug: string }>, QuestionCreatePageProps {
+  createQuestion: (eventSlug: string, question: Question) => Promise<void>;
+  getQuestionsOfEvent: (eventSlug: string) => Promise<void>;
+};
 
 const QuestionCreatePage = (props: ConnectedQuestionCreatePageProps) => {
   const {
@@ -32,10 +32,10 @@ const QuestionCreatePage = (props: ConnectedQuestionCreatePageProps) => {
 
   if (!event) return <p>Loading</p>;
 
-  const redirectAfterSubmitLink = generateUrlWithParams(ROUTE_EVENT_QUESTION_EDIT, { eventId: event.id });
+  const redirectAfterSubmitLink = generateUrlWithParams(ROUTE_EVENT_QUESTION_EDIT, { eventSlug: event.slug });
   const handleSubmitNewQuestion = (questionData: QuestionFormData) => {
-    createQuestion(event!.id, questionData as Question).then(() => {
-      getQuestionsOfEvent(event.id);
+    createQuestion(event.slug, questionData as Question).then(() => {
+      getQuestionsOfEvent(event.slug);
       history.push(redirectAfterSubmitLink);
     });
   };

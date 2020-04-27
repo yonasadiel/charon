@@ -2,7 +2,7 @@ import { AxiosError, AxiosResponse } from 'axios';
 
 import { AppThunk } from '../../store';
 import { CharonAPIError, CharonFormError } from '../http';
-import { Event, Question, Venue } from './api';
+import { Event, Participation, Question, Venue } from './api';
 
 export const PUT_VENUES = 'charon/exam/PUT_VENUES';
 export const putVenues = (venues: Venue[] | null) => ({
@@ -16,10 +16,17 @@ export const putEvents = (events: Event[] | null) => ({
   events,
 });
 
+export const PUT_PARTICIPATIONS = 'charon/exam/PUT_PARTICIPATIONS';
+export const putParticipations = (eventSlug: string, participations: Participation[] | null) => ({
+  type: PUT_PARTICIPATIONS,
+  eventSlug,
+  participations,
+});
+
 export const PUT_QUESTIONS = 'charon/exam/PUT_QUESTIONS';
-export const putQuestions = (eventId: number, questions: Question[] | null) => ({
+export const putQuestions = (eventSlug: string, questions: Question[] | null) => ({
   type: PUT_QUESTIONS,
-  eventId,
+  eventSlug,
   questions,
 });
 
@@ -80,13 +87,13 @@ export function createEvent(event: Event): AppThunk<Promise<void>> {
   };
 };
 
-export function getQuestionsOfEvent(eventId: number): AppThunk<Promise<void>> {
+export function getParticipationsOfEvent(eventSlug: string): AppThunk<Promise<void>> {
   return async function (dispatch, _, { charonExamApi }) {
-    dispatch(putQuestions(eventId, null));
-    return charonExamApi.getQuestionsOfEvent(eventId)
+    dispatch(putParticipations(eventSlug, null));
+    return charonExamApi.getParticipationsOfEvent(eventSlug)
       .then((res: AxiosResponse) => {
-        const questions: Question[] = res.data;
-        dispatch(putQuestions(eventId, questions));
+        const participations: Participation[] = res.data;
+        dispatch(putParticipations(eventSlug, participations));
       })
       .catch((err: AxiosError) => {
         throw new CharonAPIError(err);
@@ -94,9 +101,9 @@ export function getQuestionsOfEvent(eventId: number): AppThunk<Promise<void>> {
   };
 };
 
-export function createQuestion(eventId: number, question: Question): AppThunk<Promise<void>> {
+export function createParticipation(eventSlug: string, participation: Participation): AppThunk<Promise<void>> {
   return async function (_dispatch, _getState, { charonExamApi }) {
-    return charonExamApi.createQuestion(eventId, question)
+    return charonExamApi.createParticipation(eventSlug, participation)
       .then(() => {
         return;
       })
@@ -106,9 +113,35 @@ export function createQuestion(eventId: number, question: Question): AppThunk<Pr
   };
 };
 
-export function deleteQuestion(eventId: number, questionId: number): AppThunk<Promise<void>> {
+export function getQuestionsOfEvent(eventSlug: string): AppThunk<Promise<void>> {
+  return async function (dispatch, _, { charonExamApi }) {
+    dispatch(putQuestions(eventSlug, null));
+    return charonExamApi.getQuestionsOfEvent(eventSlug)
+      .then((res: AxiosResponse) => {
+        const questions: Question[] = res.data;
+        dispatch(putQuestions(eventSlug, questions));
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonAPIError(err);
+      });
+  };
+};
+
+export function createQuestion(eventSlug: string, question: Question): AppThunk<Promise<void>> {
   return async function (_dispatch, _getState, { charonExamApi }) {
-    return charonExamApi.deleteQuestion(eventId, questionId)
+    return charonExamApi.createQuestion(eventSlug, question)
+      .then(() => {
+        return;
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonFormError(err);
+      });
+  };
+};
+
+export function deleteQuestion(eventSlug: string, questionId: number): AppThunk<Promise<void>> {
+  return async function (_dispatch, _getState, { charonExamApi }) {
+    return charonExamApi.deleteQuestion(eventSlug, questionId)
       .then(() => {
         return;
       })

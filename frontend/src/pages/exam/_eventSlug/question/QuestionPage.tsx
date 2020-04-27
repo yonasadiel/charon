@@ -11,21 +11,20 @@ import { AppState } from '../../../../modules/store';
 import QuestionNavigation from '../../../../components/exam/question/navigation/QuestionNavigation';
 import QuestionDetail from '../../../../components/exam/question/QuestionDetail';
 
-interface QuestionPaneProps extends RouteComponentProps<{ questionId: string }> {
-  eventId: number;
+interface QuestionPageProps extends RouteComponentProps<{ eventSlug: string, questionId: string }> {
 }
 
-interface ConnectedQuestionPaneProps extends QuestionPaneProps {
+interface ConnectedQuestionPageProps extends QuestionPageProps {
   event: Event | null;
-  getQuestionsOfEvent: (eventId: number) => Promise<void>;
+  getQuestionsOfEvent: (eventSlug: string) => Promise<void>;
   questions: Question[] | null;
 }
 
-const QuestionPane = (props: ConnectedQuestionPaneProps) => {
-  const { event, eventId, getQuestionsOfEvent, questions, match: { params: { questionId } } } = props;
+const QuestionPage = (props: ConnectedQuestionPageProps) => {
+  const { event, getQuestionsOfEvent, questions, match: { params: { questionId, eventSlug } } } = props;
 
   const now = new Date();
-  React.useEffect(() => { if (!questions) getQuestionsOfEvent(eventId); }, [getQuestionsOfEvent, eventId, questions]);
+  React.useEffect(() => { if (!questions) getQuestionsOfEvent(eventSlug); }, [getQuestionsOfEvent, eventSlug, questions]);
 
   if (!event) {
     return (
@@ -45,20 +44,20 @@ const QuestionPane = (props: ConnectedQuestionPaneProps) => {
 
   return (
     <Card className="question-pane">
-      <QuestionNavigation eventId={eventId} questions={questions} currentQuestionId={parseInt(questionId)} />
+      <QuestionNavigation eventSlug={eventSlug} questions={questions} currentQuestionId={parseInt(questionId)} />
       <hr />
       <QuestionDetail question={!!questions ? questions[0] : null} />
     </Card>
   );
 };
 
-const mapStateToProps = (state: AppState, props: RouteComponentProps<{ eventId: string, questionId: string }>) => ({
-  event: charonExamSelectors.getEvent(state, parseInt(props.match.params.eventId)),
-  questions: charonExamSelectors.getQuestions(state, parseInt(props.match.params.eventId)),
+const mapStateToProps = (state: AppState, props: RouteComponentProps<{ eventSlug: string, questionId: string }>) => ({
+  event: charonExamSelectors.getEvent(state, props.match.params.eventSlug),
+  questions: charonExamSelectors.getQuestions(state, props.match.params.eventSlug),
 });
 
 const mapDispatchToProps = {
   getQuestionsOfEvent: charonExamActions.getQuestionsOfEvent,
 };
 
-export default withRouter(connect(mapStateToProps, mapDispatchToProps)(QuestionPane));
+export default withRouter(connect(mapStateToProps, mapDispatchToProps)(QuestionPage));

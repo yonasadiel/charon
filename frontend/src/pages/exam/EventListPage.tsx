@@ -40,7 +40,7 @@ const renderEvents = (events: Event[] | null) => {
   return (
     <div>
       {events.map((event: Event) => (
-        <Link to={generateUrlWithParams(ROUTE_EVENT, { eventId: event.id })} key={event.id}>
+        <Link to={generateUrlWithParams(ROUTE_EVENT, { eventSlug: event.slug })} key={event.id}>
           <Card className="event-card">
             <h2 className="event-title">{event.title}</h2>
             <p>

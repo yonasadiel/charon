@@ -2,7 +2,7 @@ import flatMap from 'lodash/flatMap';
 
 import { AppState } from '../../store';
 import { getCharonState } from '../selector';
-import { Event, Question, Venue } from './api';
+import { Event, Participation, Question, Venue } from './api';
 import { CharonExamState } from './reducer';
 
 export function getCharonExamState(state: AppState): CharonExamState {
@@ -19,20 +19,27 @@ export function getEvents(state: AppState): Event[] | null {
   return !!events ? flatMap(events) : events;
 }
 
-export function getEvent(state: AppState, eventId: number): Event | null {
+export function getEvent(state: AppState, eventSlug: string): Event | null {
   const events = getCharonExamState(state).events;
   if (!events) return null;
-  return events[eventId] || null;
+  return events[eventSlug] || null;
 }
 
-export function getQuestions(state: AppState, eventId: number): Question[] | null {
-  const event = getEvent(state, eventId);
+export function getParticipations(state: AppState, eventSlug: string): Participation[] | null {
+  const event = getEvent(state, eventSlug);
+  if (!event) return null;
+  if (!event.participations) return null;
+  return flatMap(event.participations);
+}
+
+export function getQuestions(state: AppState, eventSlug: string): Question[] | null {
+  const event = getEvent(state, eventSlug);
   if (!event) return null;
   if (!event.questions) return null;
   return flatMap(event.questions);
 }
 
-export function getQuestionByNumber(state: AppState, eventId: number, questionNumber: number): Question | null {
-  const questions = getQuestions(state, eventId);
+export function getQuestionByNumber(state: AppState, eventSlug: string, questionNumber: number): Question | null {
+  const questions = getQuestions(state, eventSlug);
   return !!questions ? questions[questionNumber - 1] : null;
 }
