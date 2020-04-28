@@ -34,6 +34,8 @@ type ParticipationData struct {
 	ID           uint   `json:"id"`
 	UserUsername string `json:"userUsername"`
 	VenueID      uint   `json:"venueId"`
+	Key          string `json:"key,omitempty"`
+	EncryptedKey string `json:"keyEnc,omitempty"`
 }
 
 // QuestionData is JSON representation of question.
@@ -183,6 +185,14 @@ func DeserializeParticipation(participationData ParticipationData, participation
 		return err
 	}
 	return nil
+}
+
+// DeserializeParticipationWithKey convert JSON like DeserializeParticipation but with key
+// used in creating participation
+func DeserializeParticipationWithKey(participationData ParticipationData, participation *Participation) helios.Error {
+	var err = DeserializeParticipation(participationData, participation)
+	participation.Key = participationData.Key
+	return err
 }
 
 // SerializeQuestion converts Question object question to JSON of question

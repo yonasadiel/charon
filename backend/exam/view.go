@@ -164,7 +164,7 @@ func ParticipationCreateView(req helios.Request) {
 		return
 	}
 
-	err = DeserializeParticipation(participationData, &participation)
+	err = DeserializeParticipationWithKey(participationData, &participation)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return

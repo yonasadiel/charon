@@ -41,10 +41,12 @@ type Venue struct {
 // Participation is many to many indicating an user is participating
 // in a local event.
 type Participation struct {
-	ID      uint `gorm:"primary_key"`
-	EventID uint
-	UserID  uint
-	VenueID uint
+	ID        uint `gorm:"primary_key"`
+	EventID   uint
+	UserID    uint
+	VenueID   uint
+	Key       string
+	KeyHashed string
 
 	Event *Event     `gorm:"foreignkey:EventID;association_autoupdate:false"`
 	User  *auth.User `gorm:"foreignkey:UserID;association_autoupdate:false"`

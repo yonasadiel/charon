@@ -313,6 +313,8 @@ func TestUpsertParticipation(t *testing.T) {
 	var event1 Event = EventFactorySaved(Event{})
 	var event2 Event = EventFactorySaved(Event{})
 	ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal})
+	var key = "secret_key_per_user_per_event"
+	var keyHashed = "e33a9931ec1ba26e9acd8957b597595ce7e336e4df534ac83bc4102e963c4814"
 
 	helios.DB.Model(&Participation{}).Count(&participationCountBefore)
 
@@ -328,41 +330,41 @@ func TestUpsertParticipation(t *testing.T) {
 		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal}),
 		eventSlug:                  event2.Slug,
 		userUsername:               userParticipant.Username,
-		participation:              Participation{VenueID: venue1.ID},
+		participation:              Participation{VenueID: venue1.ID, Key: key},
 		expectedParticipationCount: participationCountBefore,
 		expectedError:              errEventNotFound,
 	}, {
 		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		eventSlug:                  event1.Slug,
 		userUsername:               "random_username",
-		participation:              Participation{VenueID: venue1.ID},
+		participation:              Participation{VenueID: venue1.ID, Key: key},
 		expectedParticipationCount: participationCountBefore,
 		expectedError:              errUserNotFound,
 	}, {
 		user:                       userLocal,
 		eventSlug:                  event1.Slug,
 		userUsername:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal}).Username,
-		participation:              Participation{VenueID: venue1.ID},
+		participation:              Participation{VenueID: venue1.ID, Key: key},
 		expectedParticipationCount: participationCountBefore,
 		expectedError:              errParticipationChangeNotAuthorized,
 	}, {
 		user:                       userLocal,
 		eventSlug:                  event1.Slug,
 		userUsername:               userParticipant.Username,
-		participation:              Participation{VenueID: 123},
+		participation:              Participation{VenueID: 123, Key: key},
 		expectedParticipationCount: participationCountBefore,
 		expectedError:              errVenueNotFound,
 	}, {
 		user:                       userLocal,
 		eventSlug:                  event1.Slug,
 		userUsername:               userParticipant.Username,
-		participation:              Participation{EventID: event2.ID, UserID: userLocal.ID, VenueID: venue1.ID},
+		participation:              Participation{EventID: event2.ID, UserID: userLocal.ID, VenueID: venue1.ID, Key: key},
 		expectedParticipationCount: participationCountBefore + 1,
 	}, {
 		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		eventSlug:                  event1.Slug,
 		userUsername:               userLocal.Username,
-		participation:              Participation{EventID: event2.ID, UserID: userLocal.ID, VenueID: venue2.ID},
+		participation:              Participation{EventID: event2.ID, UserID: userLocal.ID, VenueID: venue2.ID, Key: key},
 		expectedParticipationCount: participationCountBefore + 1,
 	}}
 
@@ -382,6 +384,7 @@ func TestUpsertParticipation(t *testing.T) {
 			assert.Equal(t, testCase.eventSlug, testCase.participation.Event.Slug)
 			assert.Equal(t, testCase.userUsername, participationSaved.User.Username)
 			assert.Equal(t, testCase.userUsername, testCase.participation.User.Username)
+			assert.Equal(t, keyHashed, participationSaved.KeyHashed)
 			assert.Equal(t, tempVenueID, participationSaved.Venue.ID)
 			assert.Equal(t, tempVenueID, testCase.participation.Venue.ID)
 		} else {

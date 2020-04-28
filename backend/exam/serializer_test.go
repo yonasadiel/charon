@@ -238,6 +238,62 @@ func TestDeserializeParticipation(t *testing.T) {
 			assert.Nil(t, participation.Event)
 			assert.Nil(t, participation.User)
 			assert.Nil(t, participation.Venue)
+			assert.Empty(t, participation.Key)
+			assert.Empty(t, participation.KeyHashed)
+		} else {
+			var errDeserializationJSON []byte
+			var errMarshalling error
+			errDeserializationJSON, errMarshalling = json.Marshal(errDeserialization.GetMessage())
+			assert.Nil(t, errMarshalling)
+			assert.NotNil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedError, string(errDeserializationJSON))
+		}
+	}
+}
+
+func TestDeserializeParticipationWithKey(t *testing.T) {
+	type deserializeParticipationTestCase struct {
+		participationDataJSON string
+		expectedParticipation Participation
+		expectedError         string
+	}
+	testCases := []deserializeParticipationTestCase{{
+		participationDataJSON: `{"id":2,"eventId":3,"venueId":4,"userId":5,"userUsername":"abc","key":"abcdef","keyEnc":"ghijkl"}`,
+		expectedParticipation: Participation{
+			ID:      2,
+			VenueID: 4,
+			Key:     "abcdef",
+		},
+	}, {
+		participationDataJSON: `{"venueId":4,"userUsername":"abc","key":"abcdef"}`,
+		expectedParticipation: Participation{
+			VenueID: 4,
+			Key:     "abcdef",
+		},
+	}, {
+		participationDataJSON: `{}`,
+		expectedError:         `{"code":"form_error","message":{"_error":[],"userUsername":["Username can't be empty"],"venueId":["Venue can't be empty"]}}`,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test DeserializeParticipationWithKey testcase: %d", i)
+		var participationData ParticipationData
+		var participation Participation
+		var errUnmarshalling error
+		var errDeserialization helios.Error
+		errUnmarshalling = json.Unmarshal([]byte(testCase.participationDataJSON), &participationData)
+		errDeserialization = DeserializeParticipationWithKey(participationData, &participation)
+		assert.Nil(t, errUnmarshalling)
+		if testCase.expectedError == "" {
+			assert.Nil(t, errDeserialization)
+			assert.Equal(t, testCase.expectedParticipation.ID, participation.ID)
+			assert.Equal(t, testCase.expectedParticipation.VenueID, participation.VenueID)
+			assert.Equal(t, testCase.expectedParticipation.EventID, participation.EventID)
+			assert.Equal(t, testCase.expectedParticipation.UserID, participation.UserID)
+			assert.Equal(t, testCase.expectedParticipation.Key, participation.Key)
+			assert.Nil(t, participation.Event)
+			assert.Nil(t, participation.User)
+			assert.Nil(t, participation.Venue)
+			assert.Empty(t, participation.KeyHashed)
 		} else {
 			var errDeserializationJSON []byte
 			var errMarshalling error

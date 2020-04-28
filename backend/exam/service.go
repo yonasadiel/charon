@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
@@ -180,6 +181,7 @@ func UpsertParticipation(user auth.User, eventSlug string, userUsername string, 
 	var event Event
 	var participationUser auth.User
 	var venue Venue
+	var participationSaved Participation
 	var errGetEvent helios.Error
 	event, errGetEvent = GetEventOfUser(user, eventSlug)
 	if errGetEvent != nil {
@@ -198,13 +200,15 @@ func UpsertParticipation(user auth.User, eventSlug string, userUsername string, 
 		return errVenueNotFound
 	}
 
-	helios.DB.Where("user_id = ?", participationUser.ID).Where("event_id = ?", event.ID).First(&participation)
+	helios.DB.Where("user_id = ?", participationUser.ID).Where("event_id = ?", event.ID).First(&participationSaved)
+	participation.ID = participationSaved.ID
 	participation.User = &participationUser
 	participation.UserID = participationUser.ID
 	participation.EventID = event.ID
 	participation.Event = &event
 	participation.VenueID = venue.ID
 	participation.Venue = &venue
+	participation.KeyHashed = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.Key)))
 	if participation.ID == 0 {
 		helios.DB.Create(&participation)
 	} else {
