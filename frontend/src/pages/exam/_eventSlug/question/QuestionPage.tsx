@@ -11,17 +11,18 @@ import { AppState } from '../../../../modules/store';
 import QuestionNavigation from '../../../../components/exam/question/navigation/QuestionNavigation';
 import QuestionDetail from '../../../../components/exam/question/QuestionDetail';
 
-interface QuestionPageProps extends RouteComponentProps<{ eventSlug: string, questionId: string }> {
+interface QuestionPageProps extends RouteComponentProps<{ eventSlug: string, questionNumber: string }> {
 }
 
 interface ConnectedQuestionPageProps extends QuestionPageProps {
   event: Event | null;
   getQuestionsOfEvent: (eventSlug: string) => Promise<void>;
   questions: Question[] | null;
+  currentQuestion: Question | null;
 }
 
 const QuestionPage = (props: ConnectedQuestionPageProps) => {
-  const { event, getQuestionsOfEvent, questions, match: { params: { questionId, eventSlug } } } = props;
+  const { currentQuestion, event, getQuestionsOfEvent, questions, match: { params: { questionNumber, eventSlug } } } = props;
 
   const now = new Date();
   React.useEffect(() => { if (!questions) getQuestionsOfEvent(eventSlug); }, [getQuestionsOfEvent, eventSlug, questions]);
@@ -44,16 +45,17 @@ const QuestionPage = (props: ConnectedQuestionPageProps) => {
 
   return (
     <Card className="question-pane">
-      <QuestionNavigation eventSlug={eventSlug} questions={questions} currentQuestionId={parseInt(questionId)} />
+      <QuestionNavigation eventSlug={eventSlug} questions={questions} currentQuestionNumber={parseInt(questionNumber)} />
       <hr />
-      <QuestionDetail question={!!questions ? questions[0] : null} />
+      <QuestionDetail question={currentQuestion} />
     </Card>
   );
 };
 
-const mapStateToProps = (state: AppState, props: RouteComponentProps<{ eventSlug: string, questionId: string }>) => ({
+const mapStateToProps = (state: AppState, props: RouteComponentProps<{ eventSlug: string, questionNumber: string }>) => ({
   event: charonExamSelectors.getEvent(state, props.match.params.eventSlug),
   questions: charonExamSelectors.getQuestions(state, props.match.params.eventSlug),
+  currentQuestion: charonExamSelectors.getQuestionByNumber(state, props.match.params.eventSlug, parseInt(props.match.params.questionNumber)),
 });
 
 const mapDispatchToProps = {

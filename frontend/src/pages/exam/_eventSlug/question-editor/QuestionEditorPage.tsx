@@ -18,7 +18,7 @@ interface QuestionEditorPageProps {
 }
 
 interface ConnectedQuestionEditorPageProps extends QuestionEditorPageProps {
-  deleteQuestion: (eventSlug: string, questionId: number) => Promise<void>;
+  deleteQuestion: (eventSlug: string, questionNumber: number) => Promise<void>;
   getQuestionsOfEvent: (eventSlug: string) => void;
   questions: Question[] | null;
 }
@@ -29,9 +29,9 @@ const QuestionEditorPage = (props: ConnectedQuestionEditorPageProps) => {
   React.useEffect(() => { if (!questions) getQuestionsOfEvent(eventSlug); }, [getQuestionsOfEvent, eventSlug, questions]);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const urlParam = { eventSlug };
-  const handleDeleteQuestion = (questionId: number) => () => {
+  const handleDeleteQuestion = (questionNumber: number) => () => {
     setIsDeleting(true);
-    deleteQuestion(eventSlug, questionId).then(() => {
+    deleteQuestion(eventSlug, questionNumber).then(() => {
       getQuestionsOfEvent(eventSlug);
       setIsDeleting(false);
     });
@@ -49,7 +49,7 @@ const QuestionEditorPage = (props: ConnectedQuestionEditorPageProps) => {
         </Link>
       </div>
       {questions?.map((question) => (
-        <QuestionEdit question={question} onDeleteQuestion={handleDeleteQuestion(question.id)} />
+        <QuestionEdit question={question} onDeleteQuestion={handleDeleteQuestion(question.number)} />
       ))}
     </Card>
   );

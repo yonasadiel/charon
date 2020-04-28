@@ -9,7 +9,7 @@ import { User } from '../../modules/charon/auth/api';
 import * as charonAuthActions from '../../modules/charon/auth/action';
 import * as sessionSelectors from '../../modules/session/selector';
 import { AppState } from '../../modules/store';
-import { ROUTE_HOME } from '../../pages/routes';
+import { ROUTE_HOME, ROUTE_LOGIN } from '../../pages/routes';
 import './Navbar.scss';
 
 export interface ConnectedNavbarProps {
@@ -29,10 +29,16 @@ const Navbar = (props: ConnectedNavbarProps) => {
         <h1 className="title">{conf.appName}</h1>
       </Link>
       <div className="divider" />
-      <div className="user" onClick={handleLogoutClick}>
-        {!!user && (<img src={profileIcon} alt="profile-icon" />)}
-        <span>{!!user ? user.name : "Login"}</span>
-      </div>
+      {!!user ? (
+        <div className="user" onClick={handleLogoutClick}>
+          <img src={profileIcon} alt="profile-icon" />
+          <span>{user.name}</span>
+        </div>
+      ) : (
+        <Link to={ROUTE_LOGIN}>
+          <div className="user">Login</div>
+        </Link>
+      )}
     </div>
   );
 }

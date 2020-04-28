@@ -1,8 +1,16 @@
 import { AxiosError, AxiosResponse } from 'axios';
+import { WordArray } from 'crypto-js';
+import AES from 'crypto-js/aes';
+import Base64 from 'crypto-js/enc-base64';
+import Utf8 from 'crypto-js/enc-utf8';
+import Hex from 'crypto-js/enc-hex';
+import ModeCFB from 'crypto-js/mode-cfb';
+import NoPadding from 'crypto-js/pad-nopadding';
 
 import { AppThunk } from '../../store';
 import { CharonAPIError, CharonFormError } from '../http';
 import { Event, Participation, Question, Venue, SynchronizationData } from './api';
+import { getQuestions as getQuestionsSelector } from './selector';
 
 export const PUT_VENUES = 'charon/exam/PUT_VENUES';
 export const putVenues = (venues: Venue[] | null) => ({
@@ -139,9 +147,9 @@ export function createQuestion(eventSlug: string, question: Question): AppThunk<
   };
 };
 
-export function deleteQuestion(eventSlug: string, questionId: number): AppThunk<Promise<void>> {
+export function deleteQuestion(eventSlug: string, questionNumber: number): AppThunk<Promise<void>> {
   return async function (_dispatch, _getState, { charonExamApi }) {
-    return charonExamApi.deleteQuestion(eventSlug, questionId)
+    return charonExamApi.deleteQuestion(eventSlug, questionNumber)
       .then(() => {
         return;
       })
@@ -165,8 +173,22 @@ export function getSynchronizationData(eventSlug: string): AppThunk<Promise<Sync
 };
 
 export function putSynchronizationData(eventSlug: string, syncData: SynchronizationData): AppThunk<Promise<void>> {
-  return async function (_dispatch, _, { charonExamApi }) {
+  return async function (dispatch, _, { charonExamApi }) {
     return charonExamApi.putSynchronizationData(eventSlug, syncData)
+      .then(() => {
+        dispatch(putEvents(null));
+        dispatch(putQuestions(eventSlug, null));
+        dispatch(putParticipations(eventSlug, null));
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonAPIError(err);
+      });
+  };
+};
+
+export function decryptEvent(eventSlug: string, key: string): AppThunk<Promise<void>> {
+  return async function (_dispatch, _, { charonExamApi }) {
+    return charonExamApi.decryptEvent(eventSlug, key)
       .then(() => { })
       .catch((err: AxiosError) => {
         throw new CharonAPIError(err);
@@ -174,3 +196,38 @@ export function putSynchronizationData(eventSlug: string, syncData: Synchronizat
   };
 };
 
+function decryptText(ciphertext: string, key: string): string {
+  const keyBytes = Utf8.parse(key);
+  const cipherHex = Base64.parse(ciphertext).toString(Hex);
+  const iv = Hex.parse(cipherHex.slice(0, 32));
+  const cipherBytes = Hex.parse(cipherHex.slice(32));
+  const plainBytes  = AES.decrypt({
+    ciphertext: cipherBytes,
+    salt: '',
+  } as WordArray, keyBytes, {
+    iv: iv,
+    mode: ModeCFB,
+    padding: NoPadding,
+  });
+  return plainBytes.toString(Utf8);
+}
+
+export function decryptEventLocal(eventSlug: string, key: string): AppThunk<Promise<void>> {
+  return async function (dispatch, getState) {
+    const questions = getQuestionsSelector(getState(), eventSlug);
+    if (!!questions) {
+      for (let i = 0; i < questions.length; i++) {
+        questions[i].content = decryptText(questions[i].content, key);
+        const choiceText = decryptText(questions[i].choices[0], key);
+        const choiceTexts = choiceText.split('|');
+        questions[i].choices = [];
+        for (let j = 0; j < choiceTexts.length; j++) {
+          if (choiceTexts[j].length > 0) {
+            questions[i].choices.push(choiceTexts[j]);
+          }
+        }
+      }
+      dispatch(putQuestions(eventSlug, questions));
+    }
+  };
+};

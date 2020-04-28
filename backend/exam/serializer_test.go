@@ -260,7 +260,7 @@ func TestSerializeQuestion(t *testing.T) {
 			Content: "Question Content",
 			Choices: "",
 		},
-		expectedJSON: `{"id":2,"content":"Question Content","choices":[],"answer":""}`,
+		expectedJSON: `{"number":2,"content":"Question Content","choices":[],"answer":""}`,
 	}, {
 		question: Question{
 			ID:         2,
@@ -268,7 +268,7 @@ func TestSerializeQuestion(t *testing.T) {
 			Choices:    "a|b|c",
 			UserAnswer: "answer2",
 		},
-		expectedJSON: `{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"}`,
+		expectedJSON: `{"number":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"}`,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test SerializeQuestion testcase: %d", i)
@@ -289,21 +289,21 @@ func TestDeserializeQuestion(t *testing.T) {
 		expectedError    string
 	}
 	testCases := []deserializeQuestionTestCase{{
-		questionDataJSON: `{"id":2,"content":"Question Content","choices":[],"answer":""}`,
+		questionDataJSON: `{"number":2,"content":"Question Content","choices":[],"answer":""}`,
 		expectedQuestion: Question{
 			ID:      2,
 			Content: "Question Content",
 			Choices: "",
 		},
 	}, {
-		questionDataJSON: `{"id":2,"content":"Question Content","choices":["a","","b","","c", ""],"answer":""}`,
+		questionDataJSON: `{"number":2,"content":"Question Content","choices":["a","","b","","c", ""],"answer":""}`,
 		expectedQuestion: Question{
 			ID:      2,
 			Content: "Question Content",
 			Choices: "a|b|c",
 		},
 	}, {
-		questionDataJSON: `{"id":2,"content":"","choices":[],"answer":""}`,
+		questionDataJSON: `{"number":2,"content":"","choices":[],"answer":""}`,
 		expectedError:    `{"code":"form_error","message":{"_error":[],"content":["Content can't be empty"]}}`,
 	}}
 	for i, testCase := range testCases {
@@ -372,7 +372,7 @@ func TestSerializeSynchronizationData(t *testing.T) {
 			`"simKey":"","simKeySign":"","pubKey":"","isDecrypted":false,"lastSynchronization":""` +
 			`},` +
 			`"venue":{"id":10,"name":"venue1"},` +
-			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"","choices":[],"answer":""}],` +
+			`"questions":[{"number":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"number":0,"content":"","choices":[],"answer":""}],` +
 			`"users":[{"name":"abc","username":"def","role":"admin","password":"ghi"}]` +
 			`}`,
 	}, {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { TextInput } from 'react-hephaestus';
 
 import { Question } from '../../../modules/charon/exam/api';
 import './QuestionDetail.scss';
@@ -27,11 +28,13 @@ const QuestionDetail = (props: QuestionDetailProps) => {
     <div className="question-detail">
       <p dangerouslySetInnerHTML={{ __html: question.content }}></p>
       <div className="choices">
-        {question.choices.map((choice) => (
-          <div className="choice" key={choice}>
-            <input type="radio" value={choice} name="choice" /> {choice}
-          </div>
-        ))}
+        {question.choices.length > 0
+          ? question.choices.map((choice) => (
+            <div className="choice" key={choice}>
+              <input type="radio" value={choice} name="choice" /> {choice}
+            </div>
+          ))
+          : <TextInput placeholder="jawab..." />}
       </div>
     </div>
   )

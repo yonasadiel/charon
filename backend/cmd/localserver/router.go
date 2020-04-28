@@ -60,11 +60,11 @@ func CreateRouter() (router *mux.Router) {
 	router.HandleFunc("/exam/{eventSlug}/question/", helios.WithMiddleware(exam.QuestionListView, loggedInMiddlewares)).Methods(http.MethodGet)
 	router.HandleFunc("/exam/{eventSlug}/question/", helios.WithMiddleware(exam.QuestionCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
 	router.HandleFunc("/exam/{eventSlug}/question/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
-	router.HandleFunc("/exam/{eventSlug}/question/{questionID}/", helios.WithMiddleware(exam.QuestionDetailView, loggedInMiddlewares)).Methods(http.MethodGet)
-	router.HandleFunc("/exam/{eventSlug}/question/{questionID}/", helios.WithMiddleware(exam.QuestionDeleteView, loggedInMiddlewares)).Methods(http.MethodDelete)
-	router.HandleFunc("/exam/{eventSlug}/question/{questionID}/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
-	router.HandleFunc("/exam/{eventSlug}/question/{questionID}/submit/", helios.WithMiddleware(exam.SubmissionCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
-	router.HandleFunc("/exam/{eventSlug}/question/{questionID}/submit/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
+	router.HandleFunc("/exam/{eventSlug}/question/{questionNumber}/", helios.WithMiddleware(exam.QuestionDetailView, loggedInMiddlewares)).Methods(http.MethodGet)
+	router.HandleFunc("/exam/{eventSlug}/question/{questionNumber}/", helios.WithMiddleware(exam.QuestionDeleteView, loggedInMiddlewares)).Methods(http.MethodDelete)
+	router.HandleFunc("/exam/{eventSlug}/question/{questionNumber}/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
+	router.HandleFunc("/exam/{eventSlug}/question/{questionNumber}/submit/", helios.WithMiddleware(exam.SubmissionCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
+	router.HandleFunc("/exam/{eventSlug}/question/{questionNumber}/submit/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 
 	router.Use(mux.CORSMethodMiddleware(router))
 

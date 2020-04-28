@@ -592,49 +592,49 @@ func TestQuestionDetailView(t *testing.T) {
 	var userParticipant auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
 	var event1 Event = EventFactorySaved(Event{})
 	var question1 Question = QuestionFactorySaved(Question{Event: &event1})
-	var question2 Question = QuestionFactorySaved(Question{Event: &event1})
+	QuestionFactorySaved(Question{Event: &event1})
 	var participation1 Participation = ParticipationFactorySaved(Participation{User: &userParticipant, Event: &event1})
 	UserQuestionFactorySaved(UserQuestion{Participation: &participation1, Question: &question1})
 	type questionDetailTestCase struct {
 		user               interface{}
 		eventSlug          string
-		questionID         string
+		questionNumber     string
 		expectedStatusCode int
 		expectedErrorCode  string
 	}
 	testCases := []questionDetailTestCase{{
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		expectedStatusCode: http.StatusOK,
 	}, {
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question2.ID)),
+		questionNumber:     "2",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         "bad_question_id",
+		questionNumber:     "bad_question_id",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         "879654",
+		questionNumber:     "879654",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
 		eventSlug:          "random",
-		questionID:         "malformed",
+		questionNumber:     "malformed",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               "bad_user",
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		expectedStatusCode: http.StatusInternalServerError,
 	}}
 
@@ -644,7 +644,7 @@ func TestQuestionDetailView(t *testing.T) {
 		req = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
 		req.URLParam["eventSlug"] = testCase.eventSlug
-		req.URLParam["questionID"] = testCase.questionID
+		req.URLParam["questionNumber"] = testCase.questionNumber
 
 		QuestionDetailView(&req)
 
@@ -671,54 +671,54 @@ func TestQuestionDeleteView(t *testing.T) {
 	type questionDeleteTestCase struct {
 		user               interface{}
 		eventSlug          string
-		questionID         string
+		questionNumber     string
 		expectedStatusCode int
 		expectedErrorCode  string
 	}
 	testCases := []questionDeleteTestCase{{
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		expectedStatusCode: http.StatusForbidden,
 		expectedErrorCode:  errQuestionChangeNotAuthorized.Code,
 	}, {
 		user:               userLocal,
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		expectedStatusCode: http.StatusForbidden,
 		expectedErrorCode:  errQuestionChangeNotAuthorized.Code,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		eventSlug:          event1.Slug,
-		questionID:         "bad_question_id",
+		questionNumber:     "bad_question_id",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
 		eventSlug:          event1.Slug,
-		questionID:         "879654",
+		questionNumber:     "879654",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
 		eventSlug:          "4567890",
-		questionID:         "malformed",
+		questionNumber:     "malformed",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               "bad_user",
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		expectedStatusCode: http.StatusInternalServerError,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		expectedStatusCode: http.StatusOK,
 	}, {
 		user:               auth.UserFactorySaved(auth.User{Role: auth.UserRoleAdmin}),
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}}
@@ -728,7 +728,7 @@ func TestQuestionDeleteView(t *testing.T) {
 		req := helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
 		req.URLParam["eventSlug"] = testCase.eventSlug
-		req.URLParam["questionID"] = testCase.questionID
+		req.URLParam["questionNumber"] = testCase.questionNumber
 
 		QuestionDeleteView(&req)
 
@@ -753,7 +753,7 @@ func TestSubmissionCreateView(t *testing.T) {
 	type submissionCreateTestCase struct {
 		user               interface{}
 		eventSlug          string
-		questionID         string
+		questionNumber     string
 		requestData        string
 		expectedStatusCode int
 		expectedErrorCode  string
@@ -761,40 +761,40 @@ func TestSubmissionCreateView(t *testing.T) {
 	testCases := []submissionCreateTestCase{{
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		requestData:        fmt.Sprintf(`{"answer":"%s"}`, strings.Split(question1.Choices, "|")[0]),
 		expectedStatusCode: http.StatusCreated,
 	}, {
 		user:               userParticipant,
 		eventSlug:          "random",
-		questionID:         "malformed",
+		questionNumber:     "malformed",
 		requestData:        `{"answer":"answer2"}`,
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         "malformed",
+		questionNumber:     "malformed",
 		requestData:        `{"answer":"answer4"}`,
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         "876789",
+		questionNumber:     "876789",
 		requestData:        `{"answer":"answer5"}`,
 		expectedStatusCode: http.StatusNotFound,
 		expectedErrorCode:  errQuestionNotFound.Code,
 	}, {
 		user:               userParticipant,
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		requestData:        `malformed`,
 		expectedStatusCode: http.StatusBadRequest,
 	}, {
 		user:               "bad_user",
 		eventSlug:          event1.Slug,
-		questionID:         strconv.Itoa(int(question1.ID)),
+		questionNumber:     "1",
 		requestData:        `{"answer":"answer7"}`,
 		expectedStatusCode: http.StatusInternalServerError,
 	}}
@@ -804,7 +804,7 @@ func TestSubmissionCreateView(t *testing.T) {
 		var req helios.MockRequest = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)
 		req.URLParam["eventSlug"] = testCase.eventSlug
-		req.URLParam["questionID"] = testCase.questionID
+		req.URLParam["questionNumber"] = testCase.questionNumber
 		req.RequestData = testCase.requestData
 
 		SubmissionCreateView(&req)
@@ -956,11 +956,8 @@ func TestDecryptEventDataView(t *testing.T) {
 	event1.DecryptedAt = time.Time{}
 	event1.SimKey = ""
 	event1.PrvKey = ""
-	fmt.Println(event1.Slug)
 	helios.DB.Save(&event1)
 	ParticipationFactorySaved(Participation{User: &userLocal, Event: &event1})
-	_, er := GetEventOfUser(userLocal, event1.Slug)
-	fmt.Println(er)
 
 	type decryptEventDataViewTestCase struct {
 		user               interface{}

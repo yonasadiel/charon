@@ -39,7 +39,7 @@ type ParticipationData struct {
 // QuestionData is JSON representation of question.
 // Answer is the user's answer of the question, equals to Submission.Answer
 type QuestionData struct {
-	ID      uint     `json:"id"`
+	Number  uint     `json:"number"`
 	Content string   `json:"content"`
 	Choices []string `json:"choices"`
 	Answer  string   `json:"answer"`
@@ -195,7 +195,7 @@ func SerializeQuestion(question Question) QuestionData {
 		}
 	}
 	questionData := QuestionData{
-		ID:      question.ID,
+		Number:  question.ID,
 		Content: question.Content,
 		Choices: choices,
 		Answer:  question.UserAnswer,
@@ -207,7 +207,7 @@ func SerializeQuestion(question Question) QuestionData {
 // DeserializeQuestion convert JSON of question to Question object
 func DeserializeQuestion(questionData QuestionData, question *Question) helios.Error {
 	var err helios.ErrorForm = helios.NewErrorForm()
-	question.ID = questionData.ID
+	question.ID = questionData.Number
 	question.Content = questionData.Content
 	var choices []string = make([]string, 0)
 	for _, choice := range questionData.Choices {

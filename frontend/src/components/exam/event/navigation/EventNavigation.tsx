@@ -8,6 +8,7 @@ import {
   ROUTE_EVENT_QUESTION_DETAIL,
   ROUTE_EVENT_QUESTION_EDIT,
   ROUTE_EVENT_SYNC,
+  ROUTE_EVENT_DECRYPT,
 } from '../../../../pages/routes';
 import EventNavigationItem from './EventNavigationItem';
 import './EventNavigation.scss';
@@ -42,7 +43,7 @@ const EventNavigation = (props: EventNavigationProps) => {
         <EventNavigationItem
           icon="fa-book-open"
           isActive={isActive(ROUTE_EVENT_QUESTION_DETAIL)}
-          route={generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { ...urlParams, questionId: 1 })}
+          route={generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { ...urlParams, questionNumber: 1 })}
           text="Soal" /> )}
       {(menus.includes(ROUTE_EVENT_QUESTION_EDIT)) && (
         <EventNavigationItem
@@ -56,6 +57,12 @@ const EventNavigation = (props: EventNavigationProps) => {
           isActive={isActive(ROUTE_EVENT_SYNC)}
           route={generateUrlWithParams(ROUTE_EVENT_SYNC, urlParams)}
           text="Sinkronisasi" /> )}
+      {(menus.includes(ROUTE_EVENT_DECRYPT)) && (
+        <EventNavigationItem
+          icon="fa-key"
+          isActive={isActive(ROUTE_EVENT_DECRYPT)}
+          route={generateUrlWithParams(ROUTE_EVENT_DECRYPT, urlParams)}
+          text="Dekripsi" /> )}
     </div>
   );
 };

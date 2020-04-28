@@ -7,13 +7,13 @@ import './QuestionNavigation.scss';
 import { ROUTE_EVENT_QUESTION_DETAIL } from '../../../../pages/routes';
 
 interface QuestionNavigationProps {
-  currentQuestionId: number;
+  currentQuestionNumber: number;
   eventSlug: string;
   questions: Question[] | null;
 }
 
 const QuestionNavigation = (props: QuestionNavigationProps) => {
-  const { currentQuestionId, eventSlug, questions } = props;
+  const { currentQuestionNumber, eventSlug, questions } = props;
   if (!questions) {
     return <p>Loading</p>;
   }
@@ -21,9 +21,9 @@ const QuestionNavigation = (props: QuestionNavigationProps) => {
     <div className="question-navigation">
     {questions?.map((question, i) => (
       <Link
-        className={`nav-item ${question.id === currentQuestionId ? 'active' : ''}`}
+        className={`nav-item ${question.number === currentQuestionNumber ? 'active' : ''}`}
         to={generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { eventSlug, questionNumber: i + 1 })}
-        key={question.id}>
+        key={question.number}>
         <span>{i + 1}</span>
       </Link>
     ))}

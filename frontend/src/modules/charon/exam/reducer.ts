@@ -42,7 +42,7 @@ export function charonExamReducer (state: CharonExamState = initialState, action
     case PUT_QUESTIONS: {
       const oldEvent = !!state.events ? state.events[action.eventSlug] : null;
       const newEvent = Object.assign({}, !!oldEvent ? oldEvent : {} as Event);
-      newEvent.questions = action.questions === null ? null : keyBy(action.questions, 'id');
+      newEvent.questions = action.questions === null ? null : keyBy(action.questions, 'number');
       return {
         ...state,
         events: {

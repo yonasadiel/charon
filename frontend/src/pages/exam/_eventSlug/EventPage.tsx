@@ -20,7 +20,9 @@ import {
   ROUTE_EVENT_QUESTION_EDIT,
   ROUTE_EVENT_QUESTION_EDIT_CREATE,
   ROUTE_EVENT_SYNC,
+  ROUTE_EVENT_DECRYPT,
 } from '../../routes';
+import DecryptionPage from './decrypt/DecryptionPage';
 import { hasPermissionForMenu, menuByRole } from './menu';
 import ParticipationPage from './participation/ParticipationPage';
 import QuestionPage from './question/QuestionPage';
@@ -100,6 +102,11 @@ const EventDetailPage = (props: EventDetailPageProps) => {
           <Route path={ROUTE_EVENT_SYNC}>
             {hasPermissionForMenu(user, ROUTE_EVENT_SYNC)
                 ? <SynchronizationPage />
+                : <Redirect to={eventDetailLink} />}
+          </Route>
+          <Route path={ROUTE_EVENT_DECRYPT}>
+            {hasPermissionForMenu(user, ROUTE_EVENT_DECRYPT)
+                ? <DecryptionPage />
                 : <Redirect to={eventDetailLink} />}
           </Route>
           <Route path={ROUTE_EVENT_OVERVIEW}>

@@ -40,6 +40,8 @@ export function getQuestions(state: AppState, eventSlug: string): Question[] | n
 }
 
 export function getQuestionByNumber(state: AppState, eventSlug: string, questionNumber: number): Question | null {
-  const questions = getQuestions(state, eventSlug);
-  return !!questions ? questions[questionNumber - 1] : null;
+  const event = getEvent(state, eventSlug);
+  if (!event) return null;
+  if (!event.questions) return null;
+  return event.questions[questionNumber];
 }

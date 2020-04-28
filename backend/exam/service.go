@@ -259,7 +259,7 @@ func GetAllQuestionOfUserAndEvent(user auth.User, eventSlug string) ([]Question,
 
 	// Querying for user questions and user submissions
 	if user.IsAdmin() || user.IsOrganizer() || user.IsLocal() {
-		helios.DB.Where("event_id = ?", event.ID).Find(&questions)
+		helios.DB.Where("event_id = ?", event.ID).Order("questions.id asc").Find(&questions)
 	} else {
 		helios.DB.
 			Select("questions.*, user_questions.answer as user_answer").
@@ -305,7 +305,7 @@ func UpsertQuestion(user auth.User, eventSlug string, question *Question) helios
 
 // GetQuestionOfEventAndUser returns a question with given id, but first check
 // if the user has rights to the question
-func GetQuestionOfEventAndUser(user auth.User, eventSlug string, questionID uint) (*Question, helios.Error) {
+func GetQuestionOfEventAndUser(user auth.User, eventSlug string, questionNumber uint) (*Question, helios.Error) {
 	var event Event
 	var question Question
 	var errGetEvent helios.Error
@@ -320,7 +320,11 @@ func GetQuestionOfEventAndUser(user auth.User, eventSlug string, questionID uint
 	}
 
 	if user.IsAdmin() || user.IsOrganizer() || user.IsLocal() {
-		helios.DB.Where("id = ?", questionID).Where("event_id = ?", event.ID).First(&question)
+		helios.DB.
+			Where("event_id = ?", event.ID).
+			Order("questions.id asc").
+			Offset(questionNumber - 1).
+			First(&question)
 	} else {
 		helios.DB.
 			Select("questions.*, user_questions.answer as user_answer").
@@ -330,7 +334,8 @@ func GetQuestionOfEventAndUser(user auth.User, eventSlug string, questionID uint
 			Where("questions.event_id = ?", event.ID).
 			Where("participations.user_id = ?", user.ID).
 			Where("participations.event_id = ?", event.ID).
-			Where("questions.id = ?", questionID).
+			Order("user_questions.ordering asc").
+			Offset(questionNumber - 1).
 			First(&question)
 	}
 	if question.ID == 0 {
@@ -342,7 +347,7 @@ func GetQuestionOfEventAndUser(user auth.User, eventSlug string, questionID uint
 // DeleteQuestion deletes a question with given id
 // and returns the deleted question. Only organizer and
 // admin that can do deletion
-func DeleteQuestion(user auth.User, eventSlug string, questionID uint) (*Question, helios.Error) {
+func DeleteQuestion(user auth.User, eventSlug string, questionNumber uint) (*Question, helios.Error) {
 	if !user.IsOrganizer() && !user.IsAdmin() {
 		return nil, errQuestionChangeNotAuthorized
 	}
@@ -356,19 +361,23 @@ func DeleteQuestion(user auth.User, eventSlug string, questionID uint) (*Questio
 		return nil, errGetEvent
 	}
 
-	helios.DB.Where("event_id = ?", event.ID).Where("id = ?", questionID).First(&question)
+	helios.DB.
+		Where("event_id = ?", event.ID).
+		Order("questions.id asc").
+		Offset(questionNumber - 1).
+		First(&question)
 	if question.ID == 0 {
 		return nil, errQuestionNotFound
 	}
 	tx := helios.DB.Begin()
-	tx.Where("question_id = ?", questionID).Delete(UserQuestion{})
+	tx.Where("question_id = ?", question.ID).Delete(UserQuestion{})
 	tx.Delete(&question)
 	tx.Commit()
 	return &question, nil
 }
 
 // SubmitSubmission submit a submission from user to a question.
-func SubmitSubmission(user auth.User, eventSlug string, questionID uint, answer string) (*Question, helios.Error) {
+func SubmitSubmission(user auth.User, eventSlug string, questionNumber uint, answer string) (*Question, helios.Error) {
 	if !user.IsParticipant() {
 		return nil, errSubmissionNotAuthorized
 	}
@@ -395,7 +404,8 @@ func SubmitSubmission(user auth.User, eventSlug string, questionID uint, answer 
 		Where("questions.event_id = ?", event.ID).
 		Where("participations.user_id = ?", user.ID).
 		Where("participations.event_id = ?", event.ID).
-		Where("questions.id = ?", questionID).
+		Order("user_questions.ordering asc").
+		Offset(questionNumber - 1).
 		First(&userQuestion)
 
 	if userQuestion.ID == 0 {

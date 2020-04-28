@@ -18,3 +18,4 @@ export const ROUTE_EVENT_QUESTION_DETAIL = ROUTE_EVENT_QUESTION + ':questionNumb
 export const ROUTE_EVENT_QUESTION_EDIT = ROUTE_EVENT + 'question-editor/';
 export const ROUTE_EVENT_QUESTION_EDIT_CREATE = ROUTE_EVENT_QUESTION_EDIT + 'new/';
 export const ROUTE_EVENT_SYNC = ROUTE_EVENT + 'sync/';
+export const ROUTE_EVENT_DECRYPT = ROUTE_EVENT + 'decrypt/';
