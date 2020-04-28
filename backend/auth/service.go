@@ -97,6 +97,7 @@ func UpsertUser(user User, newUser *User) helios.Error {
 		return errUserRoleTooHigh
 	}
 
+	newUser.Password = hashPassword(newUser.Password)
 	if newUser.ID == 0 {
 		helios.DB.Create(newUser)
 	} else {

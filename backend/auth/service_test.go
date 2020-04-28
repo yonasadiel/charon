@@ -95,27 +95,32 @@ func TestUpsertUser(t *testing.T) {
 	type upsertUserTestCase struct {
 		user              User
 		newUser           User
+		password          string
 		expectedError     helios.Error
 		expectedUserCount int
 	}
 	testCases := []upsertUserTestCase{{
 		user:              userParticipant,
 		newUser:           UserFactory(User{Role: UserRoleParticipant}),
+		password:          "pass1",
 		expectedError:     errUserRoleTooHigh,
 		expectedUserCount: 2,
 	}, {
 		user:              userLocal,
 		newUser:           UserFactory(User{Role: UserRoleParticipant}),
+		password:          "pass2",
 		expectedUserCount: 3,
 	}, {
 		user:              userLocal,
 		newUser:           UserFactory(User{ID: userLocal.ID, Name: "abc"}),
+		password:          "pass3",
 		expectedUserCount: 3,
 	}}
 	for i, testCase := range testCases {
 		var newUserCount int
 		var newUserSaved User
 		t.Logf("Test UpsertUser testcase: %d", i)
+		testCase.newUser.Password = testCase.password
 		err := UpsertUser(testCase.user, &testCase.newUser)
 		helios.DB.Model(User{}).Count(&newUserCount)
 		helios.DB.Where("id = ?", testCase.newUser.ID).First(&newUserSaved)
@@ -123,6 +128,8 @@ func TestUpsertUser(t *testing.T) {
 		if testCase.expectedError == nil {
 			assert.Nil(t, err)
 			assert.Equal(t, testCase.newUser.Name, newUserSaved.Name, "If the newUser has already existed, it should be updated")
+			assert.NotEqual(t, testCase.newUser.Password, testCase.password)
+			assert.True(t, checkPasswordHash(testCase.password, testCase.newUser.Password), "password should be hashed")
 		} else {
 			assert.Equal(t, testCase.expectedError, err)
 		}
