@@ -179,6 +179,32 @@ func ParticipationCreateView(req helios.Request) {
 	req.SendJSON(SerializeParticipation(participation), http.StatusOK)
 }
 
+// ParticipationVerifyView used to submit single hashed participation key
+func ParticipationVerifyView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var eventSlug string = req.GetURLParam("eventSlug")
+	var verificationData VerificationData
+	var err helios.Error
+	err = req.DeserializeRequestData(&verificationData)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	err = VerifyParticipation(user, eventSlug, verificationData.KeyHashedSingle)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+
+	req.SendJSON("OK", http.StatusOK)
+}
+
 // ParticipationDeleteView delete the participation
 func ParticipationDeleteView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
@@ -361,13 +387,14 @@ func GetSynchronizationDataView(req helios.Request) {
 	var venue *Venue
 	var questions []Question
 	var users []auth.User
+	var usersKey map[string]string
 	var err helios.Error
 
-	event, venue, questions, users, err = GetSynchronizationData(user, eventSlug)
+	event, venue, questions, users, usersKey, err = GetSynchronizationData(user, eventSlug)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 	} else {
-		var synchronizationData SynchronizationData = SerializeSynchronizationData(*event, *venue, questions, users)
+		var synchronizationData SynchronizationData = SerializeSynchronizationData(*event, *venue, questions, users, usersKey)
 		req.SendJSON(synchronizationData, http.StatusOK)
 	}
 }
@@ -391,15 +418,16 @@ func PutSynchronizationDataView(req helios.Request) {
 	var venue Venue
 	var questions []Question
 	var users []auth.User
+	var usersKey map[string]string
 	var err helios.Error
 
-	err = DeserializeSynchronizationData(synchronizationData, &event, &venue, &questions, &users)
+	err = DeserializeSynchronizationData(synchronizationData, &event, &venue, &questions, &users, &usersKey)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return
 	}
 
-	err = PutSynchronizationData(user, event, venue, questions, users)
+	err = PutSynchronizationData(user, event, venue, questions, users, usersKey)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 	} else {

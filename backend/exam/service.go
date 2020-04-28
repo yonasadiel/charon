@@ -208,7 +208,8 @@ func UpsertParticipation(user auth.User, eventSlug string, userUsername string, 
 	participation.Event = &event
 	participation.VenueID = venue.ID
 	participation.Venue = &venue
-	participation.KeyHashed = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.Key)))
+	participation.KeyHashedSingle = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.Key)))
+	participation.KeyHashedDouble = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyHashedSingle)))
 	if participation.ID == 0 {
 		helios.DB.Create(&participation)
 	} else {
@@ -216,6 +217,25 @@ func UpsertParticipation(user auth.User, eventSlug string, userUsername string, 
 	}
 
 	return nil
+}
+
+// VerifyParticipation checks if the hashedSingle equal to the participation key
+func VerifyParticipation(user auth.User, eventSlug string, hashedSingle string) helios.Error {
+	var event Event
+	var participation Participation
+	var errGetEvent helios.Error
+	event, errGetEvent = GetEventOfUser(user, eventSlug)
+	if errGetEvent != nil {
+		return errGetEvent
+	}
+	helios.DB.Where("user_id = ?", user.ID).Where("event_id = ?", event.ID).First(&participation)
+	hashedDouble := fmt.Sprintf("%x", sha256.Sum256([]byte(hashedSingle)))
+	if participation.KeyHashedDouble == hashedDouble {
+		participation.KeyHashedSingle = hashedSingle
+		helios.DB.Save(&participation)
+		return nil
+	}
+	return errParticipationWrongKey
 }
 
 // DeleteParticipation deletes a participation with given id
@@ -428,9 +448,9 @@ func SubmitSubmission(user auth.User, eventSlug string, questionNumber uint, ans
 
 // GetSynchronizationData gets the synchronization data of event.
 // Only local user has the permission
-func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, []Question, []auth.User, helios.Error) {
+func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, []Question, []auth.User, map[string]string, helios.Error) {
 	if !user.IsLocal() {
-		return nil, nil, nil, nil, errSynchronizationNotAuthorized
+		return nil, nil, nil, nil, nil, errSynchronizationNotAuthorized
 	}
 
 	var participation Participation
@@ -443,12 +463,14 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, [
 		Where("events.slug = ?", eventSlug).
 		First(&participation)
 	if participation.ID == 0 {
-		return nil, nil, nil, nil, errEventNotFound
+		return nil, nil, nil, nil, nil, errEventNotFound
 	}
 
 	var event Event
 	var questions []Question
 	var users []auth.User
+	var participations []Participation
+	var usersKey map[string]string
 	helios.DB.Where("id = ?", participation.EventID).First(&event)
 	helios.DB.Where("event_id = ?", event.ID).Find(&questions)
 	helios.DB.
@@ -457,18 +479,29 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, [
 		Where("participations.event_id = ?", event.ID).
 		Where("participations.venue_id = ?", participation.Venue.ID).
 		Find(&users)
+	helios.DB.
+		Select("participations.*").
+		Preload("User").
+		Where("participations.event_id = ?", event.ID).
+		Where("participations.venue_id = ?", participation.Venue.ID).
+		Find(&participations)
 
 	err := encryptQuestions(questions, event.SimKey)
 	if err != nil {
-		return nil, nil, nil, nil, helios.ErrInternalServerError
+		return nil, nil, nil, nil, nil, helios.ErrInternalServerError
 	}
 
-	return &event, participation.Venue, questions, users, nil
+	usersKey = make(map[string]string)
+	for _, participation := range participations {
+		usersKey[participation.User.Username] = participation.KeyHashedDouble
+	}
+
+	return &event, participation.Venue, questions, users, usersKey, nil
 }
 
 // PutSynchronizationData puts the synchronization data of event.
 // Only local user has the permission
-func PutSynchronizationData(user auth.User, event Event, venue Venue, questions []Question, users []auth.User) helios.Error {
+func PutSynchronizationData(user auth.User, event Event, venue Venue, questions []Question, users []auth.User, usersKey map[string]string) helios.Error {
 	if !user.IsLocal() {
 		return errSynchronizationNotAuthorized
 	}
@@ -530,9 +563,11 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 	}
 	for i := range users {
 		var participation Participation = Participation{
-			UserID:  users[i].ID,
-			VenueID: venue.ID,
-			EventID: event.ID,
+			UserID:          users[i].ID,
+			VenueID:         venue.ID,
+			EventID:         event.ID,
+			KeyHashedDouble: usersKey[users[i].Username],
+			// TODO: if the key is malformed and missing user
 		}
 		tx.Create(&participation)
 	}

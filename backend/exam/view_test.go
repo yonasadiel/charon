@@ -1,6 +1,7 @@
 package exam
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -378,6 +379,68 @@ func TestParticipationCreateView(t *testing.T) {
 
 		helios.DB.Model(Participation{}).Count(&participationCount)
 		assert.Equal(t, testCase.expectedParticipationCount, participationCount)
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			var errUnmarshalling error
+			errUnmarshalling = json.Unmarshal(req.JSONResponse, &err)
+			assert.Nil(t, errUnmarshalling)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}
+
+func TestParticipationVerifyView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var userParticipant1 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var event1 Event = EventFactorySaved(Event{})
+	var event1User1Key = "event_1_user1"
+	var keyHashedSingle = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1Key)))
+	var keyHashedDouble = fmt.Sprintf("%x", sha256.Sum256([]byte(keyHashedSingle)))
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyHashedDouble: keyHashedDouble})
+	type participationVerifyTestCase struct {
+		user               interface{}
+		eventSlug          string
+		requestData        string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+
+	testCases := []participationVerifyTestCase{{
+		user:               userParticipant1,
+		eventSlug:          event1.Slug,
+		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedSingle),
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               userParticipant1,
+		eventSlug:          event1.Slug,
+		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedDouble),
+		expectedStatusCode: http.StatusBadRequest,
+		expectedErrorCode:  errParticipationWrongKey.Code,
+	}, {
+		user:               "bad_user",
+		eventSlug:          event1.Slug,
+		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedSingle),
+		expectedStatusCode: http.StatusInternalServerError,
+		expectedErrorCode:  helios.ErrInternalServerError.Code,
+	}, {
+		user:               userParticipant1,
+		eventSlug:          event1.Slug,
+		requestData:        "bad_format",
+		expectedStatusCode: http.StatusBadRequest,
+	}}
+
+	for i, testCase := range testCases {
+		t.Logf("Test ParticipationVerify testcase: %d", i)
+		var req helios.MockRequest
+		req = helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventSlug"] = testCase.eventSlug
+		req.RequestData = testCase.requestData
+
+		ParticipationVerifyView(&req)
+
 		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
 		if testCase.expectedErrorCode != "" {
 			var err map[string]interface{}

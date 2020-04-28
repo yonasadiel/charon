@@ -35,7 +35,11 @@ type ParticipationData struct {
 	UserUsername string `json:"userUsername"`
 	VenueID      uint   `json:"venueId"`
 	Key          string `json:"key,omitempty"`
-	EncryptedKey string `json:"keyEnc,omitempty"`
+}
+
+// VerificationData used for client submitting single-hashed participation key
+type VerificationData struct {
+	KeyHashedSingle string `json:"key"`
 }
 
 // QuestionData is JSON representation of question.
@@ -60,6 +64,7 @@ type SynchronizationData struct {
 	Venue     VenueData                   `json:"venue"`
 	Questions []QuestionData              `json:"questions"`
 	Users     []auth.UserWithPasswordData `json:"users"`
+	UsersKey  map[string]string           `json:"usersKey"`
 }
 
 // DecryptRequest is JSON representation of submitting key for
@@ -238,7 +243,7 @@ func DeserializeQuestion(questionData QuestionData, question *Question) helios.E
 
 // SerializeSynchronizationData converts event, questions, participations, and users
 // into SynchronizationData
-func SerializeSynchronizationData(event Event, venue Venue, questions []Question, users []auth.User) SynchronizationData {
+func SerializeSynchronizationData(event Event, venue Venue, questions []Question, users []auth.User, usersKey map[string]string) SynchronizationData {
 	var questionsData []QuestionData = make([]QuestionData, 0)
 	var usersData []auth.UserWithPasswordData = make([]auth.UserWithPasswordData, 0)
 	for _, question := range questions {
@@ -252,12 +257,13 @@ func SerializeSynchronizationData(event Event, venue Venue, questions []Question
 		Venue:     SerializeVenue(venue),
 		Questions: questionsData,
 		Users:     usersData,
+		UsersKey:  usersKey,
 	}
 }
 
 // DeserializeSynchronizationData converts event, questions, participations, and users
 // into SynchronizationData
-func DeserializeSynchronizationData(synchronizationData SynchronizationData, event *Event, venue *Venue, questions *[]Question, users *[]auth.User) helios.Error {
+func DeserializeSynchronizationData(synchronizationData SynchronizationData, event *Event, venue *Venue, questions *[]Question, users *[]auth.User, usersKey *map[string]string) helios.Error {
 	var err helios.ErrorForm = helios.NewErrorForm()
 	var errEvent helios.Error = DeserializeEvent(synchronizationData.Event, event)
 	if errEvent != nil {
@@ -311,6 +317,11 @@ func DeserializeSynchronizationData(synchronizationData SynchronizationData, eve
 		}
 	}
 	err.FieldError["users"] = errUsers
+
+	*usersKey = make(map[string]string)
+	for k, v := range synchronizationData.UsersKey {
+		(*usersKey)[k] = v
+	}
 
 	if err.IsError() {
 		return err

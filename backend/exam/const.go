@@ -59,6 +59,12 @@ var errParticipationNotFound = helios.ErrorAPI{
 	Message:    "No participation with given id",
 }
 
+var errParticipationWrongKey = helios.ErrorAPI{
+	StatusCode: http.StatusBadRequest,
+	Code:       "wrong_participation_key",
+	Message:    "Wrong participation key",
+}
+
 var errUserNotFound = helios.ErrorAPI{
 	StatusCode: http.StatusNotFound,
 	Code:       "user_not_found",
