@@ -45,7 +45,7 @@ type Participation struct {
 	EventID         uint
 	UserID          uint
 	VenueID         uint
-	Key             string
+	KeyPlain        string
 	KeyHashedSingle string
 	KeyHashedDouble string
 

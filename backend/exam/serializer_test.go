@@ -186,11 +186,14 @@ func TestSerializeParticipation(t *testing.T) {
 	var user auth.User = auth.UserFactory(auth.User{Username: "abc"})
 	var venue Venue = VenueFactory(Venue{ID: 5})
 	var participation Participation = ParticipationFactory(Participation{
-		ID:    3,
-		User:  &user,
-		Venue: &venue,
+		ID:              3,
+		User:            &user,
+		Venue:           &venue,
+		KeyPlain:        "KeyPlain",
+		KeyHashedSingle: "KeyHashedSingle",
+		KeyHashedDouble: "KeyHashedDouble",
 	})
-	var expectedJSON string = `{"id":3,"userUsername":"abc","venueId":5}`
+	var expectedJSON string = `{"id":3,"userUsername":"abc","venueId":5,"keyDouble":"KeyHashedDouble"}`
 	var serialized ParticipationData = SerializeParticipation(participation)
 	var serializedJSON []byte
 	var errMarshalling error
@@ -238,7 +241,7 @@ func TestDeserializeParticipation(t *testing.T) {
 			assert.Nil(t, participation.Event)
 			assert.Nil(t, participation.User)
 			assert.Nil(t, participation.Venue)
-			assert.Empty(t, participation.Key)
+			assert.Empty(t, participation.KeyPlain)
 			assert.Empty(t, participation.KeyHashedSingle)
 			assert.Empty(t, participation.KeyHashedDouble)
 		} else {
@@ -261,15 +264,15 @@ func TestDeserializeParticipationWithKey(t *testing.T) {
 	testCases := []deserializeParticipationTestCase{{
 		participationDataJSON: `{"id":2,"eventId":3,"venueId":4,"userId":5,"userUsername":"abc","key":"abcdef","keyEnc":"ghijkl"}`,
 		expectedParticipation: Participation{
-			ID:      2,
-			VenueID: 4,
-			Key:     "abcdef",
+			ID:       2,
+			VenueID:  4,
+			KeyPlain: "abcdef",
 		},
 	}, {
 		participationDataJSON: `{"venueId":4,"userUsername":"abc","key":"abcdef"}`,
 		expectedParticipation: Participation{
-			VenueID: 4,
-			Key:     "abcdef",
+			VenueID:  4,
+			KeyPlain: "abcdef",
 		},
 	}, {
 		participationDataJSON: `{}`,
@@ -290,7 +293,7 @@ func TestDeserializeParticipationWithKey(t *testing.T) {
 			assert.Equal(t, testCase.expectedParticipation.VenueID, participation.VenueID)
 			assert.Equal(t, testCase.expectedParticipation.EventID, participation.EventID)
 			assert.Equal(t, testCase.expectedParticipation.UserID, participation.UserID)
-			assert.Equal(t, testCase.expectedParticipation.Key, participation.Key)
+			assert.Equal(t, testCase.expectedParticipation.KeyPlain, participation.KeyPlain)
 			assert.Nil(t, participation.Event)
 			assert.Nil(t, participation.User)
 			assert.Nil(t, participation.Venue)

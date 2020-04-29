@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps, Switch, Route, Redirect } from 'react-router-dom';
 
-import { User } from '../../../modules/charon/auth/api';
+import { User, USER_ROLE } from '../../../modules/charon/auth/api';
 import EventDetail from '../../../components/exam/event/EventDetail';
 import EventNavigation from '../../../components/exam/event/navigation/EventNavigation';
 import { Event, Question } from '../../../modules/charon/exam/api';
@@ -12,6 +12,7 @@ import * as charonSessionSelectors from '../../../modules/session/selector';
 import { generateUrlWithParams } from '../../../modules/util/routes';
 import { AppState } from '../../../modules/store';
 import {
+  ROUTE_LOGIN,
   ROUTE_EVENT,
   ROUTE_EVENT_OVERVIEW,
   ROUTE_EVENT_PARTICIPATION,
@@ -33,9 +34,11 @@ import './EventPage.scss';
 
 interface EventDetailPageProps extends RouteComponentProps<{ eventSlug: string }> {
   event: Event | null;
+  participationKey: string | undefined;
   user: User | null;
   createQuestion: (eventSlug: string, question: Question) => Promise<void>;
   getQuestionsOfEvent: (eventSlug: string) => Promise<void>;
+  verifyParticipation: (eventSlug: string, participationKey: string) => Promise<void>;
 };
 
 
@@ -58,15 +61,21 @@ const EventDetailPage = (props: EventDetailPageProps) => {
     location: { pathname },
     match: { params: { eventSlug } },
     event,
+    participationKey,
     user,
+    verifyParticipation,
   } = props;
 
   React.useEffect(() => { document.title = event?.title || 'Ujian'; }, [event]);
 
   if (!event) return renderEventDetailLoadingPage(pathname, eventSlug);
+  if (!user) return <Redirect to={ROUTE_LOGIN} />;
 
   const eventDetailLink = generateUrlWithParams(ROUTE_EVENT_OVERVIEW, { eventSlug: event.slug });
   const questionDetailLink = generateUrlWithParams(ROUTE_EVENT_QUESTION_DETAIL, { eventSlug: event.slug, questionNumber: 1 });
+  const handleSubmitParticipationKey = (participationKey: string): Promise<void> => {
+    return verifyParticipation(eventSlug, participationKey);
+  };
 
   return (
     <div className="event-detail-page">
@@ -74,7 +83,7 @@ const EventDetailPage = (props: EventDetailPageProps) => {
         <h1>{event.title}</h1>
       </div>
       <div className="menubar">
-        <EventNavigation currentPath={pathname} eventSlug={eventSlug} menus={!!user ? menuByRole[user.role] : []} />
+        <EventNavigation currentPath={pathname} eventSlug={eventSlug} menus={menuByRole[user.role]} />
       </div>
       <div className="content">
         <Switch>
@@ -110,7 +119,10 @@ const EventDetailPage = (props: EventDetailPageProps) => {
                 : <Redirect to={eventDetailLink} />}
           </Route>
           <Route path={ROUTE_EVENT_OVERVIEW}>
-            <EventDetail event={event} />
+            <EventDetail
+              event={event}
+              showParticipationKeyPrompt={(user.role === USER_ROLE.PARTICIPANT) && (participationKey === undefined)}
+              onSubmitParticipatioNkey={handleSubmitParticipationKey}/>
           </Route>
           <Route path={ROUTE_EVENT}>
             <Redirect to={eventDetailLink} />
@@ -123,12 +135,14 @@ const EventDetailPage = (props: EventDetailPageProps) => {
 
 const mapStateToProps = (state: AppState, props: RouteComponentProps<{ eventSlug: string }>) => ({
   event: charonExamSelectors.getEvent(state, props.match.params.eventSlug),
+  participationKey: charonSessionSelectors.getParticipationKey(state, props.match.params.eventSlug),
   user: charonSessionSelectors.getUser(state),
 });
 
 const mapDispatchToProps = {
   createQuestion: charonExamActions.createQuestion,
   getQuestionsOfEvent: charonExamActions.getQuestionsOfEvent,
+  verifyParticipation: charonExamActions.verifyParticipation,
 };
 
 export default withRouter(connect(mapStateToProps, mapDispatchToProps)(EventDetailPage));

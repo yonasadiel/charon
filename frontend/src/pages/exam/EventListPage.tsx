@@ -31,6 +31,14 @@ const renderEvents = (events: Event[] | null) => {
           <h2 className="event-title"><span className="skeleton">Exam #1</span></h2>
           <p><span className="skeleton">Starts at 01/01/2020 00:00</span></p>
         </Card>
+        <Card className="event-card">
+          <h2 className="event-title"><span className="skeleton">Exam #1</span></h2>
+          <p><span className="skeleton">Starts at 01/01/2020 00:00</span></p>
+        </Card>
+        <Card className="event-card">
+          <h2 className="event-title"><span className="skeleton">Exam #1</span></h2>
+          <p><span className="skeleton">Starts at 01/01/2020 00:00</span></p>
+        </Card>
       </div>
     );
   }
@@ -86,7 +94,7 @@ const EventListPage = (props: EventListPageProps) => {
 
       <h1>Daftar Ujian</h1>
 
-      {(user.role === USER_ROLE.ADMIN || user.role === USER_ROLE.ORGANIZER) && (
+      {(user.role === USER_ROLE.ADMIN || user.role === USER_ROLE.ORGANIZER || user.role === USER_ROLE.LOCAL) && (
         <div className="create-button-row">
           <Button onClick={() => setShowingCreateModal(true)}>
             <i className="fas fa-plus"></i><span>TAMBAH</span>

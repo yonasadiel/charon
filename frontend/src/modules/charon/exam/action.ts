@@ -6,11 +6,13 @@ import Utf8 from 'crypto-js/enc-utf8';
 import Hex from 'crypto-js/enc-hex';
 import ModeCFB from 'crypto-js/mode-cfb';
 import NoPadding from 'crypto-js/pad-nopadding';
+import Sha256 from 'crypto-js/sha256';
 
 import { AppThunk } from '../../store';
 import { CharonAPIError, CharonFormError } from '../http';
 import { Event, Participation, Question, Venue, SynchronizationData } from './api';
 import { getQuestions as getQuestionsSelector } from './selector';
+import { putParticipationKey } from '../../session/action';
 
 export const PUT_VENUES = 'charon/exam/PUT_VENUES';
 export const putVenues = (venues: Venue[] | null) => ({
@@ -114,6 +116,19 @@ export function createParticipation(eventSlug: string, participation: Participat
     return charonExamApi.createParticipation(eventSlug, participation)
       .then(() => {
         return;
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonFormError(err);
+      });
+  };
+};
+
+export function verifyParticipation(eventSlug: string, participationKey: string): AppThunk<Promise<void>> {
+  return async function (dispatch, _, { charonExamApi }) {
+    const hashedSingle: string = Sha256(participationKey).toString(Hex);
+    return charonExamApi.verifyParticipation(eventSlug, hashedSingle)
+      .then(() => {
+        dispatch(putParticipationKey(eventSlug, participationKey));
       })
       .catch((err: AxiosError) => {
         throw new CharonFormError(err);

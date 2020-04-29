@@ -34,7 +34,8 @@ type ParticipationData struct {
 	ID           uint   `json:"id"`
 	UserUsername string `json:"userUsername"`
 	VenueID      uint   `json:"venueId"`
-	Key          string `json:"key,omitempty"`
+	KeyPlain     string `json:"key,omitempty"`
+	KeyDouble    string `json:"keyDouble"`
 }
 
 // VerificationData used for client submitting single-hashed participation key
@@ -169,6 +170,7 @@ func SerializeParticipation(participation Participation) ParticipationData {
 		ID:           participation.ID,
 		UserUsername: participation.User.Username,
 		VenueID:      participation.Venue.ID,
+		KeyDouble:    participation.KeyHashedDouble,
 	}
 	return participationData
 }
@@ -196,7 +198,7 @@ func DeserializeParticipation(participationData ParticipationData, participation
 // used in creating participation
 func DeserializeParticipationWithKey(participationData ParticipationData, participation *Participation) helios.Error {
 	var err = DeserializeParticipation(participationData, participation)
-	participation.Key = participationData.Key
+	participation.KeyPlain = participationData.KeyPlain
 	return err
 }
 

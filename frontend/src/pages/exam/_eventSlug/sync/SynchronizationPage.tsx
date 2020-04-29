@@ -57,7 +57,7 @@ const SynchronizationPage = (props: ConnectedSynchronizationPageProps) => {
           <strong>SIMPAN</strong>
         </Button>
       </div>
-      <textarea className="sync-data" rows={20} value={JSON.stringify(syncData)} />
+      <textarea className="sync-data" rows={20} value={JSON.stringify(syncData)} onChange={(e) => setSyncData(JSON.parse(e.currentTarget.value))}/>
     </Card>
   );
 };

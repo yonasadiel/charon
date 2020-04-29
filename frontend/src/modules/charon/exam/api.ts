@@ -51,6 +51,7 @@ export interface CharonExamApi {
 
   getParticipationsOfEvent: (eventSlug: string) => Promise<AxiosResponse<Participation[]>>;
   createParticipation: (eventSlug: string, participation: Participation) => Promise<AxiosResponse<Participation>>;
+  verifyParticipation: (eventSlug: string, eventKey: string) => Promise<AxiosResponse<void>>;
 
   getQuestionsOfEvent: (eventSlug: string) => Promise<AxiosResponse<Question[]>>;
   createQuestion: (eventSlug: string, question: Question) => Promise<AxiosResponse<void>>;
@@ -71,6 +72,7 @@ export default {
 
   getParticipationsOfEvent: (eventSlug: string) => http.get(`${conf.charonApiUrl}/exam/${eventSlug}/participation/`),
   createParticipation: (eventSlug: string, participation: Participation) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/participation/`, participation),
+  verifyParticipation: (eventSlug: string, eventKey: string) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/verify/`, { key: eventKey }),
 
   getQuestionsOfEvent: (eventSlug: string) => http.get(`${conf.charonApiUrl}/exam/${eventSlug}/question/`),
   createQuestion: (eventSlug: string, question: Question) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/question/`, question),

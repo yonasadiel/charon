@@ -13,3 +13,7 @@ export function getUser(state: AppState): User | null {
 export function isLoggedIn(state: AppState): boolean {
   return !!getSessionState(state).user;
 }
+
+export function getParticipationKey(state: AppState, eventSlug: string): string | undefined {
+  return getSessionState(state).participationKey[eventSlug];
+}

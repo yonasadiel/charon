@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 	"github.com/yonasadiel/helios"
 )
@@ -16,12 +17,13 @@ func main() {
 	}
 
 	helios.App.Initialize()
+	helios.DB, err = gorm.Open("sqlite3", "central.sqlite3")
 
 	defer helios.App.CloseDB()
 
 	helios.App.Migrate()
 
 	r := CreateRouter()
-	fmt.Println("Starting server on port 8100...")
-	log.Fatal(http.ListenAndServe(":8100", r))
+	fmt.Println("Starting server on port 8200...")
+	log.Fatal(http.ListenAndServe(":8200", r))
 }

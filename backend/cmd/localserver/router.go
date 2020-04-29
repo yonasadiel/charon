@@ -49,6 +49,8 @@ func CreateRouter() (router *mux.Router) {
 	router.HandleFunc("/exam/{eventSlug}/participation/", helios.WithMiddleware(exam.ParticipationListView, loggedInMiddlewares)).Methods(http.MethodGet)
 	router.HandleFunc("/exam/{eventSlug}/participation/", helios.WithMiddleware(exam.ParticipationCreateView, loggedInMiddlewares)).Methods(http.MethodPost)
 	router.HandleFunc("/exam/{eventSlug}/participation/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
+	router.HandleFunc("/exam/{eventSlug}/verify/", helios.WithMiddleware(exam.ParticipationVerifyView, loggedInMiddlewares)).Methods(http.MethodPost)
+	router.HandleFunc("/exam/{eventSlug}/verify/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 	router.HandleFunc("/exam/{eventSlug}/participation/{participationID}/", helios.WithMiddleware(exam.ParticipationDeleteView, loggedInMiddlewares)).Methods(http.MethodDelete)
 	router.HandleFunc("/exam/{eventSlug}/participation/{participationID}/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)
 	router.HandleFunc("/exam/", helios.WithMiddleware(optionHandler, basicMiddlewares)).Methods(http.MethodOptions)

@@ -4,9 +4,8 @@
   .field-row {
     display: flex;
     flex-direction: row;
-    align-items: baseline;
 
-    .venue-select, .user-select {
+    .venue-select, .user-select, .key {
       flex: 1 1;
       margin-right: 5px;
 

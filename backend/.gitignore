@@ -2,4 +2,5 @@
 bin
 coverage.html
 coverage.out
-db.sqlite3
+local.sqlite3
+central.sqlite3

@@ -122,28 +122,36 @@ func GetEventOfUser(user auth.User, eventSlug string) (Event, helios.Error) {
 // admin role that can creates / updates event.
 // If it is create, then event.ID will be changed.
 func UpsertEvent(user auth.User, event *Event) helios.Error {
-	if !user.IsOrganizer() && !user.IsAdmin() {
+	if !user.IsOrganizer() && !user.IsAdmin() && !user.IsLocal() {
 		return errEventChangeNotAuthorized
 	}
 
 	if event.ID == 0 {
-		var err error
-		var prvKey *rsa.PrivateKey
-		var simKeySign []byte
-		event.SimKey = generateRandomToken(32)
-		prvKey, err = rsa.GenerateKey(rand.Reader, 1024)
-		if err != nil {
-			return helios.ErrInternalServerError
+		if user.IsAdmin() || user.IsOrganizer() {
+			var err error
+			var prvKey *rsa.PrivateKey
+			var simKeySign []byte
+			prvKey, err = rsa.GenerateKey(rand.Reader, 1024)
+			if err != nil {
+				return helios.ErrInternalServerError
+			}
+			event.SimKey = generateRandomToken(32)
+			event.PrvKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(prvKey))
+			event.PubKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&prvKey.PublicKey))
+			simKeyHashed := sha256.Sum256([]byte(event.SimKey))
+			simKeySign, err = rsa.SignPKCS1v15(rand.Reader, prvKey, crypto.SHA256, simKeyHashed[:])
+			if err != nil {
+				return helios.ErrInternalServerError
+			}
+			event.SimKeySign = base64.StdEncoding.EncodeToString(simKeySign)
 		}
-		event.PrvKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(prvKey))
-		event.PubKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&prvKey.PublicKey))
-		simKeyHashed := sha256.Sum256([]byte(event.SimKey))
-		simKeySign, err = rsa.SignPKCS1v15(rand.Reader, prvKey, crypto.SHA256, simKeyHashed[:])
-		if err != nil {
-			return helios.ErrInternalServerError
-		}
-		event.SimKeySign = base64.StdEncoding.EncodeToString(simKeySign)
 		helios.DB.Omit("last_synchronization").Create(event)
+		if user.IsLocal() {
+			helios.DB.Create(&Participation{
+				User:  &user,
+				Event: event,
+			})
+		}
 	} else {
 		helios.DB.Omit("last_synchronization", "key").Save(event)
 	}
@@ -168,7 +176,7 @@ func GetAllParticipationOfUserAndEvent(user auth.User, eventSlug string) ([]Part
 		Preload("User").
 		Preload("Venue").
 		Where("event_id = ?", event.ID).
-		Where("users.role < ?", user.Role).
+		Where("(users.role < ? or users.id = ?)", user.Role, user.ID).
 		Find(&participations)
 
 	return participations, nil
@@ -208,7 +216,7 @@ func UpsertParticipation(user auth.User, eventSlug string, userUsername string, 
 	participation.Event = &event
 	participation.VenueID = venue.ID
 	participation.Venue = &venue
-	participation.KeyHashedSingle = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.Key)))
+	participation.KeyHashedSingle = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyPlain)))
 	participation.KeyHashedDouble = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyHashedSingle)))
 	if participation.ID == 0 {
 		helios.DB.Create(&participation)
@@ -495,6 +503,7 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, [
 	for _, participation := range participations {
 		usersKey[participation.User.Username] = participation.KeyHashedDouble
 	}
+	event.SimKey = ""
 
 	return &event, participation.Venue, questions, users, usersKey, nil
 }

@@ -28,7 +28,7 @@ const LoginForm = (props: InjectedFormProps<LoginFormData>) => {
       <small className="error">{ error }</small>
 
       <div className="login-button-row">
-        <Button buttonType={BUTTON_TYPE_CONTAINED} onClick={handleSubmit}>
+        <Button buttonType={BUTTON_TYPE_CONTAINED} onClick={handleSubmit} type="submit">
           { !submitting ? 'LOGIN' : <LoadingCircle /> }
         </Button>
       </div>

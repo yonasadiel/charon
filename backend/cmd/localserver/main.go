@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 	"github.com/yonasadiel/helios"
 )
@@ -16,6 +17,7 @@ func main() {
 	}
 
 	helios.App.Initialize()
+	helios.DB, err = gorm.Open("sqlite3", "local.sqlite3")
 
 	defer helios.App.CloseDB()
 

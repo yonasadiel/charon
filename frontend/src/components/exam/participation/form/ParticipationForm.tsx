@@ -1,7 +1,7 @@
 import parseInt from 'lodash/parseInt';
 import React from 'react';
 import { Field, reduxForm, InjectedFormProps, WrappedFieldProps } from 'redux-form';
-import { Button, BUTTON_TYPE_CONTAINED } from 'react-hephaestus';
+import { Button, BUTTON_TYPE_CONTAINED, TextInput } from 'react-hephaestus';
 
 import { User } from '../../../../modules/charon/auth/api';
 import { Participation, Venue } from '../../../../modules/charon/exam/api';
@@ -44,6 +44,13 @@ const UserField = (props: WrappedFieldProps & { users: User[] }) => {
   );
 };
 
+const renderKeyField = ({ input, meta: { error } }: WrappedFieldProps) => (
+  <div className="key">
+    <TextInput {...input} />
+    <small className="error">{error}</small>
+  </div>
+)
+
 const ParticipationForm = (props: ParticipationFormProps & InjectedFormProps<ParticipationFormData, ParticipationFormProps>) => {
   const { error, handleSubmit, reset, submitting, users, venues } = props;
   return (
@@ -51,6 +58,7 @@ const ParticipationForm = (props: ParticipationFormProps & InjectedFormProps<Par
       <div className="field-row">
         <Field name="userUsername" users={users} component={UserField} />
         <Field name="venueId" venues={venues} component={VenueField} parse={parseInt} />
+        <Field name="key" component={renderKeyField} />
         <Button buttonType={BUTTON_TYPE_CONTAINED} type="submit" className="button">
           { !submitting ? (<strong>BUAT</strong>) : <LoadingCircle /> }
         </Button>
