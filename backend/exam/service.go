@@ -444,13 +444,10 @@ func SubmitSubmission(user auth.User, eventSlug string, questionNumber uint, ans
 		return nil, errQuestionNotFound
 	}
 
-	if !isAnswerValidChoice(answer, userQuestion.Question.Choices) {
-		return nil, errAnswerNotValid
-	}
-
 	userQuestion.Answer = answer
 	userQuestion.Question.UserAnswer = answer
 	helios.DB.Save(&userQuestion)
+	userQuestion.Question.ID = questionNumber
 	return userQuestion.Question, nil
 }
 
@@ -579,6 +576,14 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 			// TODO: if the key is malformed and missing user
 		}
 		tx.Create(&participation)
+		for j := range questions {
+			// TODO: send userquestion instead of all question
+			tx.Create(&UserQuestion{
+				ParticipationID: participation.ID,
+				QuestionID:      questions[j].ID,
+				Ordering:        uint((j + 1) * 10),
+			})
+		}
 	}
 	tx.Commit()
 	return nil

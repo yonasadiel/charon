@@ -98,7 +98,7 @@ const EventDetailPage = (props: EventDetailPageProps) => {
               : <Redirect to={questionDetailLink} />}
           </Route>
           <Route path={ROUTE_EVENT_QUESTION_DETAIL}>
-            <QuestionPage />
+            <QuestionPage user={user} />
           </Route>
           <Route path={ROUTE_EVENT_QUESTION}>
             <Redirect to={questionDetailLink} />

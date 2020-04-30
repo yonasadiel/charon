@@ -1,10 +1,11 @@
 @import '../../../styles/base';
 
 .question-detail {
-  .choices {
+  .answer {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    margin: 5px 0 10px 0;
 
     .choice {
       display: flex;

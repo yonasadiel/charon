@@ -198,8 +198,18 @@ func DeserializeParticipation(participationData ParticipationData, participation
 // used in creating participation
 func DeserializeParticipationWithKey(participationData ParticipationData, participation *Participation) helios.Error {
 	var err = DeserializeParticipation(participationData, participation)
+	var errForm helios.ErrorForm = helios.NewErrorForm()
+	if err != nil {
+		errForm, _ = err.(helios.ErrorForm)
+	}
 	participation.KeyPlain = participationData.KeyPlain
-	return err
+	if len(participation.KeyPlain) != 32 {
+		errForm.FieldError["key"] = helios.ErrorFormFieldAtomic{"Key length must be 32 chars"}
+	}
+	if errForm.IsError() {
+		return errForm
+	}
+	return nil
 }
 
 // SerializeQuestion converts Question object question to JSON of question

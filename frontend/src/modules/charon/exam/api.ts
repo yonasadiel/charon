@@ -61,6 +61,8 @@ export interface CharonExamApi {
   putSynchronizationData: (eventSlug: string, syncData: SynchronizationData) => Promise<AxiosResponse<SynchronizationData>>;
 
   decryptEvent: (eventSlug: string, key: string) => Promise<AxiosResponse<void>>;
+
+  submitSubmission: (eventSlug: string, questionNumber: number, answer: string) => Promise<AxiosResponse<Question>>;
 };
 
 export default {
@@ -82,4 +84,6 @@ export default {
   putSynchronizationData: (eventSlug: string, syncData: SynchronizationData) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/sync/`, syncData),
 
   decryptEvent: (eventSlug: string, key: string) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/decrypt/`, { key }),
+
+  submitSubmission: (eventSlug: string, questionNumber: number, answer: string) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/question/${questionNumber}/submit/`, { answer }),
 } as CharonExamApi;

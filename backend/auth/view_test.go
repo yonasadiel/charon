@@ -29,13 +29,13 @@ func TestLoginView(t *testing.T) {
 		user:               UserFactorySaved(User{Username: "user2", Password: "password"}),
 		username:           "wrong_username",
 		password:           "password",
-		expectedStatusCode: errWrongUsernamePassword.StatusCode,
+		expectedStatusCode: http.StatusBadRequest,
 		expectedError:      errWrongUsernamePassword,
 	}, {
 		user:               UserFactorySaved(User{Username: "user3", Password: "password"}),
 		username:           "user3",
 		password:           "wrong_password",
-		expectedStatusCode: errWrongUsernamePassword.StatusCode,
+		expectedStatusCode: http.StatusBadRequest,
 		expectedError:      errWrongUsernamePassword,
 	}}
 	for i, testCase := range testCases {

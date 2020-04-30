@@ -2,8 +2,10 @@ import React from 'react';
 import { Card } from 'react-hephaestus';
 import { connect } from 'react-redux';
 import { Redirect } from 'react-router-dom';
+import { SubmissionError } from 'redux-form';
 
 import * as charonAuthActions from '../../modules/charon/auth/action';
+import { CharonFormError } from '../../modules/charon/http';
 import * as sessionSelectors from '../../modules/session/selector';
 import { AppState } from '../../modules/store';
 import { ROUTE_EXAM } from '../routes';
@@ -12,14 +14,24 @@ import './LoginPage.scss';
 
 interface LoginPageProps {
   isLoggedIn: boolean;
-  loginAction: (username: string, password: string) => void,
+  loginAction: (username: string, password: string) => Promise<void>,
 };
 
 const LoginPage = (props: LoginPageProps) => {
   const { isLoggedIn, loginAction } = props;
   React.useEffect(() => { document.title = 'Login'; }, []);
 
-  const submitLogin = (data: LoginFormData) => loginAction(data.username, data.password);
+  const submitLogin = async (data: LoginFormData) => {
+    return loginAction(data.username, data.password)
+      .then(() => { })
+      .catch((err) => {
+        if (err instanceof CharonFormError) {
+          throw err.asSubmissionError();
+        } else {
+          throw new SubmissionError({ _error: "Unknown error" });
+        }
+      });
+  };
 
   if (isLoggedIn) {
     return <Redirect to={ROUTE_EXAM} />;

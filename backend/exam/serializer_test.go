@@ -262,21 +262,21 @@ func TestDeserializeParticipationWithKey(t *testing.T) {
 		expectedError         string
 	}
 	testCases := []deserializeParticipationTestCase{{
-		participationDataJSON: `{"id":2,"eventId":3,"venueId":4,"userId":5,"userUsername":"abc","key":"abcdef","keyEnc":"ghijkl"}`,
+		participationDataJSON: `{"id":2,"eventId":3,"venueId":4,"userId":5,"userUsername":"abc","key":"abcdefghijklmnopabcdefghijklmnop","keyEnc":"ghijkl"}`,
 		expectedParticipation: Participation{
 			ID:       2,
 			VenueID:  4,
-			KeyPlain: "abcdef",
+			KeyPlain: "abcdefghijklmnopabcdefghijklmnop",
 		},
 	}, {
-		participationDataJSON: `{"venueId":4,"userUsername":"abc","key":"abcdef"}`,
+		participationDataJSON: `{"venueId":4,"userUsername":"abc","key":"abcdefghijklmnopabcdefghijklmnop"}`,
 		expectedParticipation: Participation{
 			VenueID:  4,
-			KeyPlain: "abcdef",
+			KeyPlain: "abcdefghijklmnopabcdefghijklmnop",
 		},
 	}, {
-		participationDataJSON: `{}`,
-		expectedError:         `{"code":"form_error","message":{"_error":[],"userUsername":["Username can't be empty"],"venueId":["Venue can't be empty"]}}`,
+		participationDataJSON: `{"key":"abcd"}`,
+		expectedError:         `{"code":"form_error","message":{"_error":[],"key":["Key length must be 32 chars"],"userUsername":["Username can't be empty"],"venueId":["Venue can't be empty"]}}`,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test DeserializeParticipationWithKey testcase: %d", i)

@@ -11,7 +11,7 @@ export const putUsers = (users: User[] | null) => ({
   users,
 });
 
-export function login(username: string, password: string): AppThunk<void> {
+export function login(username: string, password: string): AppThunk<Promise<void>> {
   return async function (dispatch, _, { charonAuthApi }) {
     return charonAuthApi.login(username, password)
       .then((res: AxiosResponse) => {

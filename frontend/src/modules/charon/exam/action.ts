@@ -40,6 +40,13 @@ export const putQuestions = (eventSlug: string, questions: Question[] | null) =>
   questions,
 });
 
+export const PUT_QUESTION = 'charon/exam/PUT_QUESTION';
+export const putQuestion = (eventSlug: string, question: Question) => ({
+  type: PUT_QUESTION,
+  eventSlug,
+  question,
+});
+
 export function getVenues(): AppThunk<Promise<void>> {
   return async function (dispatch, _, { charonExamApi }) {
     dispatch(putVenues(null));
@@ -201,6 +208,20 @@ export function putSynchronizationData(eventSlug: string, syncData: Synchronizat
   };
 };
 
+export function submitSubmission(eventSlug: string, participationKey: string, questionNumber: number, answer: string): AppThunk<Promise<void>> {
+  return async function (dispatch, _, { charonExamApi }) {
+    const encryptedPassword = encryptText(answer, participationKey);
+    return charonExamApi.submitSubmission(eventSlug, questionNumber, encryptedPassword)
+      .then((res: AxiosResponse<Question>) => {
+        const question: Question = res.data;
+        dispatch(putQuestion(eventSlug, question));
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonAPIError(err);
+      });
+  }
+}
+
 export function decryptEvent(eventSlug: string, key: string): AppThunk<Promise<void>> {
   return async function (_dispatch, _, { charonExamApi }) {
     return charonExamApi.decryptEvent(eventSlug, key)
@@ -211,9 +232,32 @@ export function decryptEvent(eventSlug: string, key: string): AppThunk<Promise<v
   };
 };
 
-function decryptText(ciphertext: string, key: string): string {
-  const keyBytes = Utf8.parse(key);
+function randomHex(length: number): string {
+  let rnd = '';
+  for (let i = 0; i < 2 * length; i++) {
+    rnd += Math.floor((Math.random() * 16)).toString(16);
+  }
+  return rnd;
+}
+
+export function encryptText(plaintext: string, key: string): string {
+  var keyBytes = Utf8.parse(key);
+  var iv = Hex.parse(randomHex(16));
+  var ciphertext = AES.encrypt(plaintext, keyBytes, {
+      mode: ModeCFB,
+      iv: iv,
+      padding: NoPadding,
+  });
+  return ciphertext.iv.toString() + ciphertext.ciphertext.toString();
+}
+
+export function decryptText(ciphertext: string, key: string): string {
   const cipherHex = Base64.parse(ciphertext).toString(Hex);
+  return decryptHex(cipherHex, key)
+}
+
+export function decryptHex(cipherHex: string, key: string): string {
+  const keyBytes = Utf8.parse(key);
   const iv = Hex.parse(cipherHex.slice(0, 32));
   const cipherBytes = Hex.parse(cipherHex.slice(32));
   const plainBytes  = AES.decrypt({

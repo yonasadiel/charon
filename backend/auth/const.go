@@ -30,10 +30,9 @@ const (
 	userTokenIdxMax  = 63 / userTokenIdxBits   // # of userToken indices fitting in 63 bits
 )
 
-var errWrongUsernamePassword = helios.ErrorAPI{
-	StatusCode: http.StatusBadRequest,
-	Code:       "login_wrong_username_or_password",
-	Message:    "Wrong username / password",
+var errWrongUsernamePassword = helios.ErrorForm{
+	Code:          "login_wrong_username_or_password",
+	NonFieldError: helios.ErrorFormFieldAtomic{"Wrong username / password"},
 }
 
 var errUnauthorized = helios.ErrorAPI{

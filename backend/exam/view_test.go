@@ -321,20 +321,20 @@ func TestParticipationCreateView(t *testing.T) {
 	testCases := []participationCreateTestCase{{
 		user:                       userLocal,
 		eventSlug:                  event1.Slug,
-		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d}`, venue1.ID),
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d,"key":"abcdefghijklmnopabcdefghijklmnop"}`, venue1.ID),
 		expectedParticipationCount: participationCountBefore + 1,
 		expectedStatusCode:         http.StatusOK,
 	}, {
 		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		eventSlug:                  "abcdef",
-		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d}`, venue1.ID),
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d,"key":"abcdefghijklmnopabcdefghijklmnop"}`, venue1.ID),
 		expectedParticipationCount: participationCountBefore + 1,
 		expectedStatusCode:         http.StatusNotFound,
 		expectedErrorCode:          errEventNotFound.Code,
 	}, {
 		user:                       userLocal,
 		eventSlug:                  event1.Slug,
-		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"local","venueId":%d}`, venue1.ID),
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"local","venueId":%d,"key":"abcdefghijklmnopabcdefghijklmnop"}`, venue1.ID),
 		expectedParticipationCount: participationCountBefore + 1,
 		expectedStatusCode:         http.StatusForbidden,
 		expectedErrorCode:          errParticipationChangeNotAuthorized.Code,
@@ -354,20 +354,20 @@ func TestParticipationCreateView(t *testing.T) {
 	}, {
 		user:                       auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
 		eventSlug:                  event1.Slug,
-		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d}`, venue2.ID),
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d,"key":"abcdefghijklmnopabcdefghijklmnop"}`, venue2.ID),
 		expectedParticipationCount: participationCountBefore + 1,
 		expectedStatusCode:         http.StatusOK,
 	}, {
 		user:                       "bad_user",
 		eventSlug:                  event1.Slug,
-		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d}`, venue1.ID),
+		requestData:                fmt.Sprintf(`{"id":1,"userUsername":"participant","venueId":%d,"key":"abcdefghijklmnopabcdefghijklmnop"}`, venue1.ID),
 		expectedParticipationCount: participationCountBefore + 1,
 		expectedStatusCode:         http.StatusInternalServerError,
 		expectedErrorCode:          helios.ErrInternalServerError.Code,
 	}}
 
 	for i, testCase := range testCases {
-		t.Logf("Test ParticipationCreate testcase: %d", i)
+		t.Logf("Test ParticipationCreateView testcase: %d", i)
 		var participationCount int
 		var req helios.MockRequest
 		req = helios.NewMockRequest()

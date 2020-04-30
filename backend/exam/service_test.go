@@ -961,12 +961,6 @@ func TestSubmitSubmission(t *testing.T) {
 		user:           userParticipant,
 		eventSlug:      event1.Slug,
 		questionNumber: 2,
-		answer:         "random",
-		expectedError:  errAnswerNotValid,
-	}, {
-		user:           userParticipant,
-		eventSlug:      event1.Slug,
-		questionNumber: 2,
 		answer:         strings.Split(question1.Choices, "|")[0],
 	}, {
 		user:           userParticipant,
@@ -1172,7 +1166,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		expectedVenueCount:         venueCountBefore + 1,
 		expectedQuestionCount:      questionCountBefore + 1,
 		expectedParticipationCount: participationCountBefore + 1,
-		expectedUserQuestionCount:  userQuestionCountBefore,
+		expectedUserQuestionCount:  userQuestionCountBefore + 1,
 	}, {
 		user:                       userLocal,
 		event:                      oldEvent,
@@ -1185,7 +1179,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		expectedEventCount:         eventCountBefore + 1,
 		expectedQuestionCount:      questionCountBefore + 1 - len(oldQuestions) + 1,
 		expectedParticipationCount: participationCountBefore + 1 - len(oldParticipations) + 2,
-		expectedUserQuestionCount:  userQuestionCountBefore - 1,
+		expectedUserQuestionCount:  userQuestionCountBefore + 1 - 1 + 2,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test PutSynchronizationData testcase: %d", i)
