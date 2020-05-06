@@ -46,8 +46,8 @@ type Participation struct {
 	UserID          uint
 	VenueID         uint
 	KeyPlain        string
-	KeyHashedSingle string
-	KeyHashedDouble string
+	KeyHashedOnce string
+	KeyHashedTwice string
 
 	Event *Event     `gorm:"foreignkey:EventID;association_autoupdate:false"`
 	User  *auth.User `gorm:"foreignkey:UserID;association_autoupdate:false"`

@@ -179,7 +179,7 @@ func ParticipationCreateView(req helios.Request) {
 	req.SendJSON(SerializeParticipation(participation), http.StatusOK)
 }
 
-// ParticipationVerifyView used to submit single hashed participation key
+// ParticipationVerifyView used to submit hashed once participation key
 func ParticipationVerifyView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
 	if !ok {
@@ -196,7 +196,7 @@ func ParticipationVerifyView(req helios.Request) {
 		return
 	}
 
-	err = VerifyParticipation(user, eventSlug, verificationData.KeyHashedSingle)
+	err = VerifyParticipation(user, eventSlug, verificationData.KeyHashedOnce)
 	if err != nil {
 		req.SendJSON(err.GetMessage(), err.GetStatusCode())
 		return

@@ -35,12 +35,12 @@ type ParticipationData struct {
 	UserUsername string `json:"userUsername"`
 	VenueID      uint   `json:"venueId"`
 	KeyPlain     string `json:"key,omitempty"`
-	KeyDouble    string `json:"keyDouble"`
+	KeyTwice     string `json:"keyTwice"`
 }
 
-// VerificationData used for client submitting single-hashed participation key
+// VerificationData used for client submitting hashed once participation key
 type VerificationData struct {
-	KeyHashedSingle string `json:"key"`
+	KeyHashedOnce string `json:"key"`
 }
 
 // QuestionData is JSON representation of question.
@@ -170,7 +170,7 @@ func SerializeParticipation(participation Participation) ParticipationData {
 		ID:           participation.ID,
 		UserUsername: participation.User.Username,
 		VenueID:      participation.Venue.ID,
-		KeyDouble:    participation.KeyHashedDouble,
+		KeyTwice:     participation.KeyHashedTwice,
 	}
 	return participationData
 }

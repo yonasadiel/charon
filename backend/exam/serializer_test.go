@@ -186,14 +186,14 @@ func TestSerializeParticipation(t *testing.T) {
 	var user auth.User = auth.UserFactory(auth.User{Username: "abc"})
 	var venue Venue = VenueFactory(Venue{ID: 5})
 	var participation Participation = ParticipationFactory(Participation{
-		ID:              3,
-		User:            &user,
-		Venue:           &venue,
-		KeyPlain:        "KeyPlain",
-		KeyHashedSingle: "KeyHashedSingle",
-		KeyHashedDouble: "KeyHashedDouble",
+		ID:             3,
+		User:           &user,
+		Venue:          &venue,
+		KeyPlain:       "KeyPlain",
+		KeyHashedOnce:  "KeyHashedOnce",
+		KeyHashedTwice: "KeyHashedTwice",
 	})
-	var expectedJSON string = `{"id":3,"userUsername":"abc","venueId":5,"keyDouble":"KeyHashedDouble"}`
+	var expectedJSON string = `{"id":3,"userUsername":"abc","venueId":5,"keyTwice":"KeyHashedTwice"}`
 	var serialized ParticipationData = SerializeParticipation(participation)
 	var serializedJSON []byte
 	var errMarshalling error
@@ -242,8 +242,8 @@ func TestDeserializeParticipation(t *testing.T) {
 			assert.Nil(t, participation.User)
 			assert.Nil(t, participation.Venue)
 			assert.Empty(t, participation.KeyPlain)
-			assert.Empty(t, participation.KeyHashedSingle)
-			assert.Empty(t, participation.KeyHashedDouble)
+			assert.Empty(t, participation.KeyHashedOnce)
+			assert.Empty(t, participation.KeyHashedTwice)
 		} else {
 			var errDeserializationJSON []byte
 			var errMarshalling error
@@ -297,8 +297,8 @@ func TestDeserializeParticipationWithKey(t *testing.T) {
 			assert.Nil(t, participation.Event)
 			assert.Nil(t, participation.User)
 			assert.Nil(t, participation.Venue)
-			assert.Empty(t, participation.KeyHashedSingle)
-			assert.Empty(t, participation.KeyHashedDouble)
+			assert.Empty(t, participation.KeyHashedOnce)
+			assert.Empty(t, participation.KeyHashedTwice)
 		} else {
 			var errDeserializationJSON []byte
 			var errMarshalling error

@@ -396,9 +396,9 @@ func TestParticipationVerifyView(t *testing.T) {
 	var userParticipant1 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
 	var event1 Event = EventFactorySaved(Event{})
 	var event1User1Key = "event_1_user1"
-	var keyHashedSingle = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1Key)))
-	var keyHashedDouble = fmt.Sprintf("%x", sha256.Sum256([]byte(keyHashedSingle)))
-	ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyHashedDouble: keyHashedDouble})
+	var keyHashedOnce = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1Key)))
+	var keyHashedTwice = fmt.Sprintf("%x", sha256.Sum256([]byte(keyHashedOnce)))
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyHashedTwice: keyHashedTwice})
 	type participationVerifyTestCase struct {
 		user               interface{}
 		eventSlug          string
@@ -410,18 +410,18 @@ func TestParticipationVerifyView(t *testing.T) {
 	testCases := []participationVerifyTestCase{{
 		user:               userParticipant1,
 		eventSlug:          event1.Slug,
-		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedSingle),
+		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedOnce),
 		expectedStatusCode: http.StatusOK,
 	}, {
 		user:               userParticipant1,
 		eventSlug:          event1.Slug,
-		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedDouble),
+		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedTwice),
 		expectedStatusCode: http.StatusBadRequest,
 		expectedErrorCode:  errParticipationWrongKey.Code,
 	}, {
 		user:               "bad_user",
 		eventSlug:          event1.Slug,
-		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedSingle),
+		requestData:        fmt.Sprintf(`{"key":"%s"}`, keyHashedOnce),
 		expectedStatusCode: http.StatusInternalServerError,
 		expectedErrorCode:  helios.ErrInternalServerError.Code,
 	}, {

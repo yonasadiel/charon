@@ -139,7 +139,7 @@ func UpsertEvent(user auth.User, event *Event) helios.Error {
 			event.PrvKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(prvKey))
 			event.PubKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&prvKey.PublicKey))
 			simKeyHashed := sha256.Sum256([]byte(event.SimKey))
-			simKeySign, err = rsa.SignPKCS1v15(rand.Reader, prvKey, crypto.SHA256, simKeyHashed[:])
+			simKeySign, err = rsa.SignPSS(rand.Reader, prvKey, crypto.SHA256, simKeyHashed[:], nil)
 			if err != nil {
 				return helios.ErrInternalServerError
 			}
@@ -216,8 +216,8 @@ func UpsertParticipation(user auth.User, eventSlug string, userUsername string, 
 	participation.Event = &event
 	participation.VenueID = venue.ID
 	participation.Venue = &venue
-	participation.KeyHashedSingle = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyPlain)))
-	participation.KeyHashedDouble = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyHashedSingle)))
+	participation.KeyHashedOnce = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyPlain)))
+	participation.KeyHashedTwice = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyHashedOnce)))
 	if participation.ID == 0 {
 		helios.DB.Create(&participation)
 	} else {
@@ -227,8 +227,8 @@ func UpsertParticipation(user auth.User, eventSlug string, userUsername string, 
 	return nil
 }
 
-// VerifyParticipation checks if the hashedSingle equal to the participation key
-func VerifyParticipation(user auth.User, eventSlug string, hashedSingle string) helios.Error {
+// VerifyParticipation checks if the hashedOnce equal to the participation key
+func VerifyParticipation(user auth.User, eventSlug string, hashedOnce string) helios.Error {
 	var event Event
 	var participation Participation
 	var errGetEvent helios.Error
@@ -237,9 +237,9 @@ func VerifyParticipation(user auth.User, eventSlug string, hashedSingle string) 
 		return errGetEvent
 	}
 	helios.DB.Where("user_id = ?", user.ID).Where("event_id = ?", event.ID).First(&participation)
-	hashedDouble := fmt.Sprintf("%x", sha256.Sum256([]byte(hashedSingle)))
-	if participation.KeyHashedDouble == hashedDouble {
-		participation.KeyHashedSingle = hashedSingle
+	hashedTwice := fmt.Sprintf("%x", sha256.Sum256([]byte(hashedOnce)))
+	if participation.KeyHashedTwice == hashedTwice {
+		participation.KeyHashedOnce = hashedOnce
 		helios.DB.Save(&participation)
 		return nil
 	}
@@ -325,6 +325,7 @@ func UpsertQuestion(user auth.User, eventSlug string, question *Question) helios
 
 	tx := helios.DB.Begin()
 	question.Event = &event
+	// TODO: make sure all choices have the same length
 	if question.ID == 0 {
 		tx.Create(question)
 	} else {
@@ -498,7 +499,7 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, [
 
 	usersKey = make(map[string]string)
 	for _, participation := range participations {
-		usersKey[participation.User.Username] = participation.KeyHashedDouble
+		usersKey[participation.User.Username] = participation.KeyHashedTwice
 	}
 	event.SimKey = ""
 
@@ -569,10 +570,10 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 	}
 	for i := range users {
 		var participation Participation = Participation{
-			UserID:          users[i].ID,
-			VenueID:         venue.ID,
-			EventID:         event.ID,
-			KeyHashedDouble: usersKey[users[i].Username],
+			UserID:         users[i].ID,
+			VenueID:        venue.ID,
+			EventID:        event.ID,
+			KeyHashedTwice: usersKey[users[i].Username],
 			// TODO: if the key is malformed and missing user
 		}
 		tx.Create(&participation)
@@ -621,7 +622,7 @@ func DecryptEventData(user auth.User, eventSlug string, simKey string) helios.Er
 	if err != nil {
 		return helios.ErrInternalServerError
 	}
-	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, simKeyHashed[:], simKeySign)
+	err = rsa.VerifyPSS(pubKey, crypto.SHA256, simKeyHashed[:], simKeySign, nil)
 	if err != nil {
 		return errDecryptEventFailed
 	}

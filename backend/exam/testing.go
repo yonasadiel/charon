@@ -49,7 +49,7 @@ func EventFactory(event Event) Event {
 		event.PrvKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(prvKey))
 		event.PubKey = base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&prvKey.PublicKey))
 		simKeyHashed := sha256.Sum256([]byte(event.SimKey))
-		simKeySign, _ = rsa.SignPKCS1v15(rand.Reader, prvKey, crypto.SHA256, simKeyHashed[:])
+		simKeySign, _ = rsa.SignPSS(rand.Reader, prvKey, crypto.SHA256, simKeyHashed[:], nil)
 		event.SimKeySign = base64.StdEncoding.EncodeToString(simKeySign)
 	}
 	if event.DecryptedAt.IsZero() {

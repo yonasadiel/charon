@@ -332,8 +332,8 @@ func TestUpsertParticipation(t *testing.T) {
 	var event2 Event = EventFactorySaved(Event{})
 	ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal})
 	var key = "secret_key_per_user_per_event"
-	var keyHashedSingle = "e33a9931ec1ba26e9acd8957b597595ce7e336e4df534ac83bc4102e963c4814"
-	var keyHashedDouble = "cfa42ce14740fb597b001bdc9c6a2569c027f53358f7fd2ebdc80d0888737530"
+	var keyHashedOnce = "e33a9931ec1ba26e9acd8957b597595ce7e336e4df534ac83bc4102e963c4814"
+	var keyHashedTwice = "cfa42ce14740fb597b001bdc9c6a2569c027f53358f7fd2ebdc80d0888737530"
 
 	helios.DB.Model(&Participation{}).Count(&participationCountBefore)
 
@@ -403,8 +403,8 @@ func TestUpsertParticipation(t *testing.T) {
 			assert.Equal(t, testCase.eventSlug, testCase.participation.Event.Slug)
 			assert.Equal(t, testCase.userUsername, participationSaved.User.Username)
 			assert.Equal(t, testCase.userUsername, testCase.participation.User.Username)
-			assert.Equal(t, keyHashedSingle, participationSaved.KeyHashedSingle)
-			assert.Equal(t, keyHashedDouble, participationSaved.KeyHashedDouble)
+			assert.Equal(t, keyHashedOnce, participationSaved.KeyHashedOnce)
+			assert.Equal(t, keyHashedTwice, participationSaved.KeyHashedTwice)
 			assert.Equal(t, tempVenueID, participationSaved.Venue.ID)
 			assert.Equal(t, tempVenueID, testCase.participation.Venue.ID)
 		} else {
@@ -422,58 +422,58 @@ func TestVerifyParticipation(t *testing.T) {
 	var event2 Event = EventFactorySaved(Event{})
 	var event1User1Key = "event_1_user1"
 	var event1User2Key = "event_1_user2"
-	var event1User1KeyHashedSingle = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1Key)))
-	var event1User2KeyHashedSingle = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User2Key)))
-	var event1User1KeyHashedDouble = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1KeyHashedSingle)))
-	var event1User2KeyHashedDouble = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User2KeyHashedSingle)))
-	var participation1 Participation = ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyHashedDouble: event1User1KeyHashedDouble})
-	var participation2 Participation = ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant2, KeyHashedDouble: event1User2KeyHashedDouble})
+	var event1User1KeyHashedOnce = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1Key)))
+	var event1User2KeyHashedOnce = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User2Key)))
+	var event1User1KeyHashedTwice = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1KeyHashedOnce)))
+	var event1User2KeyHashedTwice = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User2KeyHashedOnce)))
+	var participation1 Participation = ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyHashedTwice: event1User1KeyHashedTwice})
+	var participation2 Participation = ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant2, KeyHashedTwice: event1User2KeyHashedTwice})
 	type verifyParticipationTestCase struct {
-		user            auth.User
-		eventSlug       string
-		keyHashedSingle string
-		participation   Participation
-		expectedResult  bool
-		expectedError   helios.Error
+		user           auth.User
+		eventSlug      string
+		keyHashedOnce  string
+		participation  Participation
+		expectedResult bool
+		expectedError  helios.Error
 	}
 	testCases := []verifyParticipationTestCase{{
-		user:            userParticipant1,
-		eventSlug:       event1.Slug,
-		keyHashedSingle: "wrong_key",
-		participation:   participation1,
-		expectedError:   errParticipationWrongKey,
+		user:          userParticipant1,
+		eventSlug:     event1.Slug,
+		keyHashedOnce: "wrong_key",
+		participation: participation1,
+		expectedError: errParticipationWrongKey,
 	}, {
-		user:            userParticipant1,
-		eventSlug:       event1.Slug,
-		keyHashedSingle: event1User1KeyHashedSingle,
-		participation:   participation1,
+		user:          userParticipant1,
+		eventSlug:     event1.Slug,
+		keyHashedOnce: event1User1KeyHashedOnce,
+		participation: participation1,
 	}, {
-		user:            userParticipant2,
-		eventSlug:       event1.Slug,
-		keyHashedSingle: event1User1KeyHashedSingle,
-		participation:   participation2,
-		expectedError:   errParticipationWrongKey,
+		user:          userParticipant2,
+		eventSlug:     event1.Slug,
+		keyHashedOnce: event1User1KeyHashedOnce,
+		participation: participation2,
+		expectedError: errParticipationWrongKey,
 	}, {
-		user:            userParticipant2,
-		eventSlug:       event1.Slug,
-		keyHashedSingle: event1User2KeyHashedSingle,
-		participation:   participation2,
+		user:          userParticipant2,
+		eventSlug:     event1.Slug,
+		keyHashedOnce: event1User2KeyHashedOnce,
+		participation: participation2,
 	}, {
-		user:            userParticipant2,
-		eventSlug:       event2.Slug,
-		keyHashedSingle: "wrong_key",
-		participation:   participation2,
-		expectedError:   errEventNotFound,
+		user:          userParticipant2,
+		eventSlug:     event2.Slug,
+		keyHashedOnce: "wrong_key",
+		participation: participation2,
+		expectedError: errEventNotFound,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test VerifyParticipation testcase: %d", i)
 		var err helios.Error
 		var participationSaved Participation
-		err = VerifyParticipation(testCase.user, testCase.eventSlug, testCase.keyHashedSingle)
+		err = VerifyParticipation(testCase.user, testCase.eventSlug, testCase.keyHashedOnce)
 		helios.DB.Where("id = ?", testCase.participation.ID).First(&participationSaved)
 		if testCase.expectedError == nil {
 			assert.Nil(t, err)
-			assert.Equal(t, testCase.keyHashedSingle, participationSaved.KeyHashedSingle)
+			assert.Equal(t, testCase.keyHashedOnce, participationSaved.KeyHashedOnce)
 		} else {
 			assert.Equal(t, testCase.expectedError, err)
 		}
@@ -1025,16 +1025,16 @@ func TestGetSynchronizationData(t *testing.T) {
 	QuestionFactorySaved(Question{Event: &event1})
 	QuestionFactorySaved(Question{Event: &event2})
 	participations := []Participation{
-		ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal, Venue: &venue, KeyHashedDouble: "key1"}),
-		ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue, KeyHashedDouble: "key2"}),
-		ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue, KeyHashedDouble: "key3"}),
+		ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal, Venue: &venue, KeyHashedTwice: "key1"}),
+		ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue, KeyHashedTwice: "key2"}),
+		ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue, KeyHashedTwice: "key3"}),
 	}
 	ParticipationFactorySaved(Participation{Event: &event1})
 	ParticipationFactorySaved(Participation{Event: &event1})
 	ParticipationFactorySaved(Participation{Event: &event2})
 	expectedUsersKey := make(map[string]string)
 	for _, participation := range participations {
-		expectedUsersKey[participation.User.Username] = participation.KeyHashedDouble
+		expectedUsersKey[participation.User.Username] = participation.KeyHashedTwice
 	}
 	type getSynchronizationDataTestCase struct {
 		user                   auth.User
