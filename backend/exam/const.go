@@ -65,6 +65,18 @@ var errParticipationWrongKey = helios.ErrorAPI{
 	Message:    "Wrong participation key",
 }
 
+var errParticipationStatusAccessNotAuthorized = helios.ErrorAPI{
+	StatusCode: http.StatusForbidden,
+	Code:       "participation_status_forbidden",
+	Message:    "User role doesn't have permission to access participation status",
+}
+
+var errParticipationStatusNotFound = helios.ErrorAPI{
+	StatusCode: http.StatusNotFound,
+	Code:       "participation_session_not_found",
+	Message:    "Session with given ID not found",
+}
+
 var errUserNotFound = helios.ErrorAPI{
 	StatusCode: http.StatusNotFound,
 	Code:       "user_not_found",

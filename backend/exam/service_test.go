@@ -1014,6 +1014,138 @@ func TestSubmitSubmission(t *testing.T) {
 	}
 }
 
+func TestGetParticipationStatus(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var user1 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var user2 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var event1 Event = EventFactorySaved(Event{})
+	var event2 Event = EventFactorySaved(Event{})
+	var notNilTime time.Time = time.Now()
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &user1})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &user2})
+	var session auth.Session = auth.Session{
+		ID:        1,
+		User:      &user2,
+		Token:     "abc",
+		IPAddress: "192.168.0.2",
+	}
+	helios.DB.Create(&session)
+	type getParticipationStatusTestCase struct {
+		user           auth.User
+		eventSlug      string
+		expectedStatus []ParticipationStatus
+		expectedError  helios.Error
+	}
+	testCases := []getParticipationStatusTestCase{{
+		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:     event1.Slug,
+		expectedError: errParticipationStatusAccessNotAuthorized,
+	}, {
+		user:          userLocal,
+		eventSlug:     event2.Slug,
+		expectedError: errEventNotFound,
+	}, {
+		user:      userLocal,
+		eventSlug: event1.Slug,
+		expectedStatus: []ParticipationStatus{{
+			UserUsername: user1.Username,
+			IPAddress:    "",
+			LoginAt:      nil,
+			SessionID:    0,
+		}, {
+			UserUsername: user2.Username,
+			IPAddress:    "192.168.0.2",
+			LoginAt:      &notNilTime,
+			SessionID:    session.ID,
+		}},
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test GetParticipationStatus testcase: %d", i)
+		var status []ParticipationStatus
+		var err helios.Error
+		status, err = GetParticipationStatus(testCase.user, testCase.eventSlug)
+		if testCase.expectedError == nil {
+			assert.Equal(t, len(testCase.expectedStatus), len(status))
+			for j := range status {
+				assert.Equal(t, testCase.expectedStatus[j].UserUsername, status[j].UserUsername)
+				if testCase.expectedStatus[j].LoginAt == nil {
+					assert.Empty(t, status[j].LoginAt)
+					assert.Empty(t, status[j].IPAddress)
+				} else {
+					assert.NotNil(t, status[j].LoginAt)
+					assert.Equal(t, testCase.expectedStatus[j].IPAddress, status[j].IPAddress)
+				}
+			}
+		} else {
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
+}
+
+func TestRemoveParticipationSession(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var user1 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var event1 Event = EventFactorySaved(Event{})
+	var event2 Event = EventFactorySaved(Event{})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &user1})
+	var session auth.Session = auth.Session{
+		User:      &user1,
+		Token:     "abc",
+		IPAddress: "192.168.0.2",
+	}
+	helios.DB.Create(&session)
+	type removeParticipationSessionTestCase struct {
+		user          auth.User
+		eventSlug     string
+		sessionID     uint
+		expectedError helios.Error
+	}
+	testCases := []removeParticipationSessionTestCase{{
+		user:          auth.UserFactorySaved(auth.User{Role: auth.UserRoleOrganizer}),
+		eventSlug:     event1.Slug,
+		sessionID:     session.ID,
+		expectedError: errParticipationStatusAccessNotAuthorized,
+	}, {
+		user:          userLocal,
+		eventSlug:     event2.Slug,
+		sessionID:     session.ID,
+		expectedError: errEventNotFound,
+	}, {
+		user:          userLocal,
+		eventSlug:     event1.Slug,
+		sessionID:     12,
+		expectedError: errParticipationStatusNotFound,
+	}, {
+		user:      userLocal,
+		eventSlug: event1.Slug,
+		sessionID: session.ID,
+	}, {
+		user:          userLocal,
+		eventSlug:     event1.Slug,
+		sessionID:     session.ID,
+		expectedError: errParticipationStatusNotFound,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test RemoveParticipationSession testcase: %d", i)
+		var err helios.Error
+		var sessionSaved auth.Session
+		err = RemoveParticipationSession(testCase.user, testCase.eventSlug, testCase.sessionID)
+		helios.DB.Where("id = ?", session.ID).First(&sessionSaved)
+		if testCase.expectedError == nil {
+			assert.Nil(t, err)
+			assert.Empty(t, sessionSaved.ID)
+		} else {
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
+}
+
 func TestGetSynchronizationData(t *testing.T) {
 	helios.App.BeforeTest()
 

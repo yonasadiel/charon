@@ -452,6 +452,59 @@ func SubmitSubmission(user auth.User, eventSlug string, questionNumber uint, ans
 	return userQuestion.Question, nil
 }
 
+// GetParticipationStatus returns status of all participants
+func GetParticipationStatus(user auth.User, eventSlug string) ([]ParticipationStatus, helios.Error) {
+	if !user.IsLocal() {
+		return nil, errParticipationStatusAccessNotAuthorized
+	}
+	var event Event
+	var errGetEvent helios.Error
+	event, errGetEvent = GetEventOfUser(user, eventSlug)
+	if errGetEvent != nil {
+		return nil, errGetEvent
+	}
+
+	var status []ParticipationStatus
+	helios.DB.
+		Select("users.username as user_username, sessions.ip_address, sessions.created_at as login_at, sessions.id as session_id").
+		Table("participations").
+		Joins("left join users on users.id = participations.user_id").
+		Joins("left join sessions on sessions.user_id = users.id").
+		Where("event_id = ?", event.ID).
+		Where("users.role = ?", auth.UserRoleParticipant).
+		Find(&status)
+	return status, nil
+}
+
+// RemoveParticipationSession removes session to force user logout
+func RemoveParticipationSession(user auth.User, eventSlug string, sessionID uint) helios.Error {
+	if !user.IsLocal() {
+		return errParticipationStatusAccessNotAuthorized
+	}
+	var event Event
+	var errGetEvent helios.Error
+	event, errGetEvent = GetEventOfUser(user, eventSlug)
+	if errGetEvent != nil {
+		return errGetEvent
+	}
+	var session auth.Session
+	helios.DB.
+		Select("sessions.*").
+		Table("participations").
+		Joins("left join users on users.id = participations.user_id").
+		Joins("left join sessions on sessions.user_id = users.id").
+		Where("event_id = ?", event.ID).
+		Where("users.role = ?", auth.UserRoleParticipant).
+		Where("sessions.id = ?", sessionID).
+		Where("sessions.deleted_at is null").
+		First(&session)
+	if session.ID == 0 {
+		return errParticipationStatusNotFound
+	}
+	helios.DB.Delete(auth.Session{}, "id = ?", session.ID)
+	return nil
+}
+
 // GetSynchronizationData gets the synchronization data of event.
 // Only local user has the permission
 func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, []Question, []auth.User, map[string]string, helios.Error) {

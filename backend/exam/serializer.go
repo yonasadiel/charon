@@ -38,6 +38,14 @@ type ParticipationData struct {
 	KeyTwice     string `json:"keyTwice"`
 }
 
+// ParticipationStatus is status of user participant to be monitored
+type ParticipationStatus struct {
+	UserUsername string     `json:"userUsername"`
+	IPAddress    string     `json:"ipAddress"`
+	LoginAt      *time.Time `json:"loginAt"`
+	SessionID    uint       `json:"sessionId"`
+}
+
 // VerificationData used for client submitting hashed once participation key
 type VerificationData struct {
 	KeyHashedOnce string `json:"key"`

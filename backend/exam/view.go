@@ -231,6 +231,50 @@ func ParticipationDeleteView(req helios.Request) {
 	req.SendJSON(serializedParticipation, http.StatusOK)
 }
 
+// ParticipationStatusListView lists all participation status
+func ParticipationStatusListView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var eventSlug string = req.GetURLParam("eventSlug")
+
+	var status []ParticipationStatus
+	var err helios.Error
+	status, err = GetParticipationStatus(user, eventSlug)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	req.SendJSON(status, http.StatusOK)
+}
+
+// ParticipationStatusDeleteView remove the session of participation status
+func ParticipationStatusDeleteView(req helios.Request) {
+	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var eventSlug string = req.GetURLParam("eventSlug")
+	sessionID, errParseSessionID := req.GetURLParamUint("sessionID")
+	if errParseSessionID != nil {
+		req.SendJSON(errParticipationStatusNotFound.GetMessage(), errParticipationStatusNotFound.GetStatusCode())
+		return
+	}
+
+	var err helios.Error
+	err = RemoveParticipationSession(user, eventSlug, sessionID)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	req.SendJSON("OK", http.StatusOK)
+}
+
 // QuestionListView send list of questions
 func QuestionListView(req helios.Request) {
 	user, ok := req.GetContextData(auth.UserContextKey).(auth.User)

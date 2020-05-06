@@ -512,6 +512,124 @@ func TestParticipationDeleteView(t *testing.T) {
 	}
 }
 
+func TestParticipationStatusListView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var user1 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var event1 Event = EventFactorySaved(Event{})
+	var event2 Event = EventFactorySaved(Event{})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &user1})
+	var session auth.Session = auth.Session{
+		ID:        1,
+		User:      &user1,
+		Token:     "abc",
+		IPAddress: "192.168.0.2",
+	}
+	helios.DB.Create(&session)
+	type participationStatusListViewTestCase struct {
+		user               interface{}
+		eventSlug          string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []participationStatusListViewTestCase{{
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               userLocal,
+		eventSlug:          event2.Slug,
+		expectedStatusCode: errEventNotFound.StatusCode,
+		expectedErrorCode:  errEventNotFound.Code,
+	}, {
+		user:               "bad_user",
+		eventSlug:          event2.Slug,
+		expectedStatusCode: http.StatusInternalServerError,
+		expectedErrorCode:  helios.ErrInternalServerError.Code,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test ParticipationStatusListView testcase: %d", i)
+		req := helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventSlug"] = testCase.eventSlug
+
+		ParticipationStatusListView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}
+
+func TestParticipationStatusDeleteView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var user1 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
+	var event1 Event = EventFactorySaved(Event{})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &user1})
+	var session auth.Session = auth.Session{
+		ID:        1,
+		User:      &user1,
+		Token:     "abc",
+		IPAddress: "192.168.0.2",
+	}
+	helios.DB.Create(&session)
+	type participationStatusDeleteViewTestCase struct {
+		user               interface{}
+		eventSlug          string
+		sessionID          string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []participationStatusDeleteViewTestCase{{
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		sessionID:          strconv.Itoa(int(session.ID)),
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		sessionID:          strconv.Itoa(int(session.ID)),
+		expectedStatusCode: errParticipationStatusNotFound.StatusCode,
+		expectedErrorCode:  errParticipationStatusNotFound.Code,
+	}, {
+		user:               "bad_user",
+		eventSlug:          event1.Slug,
+		sessionID:          strconv.Itoa(int(session.ID)),
+		expectedStatusCode: http.StatusInternalServerError,
+		expectedErrorCode:  helios.ErrInternalServerError.Code,
+	}, {
+		user:               userLocal,
+		eventSlug:          event1.Slug,
+		sessionID:          "bad_format",
+		expectedStatusCode: errParticipationStatusNotFound.StatusCode,
+		expectedErrorCode:  errParticipationStatusNotFound.Code,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test ParticipationStatusDeleteView testcase: %d", i)
+		req := helios.NewMockRequest()
+		req.SetContextData(auth.UserContextKey, testCase.user)
+		req.URLParam["eventSlug"] = testCase.eventSlug
+		req.URLParam["sessionID"] = testCase.sessionID
+
+		ParticipationStatusDeleteView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}
+
 func TestQuestionListView(t *testing.T) {
 	helios.App.BeforeTest()
 
