@@ -40,10 +40,11 @@ type ParticipationData struct {
 
 // ParticipationStatus is status of user participant to be monitored
 type ParticipationStatus struct {
-	UserUsername string     `json:"userUsername"`
-	IPAddress    string     `json:"ipAddress"`
-	LoginAt      *time.Time `json:"loginAt"`
-	SessionID    uint       `json:"sessionId"`
+	UserUsername      string     `json:"userUsername"`
+	IPAddress         string     `json:"ipAddress"`
+	LoginAt           *time.Time `json:"loginAt"`
+	SessionID         uint       `json:"sessionId"`
+	UserSessionLocked bool       `json:"userSessionLocked"`
 }
 
 // VerificationData used for client submitting hashed once participation key

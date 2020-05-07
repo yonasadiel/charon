@@ -25,7 +25,12 @@
 
     .title {
       font-size: 1.5em;
+      display: none;
       color: $background-color;
+
+      @include for-tablet-landscape-up {
+        display: inline-block;
+      }
     }
   }
 
@@ -38,22 +43,65 @@
     cursor: pointer;
     padding: 5px 20px;
     height: 100%;
+    flex: 0 0 200px;
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    justify-content: flex-end;
     color: $background-color;
+    position: relative;
 
-    img {
-      width: 35px;
-      margin-right: 10px;
+    &:hover {
+      .logout {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .profile {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
     }
 
-    span {
-      display: none;
-      color: $background-color;
+    .logout {
+      position: absolute;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      height: 35px;
+      transform: translateY(50px);
+      opacity: 0;
+      transition: transform .4s ease, opacity .4s ease;
 
-      @include for-tablet-landscape-up {
-        display: inline-block;
+      span {
+        display: none;
+        color: $background-color;
+
+        @include for-tablet-landscape-up {
+          display: inline-block;
+        }
+      }
+    }
+
+    .profile {
+      position: absolute;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      transform: translateY(0);
+      opacity: 1;
+      transition: transform .4s ease, opacity .4s ease;
+
+      img {
+        width: 35px;
+        margin-right: 10px;
+      }
+
+      span {
+        display: none;
+        color: $background-color;
+
+        @include for-tablet-landscape-up {
+          display: inline-block;
+        }
       }
     }
   }

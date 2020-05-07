@@ -16,6 +16,7 @@ import {
   ROUTE_EVENT,
   ROUTE_EVENT_OVERVIEW,
   ROUTE_EVENT_PARTICIPATION,
+  ROUTE_EVENT_PARTICIPATION_STATUS,
   ROUTE_EVENT_QUESTION,
   ROUTE_EVENT_QUESTION_DETAIL,
   ROUTE_EVENT_QUESTION_EDIT,
@@ -26,6 +27,7 @@ import {
 import DecryptionPage from './decrypt/DecryptionPage';
 import { hasPermissionForMenu, menuByRole } from './menu';
 import ParticipationPage from './participation/ParticipationPage';
+import ParticipationStatusPage from './participation-status/ParticipationStatusPage';
 import QuestionPage from './question/QuestionPage';
 import EventQuestionCreatePage from './question-editor/create/QuestionCreatePage';
 import QuestionEditorPage from './question-editor/QuestionEditorPage';
@@ -106,6 +108,11 @@ const EventDetailPage = (props: EventDetailPageProps) => {
           <Route path={ROUTE_EVENT_PARTICIPATION}>
             {hasPermissionForMenu(user, ROUTE_EVENT_PARTICIPATION)
                 ? <ParticipationPage />
+                : <Redirect to={eventDetailLink} />}
+          </Route>
+          <Route path={ROUTE_EVENT_PARTICIPATION_STATUS}>
+            {hasPermissionForMenu(user, ROUTE_EVENT_PARTICIPATION_STATUS)
+                ? <ParticipationStatusPage />
                 : <Redirect to={eventDetailLink} />}
           </Route>
           <Route path={ROUTE_EVENT_SYNC}>

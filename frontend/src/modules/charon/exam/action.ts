@@ -10,7 +10,7 @@ import Sha256 from 'crypto-js/sha256';
 
 import { AppThunk } from '../../store';
 import { CharonAPIError, CharonFormError } from '../http';
-import { Event, Participation, Question, Venue, SynchronizationData } from './api';
+import { Event, Participation, ParticipationStatus, Question, Venue, SynchronizationData } from './api';
 import { getQuestions as getQuestionsSelector } from './selector';
 import { putParticipationKey } from '../../session/action';
 
@@ -31,6 +31,13 @@ export const putParticipations = (eventSlug: string, participations: Participati
   type: PUT_PARTICIPATIONS,
   eventSlug,
   participations,
+});
+
+export const PUT_PARTICIPATION_STATUS = 'charon/exam/PUT_PARTICIPATION_STATUS';
+export const putParticipationStatus = (eventSlug: string, participationStatus: ParticipationStatus[] | null) => ({
+  type: PUT_PARTICIPATION_STATUS,
+  eventSlug,
+  participationStatus,
 });
 
 export const PUT_QUESTIONS = 'charon/exam/PUT_QUESTIONS';
@@ -132,13 +139,43 @@ export function createParticipation(eventSlug: string, participation: Participat
 
 export function verifyParticipation(eventSlug: string, participationKey: string): AppThunk<Promise<void>> {
   return async function (dispatch, _, { charonExamApi }) {
-    const hashedSingle: string = Sha256(participationKey).toString(Hex);
-    return charonExamApi.verifyParticipation(eventSlug, hashedSingle)
+    const hashedOnce: string = Sha256(participationKey).toString(Hex);
+    return charonExamApi.verifyParticipation(eventSlug, hashedOnce)
       .then(() => {
         dispatch(putParticipationKey(eventSlug, participationKey));
       })
       .catch((err: AxiosError) => {
         throw new CharonFormError(err);
+      });
+  };
+};
+
+export function getParticipationStatus(eventSlug: string): AppThunk<Promise<void>> {
+  return async function (dispatch, _, { charonExamApi }) {
+    dispatch(putParticipationStatus(eventSlug, null));
+    return charonExamApi.getParticipationStatus(eventSlug)
+      .then((res: AxiosResponse) => {
+        const participationStatus: ParticipationStatus[] = res.data;
+        participationStatus.forEach((status) => {
+          status.loginAt = new Date(status.loginAt);
+        });
+        dispatch(putParticipationStatus(eventSlug, participationStatus));
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonAPIError(err);
+      });
+  };
+};
+
+export function deleteParticipationStatus(eventSlug: string, sessionId: number): AppThunk<Promise<void>> {
+  return async function (dispatch, _, { charonExamApi }) {
+    dispatch(putParticipationStatus(eventSlug, null));
+    return charonExamApi.deleteParticipationStatus(eventSlug, sessionId)
+      .then(() => {
+        return;
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonAPIError(err);
       });
   };
 };

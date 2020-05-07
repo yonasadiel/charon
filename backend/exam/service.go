@@ -466,12 +466,13 @@ func GetParticipationStatus(user auth.User, eventSlug string) ([]ParticipationSt
 
 	var status []ParticipationStatus
 	helios.DB.
-		Select("users.username as user_username, sessions.ip_address, sessions.created_at as login_at, sessions.id as session_id").
+		Select("users.username as user_username, sessions.ip_address, sessions.created_at as login_at, sessions.id as session_id, users.session_locked as user_session_locked").
 		Table("participations").
-		Joins("left join users on users.id = participations.user_id").
-		Joins("left join sessions on sessions.user_id = users.id").
+		Joins("left join users on (users.id = participations.user_id and users.deleted_at is null)").
+		Joins("left join sessions on (sessions.user_id = users.id and sessions.deleted_at is null)").
 		Where("event_id = ?", event.ID).
 		Where("users.role = ?", auth.UserRoleParticipant).
+		Where("participations.deleted_at is null").
 		Find(&status)
 	return status, nil
 }
@@ -491,12 +492,13 @@ func RemoveParticipationSession(user auth.User, eventSlug string, sessionID uint
 	helios.DB.
 		Select("sessions.*").
 		Table("participations").
-		Joins("left join users on users.id = participations.user_id").
-		Joins("left join sessions on sessions.user_id = users.id").
+		Joins("left join users on (users.id = participations.user_id and users.deleted_at is null)").
+		Joins("left join sessions on (sessions.user_id = users.id and sessions.deleted_at is null)").
 		Where("event_id = ?", event.ID).
 		Where("users.role = ?", auth.UserRoleParticipant).
 		Where("sessions.id = ?", sessionID).
 		Where("sessions.deleted_at is null").
+		Where("participations.deleted_at is null").
 		First(&session)
 	if session.ID == 0 {
 		return errParticipationStatusNotFound

@@ -13,6 +13,7 @@ export const ROUTE_EVENT_LIST = ROUTE_EXAM;
 export const ROUTE_EVENT = ROUTE_EXAM + ':eventSlug/';
 export const ROUTE_EVENT_OVERVIEW = ROUTE_EVENT + 'overview/';
 export const ROUTE_EVENT_PARTICIPATION = ROUTE_EVENT + 'participation/';
+export const ROUTE_EVENT_PARTICIPATION_STATUS = ROUTE_EVENT + 'participation-status/';
 export const ROUTE_EVENT_QUESTION = ROUTE_EVENT + 'question/';
 export const ROUTE_EVENT_QUESTION_DETAIL = ROUTE_EVENT_QUESTION + ':questionNumber/';
 export const ROUTE_EVENT_QUESTION_EDIT = ROUTE_EVENT + 'question-editor/';

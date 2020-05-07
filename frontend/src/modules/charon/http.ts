@@ -1,8 +1,25 @@
 import { SubmissionError } from 'redux-form';
+import axios, { AxiosError } from 'axios';
 
-import { HTTPError } from '../http';
+import conf from '../../conf';
 
-export class CharonAPIError extends HTTPError {
+const charonApiHttp = axios.create({
+  baseURL: conf.charonApiUrl,
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
+export default charonApiHttp;
+
+export class CharonAPIError {
+  public err: AxiosError;
+
+  constructor(err: AxiosError) {
+    this.err = err;
+  }
 
   /**
    * Human readable message of the error

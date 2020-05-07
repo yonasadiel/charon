@@ -66,3 +66,37 @@ func UserCreateView(req helios.Request) {
 	UpsertUser(user, &newUser)
 	req.SendJSON(SerializeUser(newUser), http.StatusCreated)
 }
+
+// UserSessionLockView locks the session of user
+func UserSessionLockView(req helios.Request) {
+	user, ok := req.GetContextData(UserContextKey).(User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var username string = req.GetURLParam("username")
+	var err helios.Error = LockUserSession(user, username)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	req.SendJSON("OK", http.StatusOK)
+}
+
+// UserSessionUnlockView locks the session of user
+func UserSessionUnlockView(req helios.Request) {
+	user, ok := req.GetContextData(UserContextKey).(User)
+	if !ok {
+		req.SendJSON(helios.ErrInternalServerError.GetMessage(), helios.ErrInternalServerError.GetStatusCode())
+		return
+	}
+
+	var username string = req.GetURLParam("username")
+	var err helios.Error = UnlockUserSession(user, username)
+	if err != nil {
+		req.SendJSON(err.GetMessage(), err.GetStatusCode())
+		return
+	}
+	req.SendJSON("OK", http.StatusOK)
+}

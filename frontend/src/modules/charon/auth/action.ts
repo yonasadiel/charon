@@ -19,7 +19,7 @@ export function login(username: string, password: string): AppThunk<Promise<void
         dispatch(putUser(user));
       })
       .catch((err: AxiosError) => {
-        throw new CharonAPIError(err);
+        throw new CharonFormError(err);
       });
   };
 };
@@ -62,4 +62,27 @@ export function createUser(user: User): AppThunk<Promise<void>> {
   };
 };
 
+export function lockUser(username: string): AppThunk<Promise<void>> {
+  return async function (_dispatch, _getState, { charonAuthApi }) {
+    return charonAuthApi.lockUser(username)
+      .then(() => {
+        return;
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonFormError(err);
+      });
+  };
+};
+
+export function unlockUser(username: string): AppThunk<Promise<void>> {
+  return async function (_dispatch, _getState, { charonAuthApi }) {
+    return charonAuthApi.unlockUser(username)
+      .then(() => {
+        return;
+      })
+      .catch((err: AxiosError) => {
+        throw new CharonFormError(err);
+      });
+  };
+};
 

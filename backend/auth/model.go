@@ -12,11 +12,12 @@ import (
 // - "admin": administrator of applicaton.
 // - "organizer": writer of problems, etc.
 type User struct {
-	ID       uint   `gorm:"primary_key"`
-	Name     string `gorm:"size:256"`
-	Username string `gorm:"size:256; unique"`
-	Password string `gorm:"size:256"`
-	Role     uint   // default to participant
+	ID            uint   `gorm:"primary_key"`
+	Name          string `gorm:"size:256"`
+	Username      string `gorm:"size:256; unique"`
+	Password      string `gorm:"size:256"`
+	Role          uint   // default to participant
+	SessionLocked bool   `gorm:"default:false"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

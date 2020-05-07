@@ -1,8 +1,7 @@
 import { AxiosResponse } from 'axios';
 
 import { User } from '../auth/api';
-import conf from '../../../conf';
-import http from '../../http';
+import http from '../http';
 
 export interface Event {
   id: number;
@@ -15,6 +14,7 @@ export interface Event {
   lastSynchronization: Date;
   questions: { [number: number]: Question } | null;
   participations: { [id: number]: Participation } | null;
+  participationStatus: { [sessionId: number]: ParticipationStatus } | null;
 };
 
 export interface Question {
@@ -40,7 +40,15 @@ export interface SynchronizationData {
   venue: Venue;
   questions: Question[];
   users: User[];
-}
+};
+
+export interface ParticipationStatus {
+  userUsername: string;
+  ipAddress: string;
+  loginAt: Date;
+  sessionId: number;
+  userSessionLocked: boolean;
+};
 
 export interface CharonExamApi {
   getVenues: () => Promise<AxiosResponse<Venue[]>>;
@@ -52,6 +60,9 @@ export interface CharonExamApi {
   getParticipationsOfEvent: (eventSlug: string) => Promise<AxiosResponse<Participation[]>>;
   createParticipation: (eventSlug: string, participation: Participation) => Promise<AxiosResponse<Participation>>;
   verifyParticipation: (eventSlug: string, eventKey: string) => Promise<AxiosResponse<void>>;
+
+  getParticipationStatus: (eventSlug: string) => Promise<AxiosResponse<ParticipationStatus[]>>;
+  deleteParticipationStatus: (eventSlug: string, sessionId: number) => Promise<AxiosResponse<void>>;
 
   getQuestionsOfEvent: (eventSlug: string) => Promise<AxiosResponse<Question[]>>;
   createQuestion: (eventSlug: string, question: Question) => Promise<AxiosResponse<void>>;
@@ -66,24 +77,27 @@ export interface CharonExamApi {
 };
 
 export default {
-  getVenues: () => http.get(`${conf.charonApiUrl}/exam/venue/`),
-  createVenue: (venue: Venue) => http.post(`${conf.charonApiUrl}/exam/venue/`, venue),
+  getVenues: () => http.get(`/exam/venue/`),
+  createVenue: (venue: Venue) => http.post(`/exam/venue/`, venue),
 
-  getEvents: () => http.get(`${conf.charonApiUrl}/exam/`),
-  createEvent: (event: Event) => http.post(`${conf.charonApiUrl}/exam/`, event),
+  getEvents: () => http.get(`/exam/`),
+  createEvent: (event: Event) => http.post(`/exam/`, event),
 
-  getParticipationsOfEvent: (eventSlug: string) => http.get(`${conf.charonApiUrl}/exam/${eventSlug}/participation/`),
-  createParticipation: (eventSlug: string, participation: Participation) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/participation/`, participation),
-  verifyParticipation: (eventSlug: string, eventKey: string) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/verify/`, { key: eventKey }),
+  getParticipationsOfEvent: (eventSlug: string) => http.get(`/exam/${eventSlug}/participation/`),
+  createParticipation: (eventSlug: string, participation: Participation) => http.post(`/exam/${eventSlug}/participation/`, participation),
+  verifyParticipation: (eventSlug: string, eventKey: string) => http.post(`/exam/${eventSlug}/verify/`, { key: eventKey }),
 
-  getQuestionsOfEvent: (eventSlug: string) => http.get(`${conf.charonApiUrl}/exam/${eventSlug}/question/`),
-  createQuestion: (eventSlug: string, question: Question) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/question/`, question),
-  deleteQuestion: (eventSlug: string, questionNumber: number) => http.delete(`${conf.charonApiUrl}/exam/${eventSlug}/question/${questionNumber}/`),
+  getParticipationStatus: (eventSlug: string) => http.get(`/exam/${eventSlug}/participation-status/`),
+  deleteParticipationStatus: (eventSlug: string, sessionId: number) => http.delete(`/exam/${eventSlug}/participation-status/${sessionId}/`),
 
-  getSynchronizationData: (eventSlug: string) => http.get(`${conf.charonApiUrl}/exam/${eventSlug}/sync/`),
-  putSynchronizationData: (eventSlug: string, syncData: SynchronizationData) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/sync/`, syncData),
+  getQuestionsOfEvent: (eventSlug: string) => http.get(`/exam/${eventSlug}/question/`),
+  createQuestion: (eventSlug: string, question: Question) => http.post(`/exam/${eventSlug}/question/`, question),
+  deleteQuestion: (eventSlug: string, questionNumber: number) => http.delete(`/exam/${eventSlug}/question/${questionNumber}/`),
 
-  decryptEvent: (eventSlug: string, key: string) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/decrypt/`, { key }),
+  getSynchronizationData: (eventSlug: string) => http.get(`/exam/${eventSlug}/sync/`),
+  putSynchronizationData: (eventSlug: string, syncData: SynchronizationData) => http.post(`/exam/${eventSlug}/sync/`, syncData),
 
-  submitSubmission: (eventSlug: string, questionNumber: number, answer: string) => http.post(`${conf.charonApiUrl}/exam/${eventSlug}/question/${questionNumber}/submit/`, { answer }),
+  decryptEvent: (eventSlug: string, key: string) => http.post(`/exam/${eventSlug}/decrypt/`, { key }),
+
+  submitSubmission: (eventSlug: string, questionNumber: number, answer: string) => http.post(`/exam/${eventSlug}/question/${questionNumber}/submit/`, { answer }),
 } as CharonExamApi;

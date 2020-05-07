@@ -170,3 +170,89 @@ func TestUserCreateView(t *testing.T) {
 		}
 	}
 }
+
+func TestUserSessionLockView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var user1 User = UserFactorySaved(User{Role: UserRoleParticipant})
+	type userCreateTestCase struct {
+		user               interface{}
+		username           string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []userCreateTestCase{{
+		user:               UserFactorySaved(User{Role: UserRoleLocal}),
+		username:           user1.Username,
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               UserFactorySaved(User{Role: UserRoleLocal}),
+		username:           "random",
+		expectedStatusCode: http.StatusNotFound,
+		expectedErrorCode:  errUserNotFound.Code,
+	}, {
+		user:               "bad_user",
+		username:           user1.Username,
+		expectedStatusCode: http.StatusInternalServerError,
+		expectedErrorCode:  helios.ErrInternalServerError.Code,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test UserSessionLockView testcase: %d", i)
+		var req helios.MockRequest
+		req = helios.NewMockRequest()
+		req.SetContextData(UserContextKey, testCase.user)
+		req.URLParam["username"] = testCase.username
+
+		UserSessionLockView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}
+
+func TestUserSessionUnlockView(t *testing.T) {
+	helios.App.BeforeTest()
+
+	var user1 User = UserFactorySaved(User{Role: UserRoleParticipant})
+	type userCreateTestCase struct {
+		user               interface{}
+		username           string
+		expectedStatusCode int
+		expectedErrorCode  string
+	}
+	testCases := []userCreateTestCase{{
+		user:               UserFactorySaved(User{Role: UserRoleLocal}),
+		username:           user1.Username,
+		expectedStatusCode: http.StatusOK,
+	}, {
+		user:               UserFactorySaved(User{Role: UserRoleLocal}),
+		username:           "random",
+		expectedStatusCode: http.StatusNotFound,
+		expectedErrorCode:  errUserNotFound.Code,
+	}, {
+		user:               "bad_user",
+		username:           user1.Username,
+		expectedStatusCode: http.StatusInternalServerError,
+		expectedErrorCode:  helios.ErrInternalServerError.Code,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test UserSessionUnlockView testcase: %d", i)
+		var req helios.MockRequest
+		req = helios.NewMockRequest()
+		req.SetContextData(UserContextKey, testCase.user)
+		req.URLParam["username"] = testCase.username
+
+		UserSessionUnlockView(&req)
+
+		assert.Equal(t, testCase.expectedStatusCode, req.StatusCode)
+		if testCase.expectedErrorCode != "" {
+			var err map[string]interface{}
+			json.Unmarshal(req.JSONResponse, &err)
+			assert.Equal(t, testCase.expectedErrorCode, err["code"])
+		}
+	}
+}

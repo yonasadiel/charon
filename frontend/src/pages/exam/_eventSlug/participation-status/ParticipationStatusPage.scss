@@ -1,0 +1,41 @@
+@import '../../../../styles/base';
+
+.participation-status-page {
+  .title {
+    font-size: 1.5em;
+    margin-bottom: .5em;
+  }
+
+  .participation-status-list {
+    margin-bottom: 10px;
+
+    .participation-status {
+      display: flex;
+      flex-direction: row;
+      align-items: baseline;
+      margin-bottom: 10px;
+
+      &:first-child {
+        font-weight: 700;
+      }
+
+      .user, .ip-address, .login-at {
+        flex: 1 1;
+      }
+
+      .lock-button {
+        flex: 0 0 100px;
+      }
+
+      .delete {
+        flex: 0 0 50px;
+
+        .delete-button {
+          width: 50px;
+          min-width: 50px;
+          background-color: $danger-color;
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,6 @@
 import { AxiosResponse } from 'axios';
 
-import conf from '../../../conf';
-import http from '../../http';
+import http from '../http';
 
 export const USER_ROLE = {
   LOCAL: 'local',
@@ -23,12 +22,16 @@ export interface CharonAuthApi {
 
   getUsers: () => Promise<AxiosResponse<User[]>>;
   createUser: (user: User) => Promise<AxiosResponse<void>>;
+  lockUser: (username: string) => Promise<AxiosResponse<void>>;
+  unlockUser: (username: string) => Promise<AxiosResponse<void>>;
 }
 
 export default {
-  login: (username: string, password: string) => http.post(`${conf.charonApiUrl}/auth/login/`, { username, password }),
-  logout: () => http.post(`${conf.charonApiUrl}/auth/logout/`),
+  login: (username: string, password: string) => http.post(`/auth/login/`, { username, password }),
+  logout: () => http.post(`/auth/logout/`),
 
-  getUsers: () => http.get(`${conf.charonApiUrl}/auth/user/`),
-  createUser: (user: User) => http.post(`${conf.charonApiUrl}/auth/user/`, user),
+  getUsers: () => http.get(`/auth/user/`),
+  createUser: (user: User) => http.post(`/auth/user/`, user),
+  lockUser: (username: string) => http.post(`/auth/user/${username}/lock/`),
+  unlockUser: (username: string) => http.post(`/auth/user/${username}/unlock/`),
 }

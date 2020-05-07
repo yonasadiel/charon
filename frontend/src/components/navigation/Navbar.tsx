@@ -31,8 +31,8 @@ const Navbar = (props: ConnectedNavbarProps) => {
       <div className="divider" />
       {!!user ? (
         <div className="user" onClick={handleLogoutClick}>
-          <img src={profileIcon} alt="profile-icon" />
-          <span>{user.name}</span>
+          <div className="profile"><img src={profileIcon} alt="profile-icon" /><span>{user.name}</span></div>
+          <div className="logout"><i className="fas fa-sign-out-alt" /> <span>Logout</span></div>
         </div>
       ) : (
         <Link to={ROUTE_LOGIN}>

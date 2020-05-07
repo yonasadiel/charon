@@ -23,13 +23,18 @@ func TestLogin(t *testing.T) {
 		username: "user1",
 		password: "def",
 	}, {
-		user:          UserFactorySaved(User{Username: "user2", Password: "def"}),
+		user:          UserFactorySaved(User{Username: "user2", Password: "def", SessionLocked: true}),
+		username:      "user2",
+		password:      "def",
+		expectedError: errSessionLocked,
+	}, {
+		user:          UserFactorySaved(User{Username: "user3", Password: "def"}),
 		username:      "def",
 		password:      "def",
 		expectedError: errWrongUsernamePassword,
 	}, {
-		user:          UserFactorySaved(User{Username: "user3", Password: "def"}),
-		username:      "user3",
+		user:          UserFactorySaved(User{Username: "user4", Password: "def"}),
+		username:      "user4",
 		password:      "abc",
 		expectedError: errWrongUsernamePassword,
 	}}
@@ -144,4 +149,72 @@ func TestHashPassword(t *testing.T) {
 func TestCheckPasswordHash(t *testing.T) {
 	check := checkPasswordHash("charon", "$2a$14$RgL6IqGdMZTkTibAWfuoSeOoc6OpuHezUh3PK4hBLza45pwHx4f7K")
 	assert.True(t, check, "Password mismatch")
+}
+
+func TestLockUserSession(t *testing.T) {
+	var user1 User = UserFactorySaved(User{Role: UserRoleParticipant, SessionLocked: false})
+	type lockUserSessionTestCase struct {
+		user          User
+		username      string
+		expectedError helios.Error
+	}
+	testCases := []lockUserSessionTestCase{{
+		user:          UserFactorySaved(User{Role: UserRoleParticipant}),
+		username:      user1.Username,
+		expectedError: errUserNotFound,
+	}, {
+		user:     UserFactorySaved(User{Role: UserRoleLocal}),
+		username: user1.Username,
+	}, {
+		user:     UserFactorySaved(User{Role: UserRoleLocal}),
+		username: user1.Username,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test LockUserSession testcase: %d", i)
+		var err helios.Error
+		var userSaved User
+		err = LockUserSession(testCase.user, testCase.username)
+		helios.DB.Where("username = ?", testCase.username).First(&userSaved)
+		if testCase.expectedError == nil {
+			assert.Nil(t, err)
+			assert.True(t, userSaved.SessionLocked)
+		} else {
+			assert.False(t, userSaved.SessionLocked)
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
+}
+
+func TestUnlockUserSession(t *testing.T) {
+	var user1 User = UserFactorySaved(User{Role: UserRoleParticipant, SessionLocked: true})
+	type lockUserSessionTestCase struct {
+		user          User
+		username      string
+		expectedError helios.Error
+	}
+	testCases := []lockUserSessionTestCase{{
+		user:          UserFactorySaved(User{Role: UserRoleParticipant}),
+		username:      user1.Username,
+		expectedError: errUserNotFound,
+	}, {
+		user:     UserFactorySaved(User{Role: UserRoleLocal}),
+		username: user1.Username,
+	}, {
+		user:     UserFactorySaved(User{Role: UserRoleLocal}),
+		username: user1.Username,
+	}}
+	for i, testCase := range testCases {
+		t.Logf("Test UnlockUserSession testcase: %d", i)
+		var err helios.Error
+		var userSaved User
+		err = UnlockUserSession(testCase.user, testCase.username)
+		helios.DB.Where("username = ?", testCase.username).First(&userSaved)
+		if testCase.expectedError == nil {
+			assert.Nil(t, err)
+			assert.False(t, userSaved.SessionLocked)
+		} else {
+			assert.True(t, userSaved.SessionLocked)
+			assert.Equal(t, testCase.expectedError, err)
+		}
+	}
 }

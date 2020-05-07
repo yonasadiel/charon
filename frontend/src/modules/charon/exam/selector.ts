@@ -2,7 +2,7 @@ import flatMap from 'lodash/flatMap';
 
 import { AppState } from '../../store';
 import { getCharonState } from '../selector';
-import { Event, Participation, Question, Venue } from './api';
+import { Event, Participation, ParticipationStatus, Question, Venue } from './api';
 import { CharonExamState } from './reducer';
 
 export function getCharonExamState(state: AppState): CharonExamState {
@@ -30,6 +30,13 @@ export function getParticipations(state: AppState, eventSlug: string): Participa
   if (!event) return null;
   if (!event.participations) return null;
   return flatMap(event.participations);
+}
+
+export function getParticipationStatus(state: AppState, eventSlug: string): ParticipationStatus[] | null {
+  const event = getEvent(state, eventSlug);
+  if (!event) return null;
+  if (!event.participationStatus) return null;
+  return flatMap(event.participationStatus);
 }
 
 export function getQuestions(state: AppState, eventSlug: string): Question[] | null {

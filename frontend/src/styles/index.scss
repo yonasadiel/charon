@@ -134,3 +134,7 @@ table {
 .normal-weight {
   font-weight: normal !important;
 }
+
+i.fas:not(:last-child) {
+  margin-right: 5px;
+}

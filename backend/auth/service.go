@@ -54,7 +54,7 @@ func Login(username string, password string, ip string) (*Session, helios.Error)
 	var session Session
 	var token string
 
-	helios.DB.Where(&User{Username: username}).First(&user)
+	helios.DB.Where("username = ?", username).First(&user)
 
 	if user.ID == 0 {
 		return nil, errWrongUsernamePassword
@@ -62,6 +62,10 @@ func Login(username string, password string, ip string) (*Session, helios.Error)
 
 	if !checkPasswordHash(password, user.Password) {
 		return nil, errWrongUsernamePassword
+	}
+
+	if user.SessionLocked {
+		return nil, errSessionLocked
 	}
 
 	token = generateUserToken()
@@ -78,6 +82,8 @@ func Login(username string, password string, ip string) (*Session, helios.Error)
 
 // Logout invalidates the session token
 func Logout(user User) {
+	user.SessionLocked = false
+	helios.DB.Save(&user)
 	helios.DB.Where("user_id = ?", user.ID).Delete(&Session{})
 }
 
@@ -103,5 +109,29 @@ func UpsertUser(user User, newUser *User) helios.Error {
 	} else {
 		helios.DB.Save(newUser)
 	}
+	return nil
+}
+
+// LockUserSession locks user so they can't login from new device
+func LockUserSession(user User, username string) helios.Error {
+	var targetUser User
+	helios.DB.Where("username = ?", username).Where("role < ?", user.Role).First(&targetUser)
+	if targetUser.ID == 0 {
+		return errUserNotFound
+	}
+	targetUser.SessionLocked = true
+	helios.DB.Save(&targetUser)
+	return nil
+}
+
+// UnlockUserSession reverse the lock effect, so the user can login from new device
+func UnlockUserSession(user User, username string) helios.Error {
+	var targetUser User
+	helios.DB.Where("username = ?", username).Where("role < ?", user.Role).First(&targetUser)
+	if targetUser.ID == 0 {
+		return errUserNotFound
+	}
+	targetUser.SessionLocked = false
+	helios.DB.Save(&targetUser)
 	return nil
 }

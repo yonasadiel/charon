@@ -1017,7 +1017,7 @@ func TestSubmitSubmission(t *testing.T) {
 func TestGetParticipationStatus(t *testing.T) {
 	helios.App.BeforeTest()
 
-	var user1 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
+	var user1 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant, SessionLocked: true})
 	var user2 auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleParticipant})
 	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
 	var event1 Event = EventFactorySaved(Event{})
@@ -1051,15 +1051,17 @@ func TestGetParticipationStatus(t *testing.T) {
 		user:      userLocal,
 		eventSlug: event1.Slug,
 		expectedStatus: []ParticipationStatus{{
-			UserUsername: user1.Username,
-			IPAddress:    "",
-			LoginAt:      nil,
-			SessionID:    0,
+			UserUsername:      user1.Username,
+			IPAddress:         "",
+			LoginAt:           nil,
+			SessionID:         0,
+			UserSessionLocked: true,
 		}, {
-			UserUsername: user2.Username,
-			IPAddress:    "192.168.0.2",
-			LoginAt:      &notNilTime,
-			SessionID:    session.ID,
+			UserUsername:      user2.Username,
+			IPAddress:         "192.168.0.2",
+			LoginAt:           &notNilTime,
+			SessionID:         session.ID,
+			UserSessionLocked: false,
 		}},
 	}}
 	for i, testCase := range testCases {

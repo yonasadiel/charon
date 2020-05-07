@@ -5,6 +5,7 @@ import { generateUrlWithParams } from '../../../../modules/util/routes';
 import {
   ROUTE_EVENT_OVERVIEW,
   ROUTE_EVENT_PARTICIPATION,
+  ROUTE_EVENT_PARTICIPATION_STATUS,
   ROUTE_EVENT_QUESTION_DETAIL,
   ROUTE_EVENT_QUESTION_EDIT,
   ROUTE_EVENT_SYNC,
@@ -39,6 +40,12 @@ const EventNavigation = (props: EventNavigationProps) => {
           isActive={isActive(ROUTE_EVENT_PARTICIPATION)}
           route={generateUrlWithParams(ROUTE_EVENT_PARTICIPATION, urlParams)}
           text="Peserta" /> )}
+      {(menus.includes(ROUTE_EVENT_PARTICIPATION_STATUS)) && (
+        <EventNavigationItem
+          icon="fa-user-lock"
+          isActive={isActive(ROUTE_EVENT_PARTICIPATION_STATUS)}
+          route={generateUrlWithParams(ROUTE_EVENT_PARTICIPATION_STATUS, urlParams)}
+          text="Status Peserta" /> )}
       {(menus.includes(ROUTE_EVENT_QUESTION_DETAIL)) && (
         <EventNavigationItem
           icon="fa-book-open"

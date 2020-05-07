@@ -35,6 +35,11 @@ var errWrongUsernamePassword = helios.ErrorForm{
 	NonFieldError: helios.ErrorFormFieldAtomic{"Wrong username / password"},
 }
 
+var errSessionLocked = helios.ErrorForm{
+	Code:          "session_locked",
+	NonFieldError: helios.ErrorFormFieldAtomic{"You have already login from other device"},
+}
+
 var errUnauthorized = helios.ErrorAPI{
 	StatusCode: http.StatusUnauthorized,
 	Code:       "unauthorized",
@@ -45,4 +50,10 @@ var errUserRoleTooHigh = helios.ErrorAPI{
 	StatusCode: http.StatusBadRequest,
 	Code:       "user_role_too_high",
 	Message:    "Can't create user with same or higher role",
+}
+
+var errUserNotFound = helios.ErrorAPI{
+	StatusCode: http.StatusNotFound,
+	Code:       "user_not_found",
+	Message:    "User not found",
 }

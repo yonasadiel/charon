@@ -1,6 +1,6 @@
 import keyBy from 'lodash/keyBy';
 
-import { PUT_EVENTS, PUT_PARTICIPATIONS, PUT_QUESTION, PUT_QUESTIONS, PUT_VENUES } from './action';
+import { PUT_EVENTS, PUT_PARTICIPATIONS, PUT_PARTICIPATION_STATUS, PUT_QUESTION, PUT_QUESTIONS, PUT_VENUES } from './action';
 import { Event, Venue } from './api';
 
 export interface CharonExamState {
@@ -31,6 +31,18 @@ export function charonExamReducer (state: CharonExamState = initialState, action
       const oldEvent = !!state.events ? state.events[action.eventSlug] : null;
       const newEvent = Object.assign({}, !!oldEvent ? oldEvent : {} as Event);
       newEvent.participations = action.participations === null ? null : keyBy(action.participations, 'id');
+      return {
+        ...state,
+        events: {
+          ...state.events,
+          [action.eventSlug]: newEvent,
+        },
+      };
+    }
+    case PUT_PARTICIPATION_STATUS: {
+      const oldEvent = !!state.events ? state.events[action.eventSlug] : null;
+      const newEvent = Object.assign({}, !!oldEvent ? oldEvent : {} as Event);
+      newEvent.participationStatus = action.participationStatus === null ? null : keyBy(action.participationStatus, 'sessionId');
       return {
         ...state,
         events: {
