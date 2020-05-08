@@ -12,6 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
+	"strings"
 	"time"
 
 	"github.com/yonasadiel/charon/backend/auth"
@@ -509,9 +511,9 @@ func RemoveParticipationSession(user auth.User, eventSlug string, sessionID uint
 
 // GetSynchronizationData gets the synchronization data of event.
 // Only local user has the permission
-func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, []Question, []auth.User, map[string]string, helios.Error) {
+func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, []Question, []auth.User, map[string]string, map[string]string, helios.Error) {
 	if !user.IsLocal() {
-		return nil, nil, nil, nil, nil, errSynchronizationNotAuthorized
+		return nil, nil, nil, nil, nil, nil, errSynchronizationNotAuthorized
 	}
 
 	var participation Participation
@@ -524,7 +526,7 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, [
 		Where("events.slug = ?", eventSlug).
 		First(&participation)
 	if participation.ID == 0 {
-		return nil, nil, nil, nil, nil, errEventNotFound
+		return nil, nil, nil, nil, nil, nil, errEventNotFound
 	}
 
 	var event Event
@@ -532,6 +534,8 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, [
 	var users []auth.User
 	var participations []Participation
 	var usersKey map[string]string
+	var usersY map[string]string
+	var secretShare SecretShare
 	helios.DB.Where("id = ?", participation.EventID).First(&event)
 	helios.DB.Where("event_id = ?", event.ID).Find(&questions)
 	helios.DB.
@@ -546,24 +550,69 @@ func GetSynchronizationData(user auth.User, eventSlug string) (*Event, *Venue, [
 		Where("participations.event_id = ?", event.ID).
 		Where("participations.venue_id = ?", participation.Venue.ID).
 		Find(&participations)
+	helios.DB.
+		Where("event_id = ?", event.ID).
+		Where("venue_id = ?", participation.Venue.ID).
+		First(&secretShare)
+	var polynomCoeffs []big.Int
+	if secretShare.ID == 0 {
+		// TODO: change to 90%
+		polynomCoeffs = generateNRandomBigInt(len(participations))
+		var polynomCoeffsString string = ""
+		for i, polynomCoeff := range polynomCoeffs {
+			if i > 0 {
+				polynomCoeffsString = polynomCoeffsString + "|"
+			}
+			polynomCoeffsString = polynomCoeffsString + polynomCoeff.String()
+		}
+		secretShare = SecretShare{
+			Venue:         participation.Venue,
+			Event:         participation.Event,
+			PolynomCoeffs: polynomCoeffsString,
+		}
+		helios.DB.Create(&secretShare)
+	} else {
+		var coeffs = strings.Split(secretShare.PolynomCoeffs, "|")
+		for _, coeffStr := range coeffs {
+			var coeff *big.Int
+			coeff, _ = new(big.Int).SetString(coeffStr, 10)
+			polynomCoeffs = append(polynomCoeffs, *coeff)
+		}
+	}
+	for pI, participation := range participations {
+		var x, y *big.Int
+		x, _ = new(big.Int).SetString(participation.KeyHashedOnce, 16)
+		y, _ = new(big.Int).SetString(event.SimKey, 62)
+		x = x.Mod(x, PRIME)
+		for i, polynomCoeff := range polynomCoeffs {
+			var degree *big.Int = big.NewInt(int64(i + 1))
+			var xToI *big.Int = new(big.Int).Exp(x, degree, PRIME)
+			y = new(big.Int).Add(y, new(big.Int).Mul(xToI, &polynomCoeff))
+		}
+		y = y.Mod(y, PRIME)
+		participations[pI].SecretShareY = y.String()
+		helios.DB.Save(&participations[pI])
+	}
 
 	err := encryptQuestions(questions, event.SimKey)
 	if err != nil {
-		return nil, nil, nil, nil, nil, helios.ErrInternalServerError
+		return nil, nil, nil, nil, nil, nil, helios.ErrInternalServerError
 	}
 
 	usersKey = make(map[string]string)
+	usersY = make(map[string]string)
 	for _, participation := range participations {
 		usersKey[participation.User.Username] = participation.KeyHashedTwice
+		usersY[participation.User.Username] = participation.SecretShareY
 	}
 	event.SimKey = ""
 
-	return &event, participation.Venue, questions, users, usersKey, nil
+	return &event, participation.Venue, questions, users, usersKey, usersY, nil
 }
 
 // PutSynchronizationData puts the synchronization data of event.
 // Only local user has the permission
-func PutSynchronizationData(user auth.User, event Event, venue Venue, questions []Question, users []auth.User, usersKey map[string]string) helios.Error {
+func PutSynchronizationData(user auth.User, event Event, venue Venue, questions []Question, users []auth.User, usersKey map[string]string, usersY map[string]string) helios.Error {
 	if !user.IsLocal() {
 		return errSynchronizationNotAuthorized
 	}
@@ -630,6 +679,7 @@ func PutSynchronizationData(user auth.User, event Event, venue Venue, questions 
 			EventID:        event.ID,
 			KeyHashedTwice: usersKey[users[i].Username],
 			// TODO: if the key is malformed and missing user
+			SecretShareY: usersY[users[i].Username],
 		}
 		tx.Create(&participation)
 		for j := range questions {

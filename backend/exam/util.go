@@ -1,6 +1,7 @@
 package exam
 
 import (
+	"math/big"
 	"math/rand"
 	"strings"
 	"time"
@@ -34,4 +35,16 @@ func generateRandomToken(tokenLength int) string {
 	}
 
 	return sb.String()
+}
+
+func generateNRandomBigInt(n int) []big.Int {
+	var primelength uint = 256
+	var twoPower *big.Int = new(big.Int).Lsh(big.NewInt(1), primelength)
+	var randSrc *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	var randoms []big.Int
+	for i := 0; i < n; i++ {
+		var rand *big.Int = new(big.Int).Rand(randSrc, twoPower)
+		randoms = append(randoms, *rand)
+	}
+	return randoms
 }

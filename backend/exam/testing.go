@@ -105,6 +105,11 @@ func ParticipationFactory(participation Participation) Participation {
 		user := auth.UserFactory(auth.User{})
 		participation.User = &user
 	}
+	if participation.KeyPlain == "" {
+		participation.KeyPlain = generateRandomToken(32)
+		participation.KeyHashedOnce = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyPlain)))
+		participation.KeyHashedTwice = fmt.Sprintf("%x", sha256.Sum256([]byte(participation.KeyHashedOnce)))
+	}
 	return participation
 }
 

@@ -75,6 +75,7 @@ type SynchronizationData struct {
 	Questions []QuestionData              `json:"questions"`
 	Users     []auth.UserWithPasswordData `json:"users"`
 	UsersKey  map[string]string           `json:"usersKey"`
+	UsersY    map[string]string           `json:"usersY"`
 }
 
 // DecryptRequest is JSON representation of submitting key for
@@ -264,7 +265,7 @@ func DeserializeQuestion(questionData QuestionData, question *Question) helios.E
 
 // SerializeSynchronizationData converts event, questions, participations, and users
 // into SynchronizationData
-func SerializeSynchronizationData(event Event, venue Venue, questions []Question, users []auth.User, usersKey map[string]string) SynchronizationData {
+func SerializeSynchronizationData(event Event, venue Venue, questions []Question, users []auth.User, usersKey map[string]string, usersY map[string]string) SynchronizationData {
 	var questionsData []QuestionData = make([]QuestionData, 0)
 	var usersData []auth.UserWithPasswordData = make([]auth.UserWithPasswordData, 0)
 	for _, question := range questions {
@@ -279,12 +280,13 @@ func SerializeSynchronizationData(event Event, venue Venue, questions []Question
 		Questions: questionsData,
 		Users:     usersData,
 		UsersKey:  usersKey,
+		UsersY:    usersY,
 	}
 }
 
 // DeserializeSynchronizationData converts event, questions, participations, and users
 // into SynchronizationData
-func DeserializeSynchronizationData(synchronizationData SynchronizationData, event *Event, venue *Venue, questions *[]Question, users *[]auth.User, usersKey *map[string]string) helios.Error {
+func DeserializeSynchronizationData(synchronizationData SynchronizationData, event *Event, venue *Venue, questions *[]Question, users *[]auth.User, usersKey *map[string]string, usersY *map[string]string) helios.Error {
 	var err helios.ErrorForm = helios.NewErrorForm()
 	var errEvent helios.Error = DeserializeEvent(synchronizationData.Event, event)
 	if errEvent != nil {
@@ -342,6 +344,11 @@ func DeserializeSynchronizationData(synchronizationData SynchronizationData, eve
 	*usersKey = make(map[string]string)
 	for k, v := range synchronizationData.UsersKey {
 		(*usersKey)[k] = v
+	}
+
+	*usersY = make(map[string]string)
+	for k, v := range synchronizationData.UsersY {
+		(*usersY)[k] = v
 	}
 
 	if err.IsError() {

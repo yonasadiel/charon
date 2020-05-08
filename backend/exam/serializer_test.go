@@ -399,6 +399,7 @@ func TestSerializeSynchronizationData(t *testing.T) {
 		questions    []Question
 		users        []auth.User
 		usersKey     map[string]string
+		usersY       map[string]string
 		expectedJSON string
 	}
 	testCases := []serializeSynchronizationDataTestCase{{
@@ -431,6 +432,10 @@ func TestSerializeSynchronizationData(t *testing.T) {
 			"abc": "def",
 			"ghi": "jkl",
 		},
+		usersY: map[string]string{
+			"abc": "123",
+			"ghi": "456",
+		},
 		expectedJSON: `{` +
 			`"event":{` +
 			`"id":3,"slug":"math-final-exam","title":"Math Final Exam","description":"desc",` +
@@ -440,7 +445,8 @@ func TestSerializeSynchronizationData(t *testing.T) {
 			`"venue":{"id":10,"name":"venue1"},` +
 			`"questions":[{"number":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"number":0,"content":"","choices":[],"answer":""}],` +
 			`"users":[{"name":"abc","username":"def","role":"admin","password":"ghi"}],` +
-			`"usersKey":{"abc":"def","ghi":"jkl"}` +
+			`"usersKey":{"abc":"def","ghi":"jkl"},` +
+			`"usersY":{"abc":"123","ghi":"456"}` +
 			`}`,
 	}, {
 		event:     Event{},
@@ -448,6 +454,7 @@ func TestSerializeSynchronizationData(t *testing.T) {
 		questions: []Question{},
 		users:     []auth.User{},
 		usersKey:  make(map[string]string),
+		usersY:    make(map[string]string),
 		expectedJSON: `{` +
 			`"event":{` +
 			`"id":0,"slug":"","title":"","description":"",` +
@@ -457,7 +464,8 @@ func TestSerializeSynchronizationData(t *testing.T) {
 			`"venue":{"id":0,"name":""},` +
 			`"questions":[],` +
 			`"users":[],` +
-			`"usersKey":{}` +
+			`"usersKey":{},` +
+			`"usersY":{}` +
 			`}`,
 	}}
 	for i, testCase := range testCases {
@@ -465,7 +473,7 @@ func TestSerializeSynchronizationData(t *testing.T) {
 		var serialized SynchronizationData
 		var serializedJSON []byte
 		var errMarshalling error
-		serialized = SerializeSynchronizationData(testCase.event, testCase.venue, testCase.questions, testCase.users, testCase.usersKey)
+		serialized = SerializeSynchronizationData(testCase.event, testCase.venue, testCase.questions, testCase.users, testCase.usersKey, testCase.usersY)
 		serializedJSON, errMarshalling = json.Marshal(serialized)
 		assert.Nil(t, errMarshalling)
 		assert.Equal(t, testCase.expectedJSON, string(serializedJSON))
@@ -480,6 +488,7 @@ func TestDeserializeSynchronizationData(t *testing.T) {
 		expectedQuestionLength  int
 		expectedUserLength      int
 		expectedUsersKey        map[string]string
+		expectedUsersY          map[string]string
 		expectedError           string
 	}
 	testCases := []deserializeQuestionTestCase{{
@@ -488,7 +497,8 @@ func TestDeserializeSynchronizationData(t *testing.T) {
 			`"venue":{"id":10,"name":"venue1"},` +
 			`"questions":[{"id":2,"content":"Question Content","choices":["a","b","c"],"answer":"answer2"},{"id":0,"content":"a","choices":[],"answer":""}],` +
 			`"users":[{"name":"abc","username":"def","role":"admin"}],` +
-			`"usersKey":{"user1":"key1","user2":"key2"}` +
+			`"usersKey":{"user1":"key1","user2":"key2"},` +
+			`"usersY":{"user1":"123","user2":"456"}` +
 			`}`,
 		expectedEvent: Event{
 			ID:          3,
@@ -508,6 +518,10 @@ func TestDeserializeSynchronizationData(t *testing.T) {
 			"user1": "key1",
 			"user2": "key2",
 		},
+		expectedUsersY: map[string]string{
+			"user1": "123",
+			"user2": "456",
+		},
 	}, {
 		synchronizationDataJSON: `{"event":{"endsAt":"2020-08-12T11:30:10+07:00","startsAt":"2020-08-12T09:30:10+07:00","title":"abc","slug":"abc"},"venue":{"name":"abc"}}`,
 		expectedEvent: Event{
@@ -520,6 +534,7 @@ func TestDeserializeSynchronizationData(t *testing.T) {
 		expectedQuestionLength: 0,
 		expectedUserLength:     0,
 		expectedUsersKey:       make(map[string]string),
+		expectedUsersY:         make(map[string]string),
 	}, {
 		synchronizationDataJSON: `{` +
 			`"event":{"endsAt":"2020-08-12T01:30:10+07:00","startsAt":"2020-08-12T09:30:10+07:00","title":"abc","slug":"abc"},` +
@@ -543,10 +558,11 @@ func TestDeserializeSynchronizationData(t *testing.T) {
 		var questions []Question
 		var users []auth.User
 		var usersKey map[string]string
+		var usersY map[string]string
 		var errUnmarshalling error
 		var errDeserialization helios.Error
 		errUnmarshalling = json.Unmarshal([]byte(testCase.synchronizationDataJSON), &synchronizationData)
-		errDeserialization = DeserializeSynchronizationData(synchronizationData, &event, &venue, &questions, &users, &usersKey)
+		errDeserialization = DeserializeSynchronizationData(synchronizationData, &event, &venue, &questions, &users, &usersKey, &usersY)
 		assert.Nil(t, errUnmarshalling)
 		if testCase.expectedError == "" {
 			assert.Nil(t, errDeserialization)
@@ -560,6 +576,7 @@ func TestDeserializeSynchronizationData(t *testing.T) {
 			assert.Equal(t, testCase.expectedQuestionLength, len(questions))
 			assert.Equal(t, testCase.expectedUserLength, len(users))
 			assert.Equal(t, testCase.expectedUsersKey, usersKey)
+			assert.Equal(t, testCase.expectedUsersY, usersY)
 		} else {
 			var errDeserializationJSON []byte
 			var errMarshalling error

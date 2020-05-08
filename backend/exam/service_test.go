@@ -3,6 +3,8 @@ package exam
 import (
 	"crypto/sha256"
 	"fmt"
+	"math/big"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -426,8 +428,8 @@ func TestVerifyParticipation(t *testing.T) {
 	var event1User2KeyHashedOnce = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User2Key)))
 	var event1User1KeyHashedTwice = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1KeyHashedOnce)))
 	var event1User2KeyHashedTwice = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User2KeyHashedOnce)))
-	var participation1 Participation = ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyHashedTwice: event1User1KeyHashedTwice})
-	var participation2 Participation = ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant2, KeyHashedTwice: event1User2KeyHashedTwice})
+	var participation1 Participation = ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyPlain: "to_disable_factory", KeyHashedTwice: event1User1KeyHashedTwice})
+	var participation2 Participation = ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant2, KeyPlain: "to_disable_factory", KeyHashedTwice: event1User2KeyHashedTwice})
 	type verifyParticipationTestCase struct {
 		user           auth.User
 		eventSlug      string
@@ -1153,22 +1155,29 @@ func TestGetSynchronizationData(t *testing.T) {
 
 	var userLocal auth.User = auth.UserFactorySaved(auth.User{Role: auth.UserRoleLocal})
 	var venue Venue = VenueFactorySaved(Venue{})
-	var event1 Event = EventFactorySaved(Event{})
+	var event1 Event = EventFactorySaved(Event{SimKey: "1234567890abcdef1234567890abcdef"})
 	var event2 Event = EventFactorySaved(Event{})
 	QuestionFactorySaved(Question{Event: &event1})
 	QuestionFactorySaved(Question{Event: &event1})
 	QuestionFactorySaved(Question{Event: &event2})
 	participations := []Participation{
-		ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal, Venue: &venue, KeyHashedTwice: "key1"}),
-		ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue, KeyHashedTwice: "key2"}),
-		ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue, KeyHashedTwice: "key3"}),
+		ParticipationFactorySaved(Participation{Event: &event1, User: &userLocal, Venue: &venue, KeyPlain: "abc", KeyHashedOnce: "1", KeyHashedTwice: "key1"}),
+		ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue, KeyPlain: "def", KeyHashedOnce: "2", KeyHashedTwice: "key2"}),
+		ParticipationFactorySaved(Participation{Event: &event1, Venue: &venue, KeyPlain: "ghi", KeyHashedOnce: "3", KeyHashedTwice: "key3"}),
 	}
 	ParticipationFactorySaved(Participation{Event: &event1})
 	ParticipationFactorySaved(Participation{Event: &event1})
 	ParticipationFactorySaved(Participation{Event: &event2})
+	helios.DB.Create(&SecretShare{Event: &event1, Venue: &venue, PolynomCoeffs: "1|2"})
 	expectedUsersKey := make(map[string]string)
+	expectedUsersY := make(map[string]string)
 	for _, participation := range participations {
 		expectedUsersKey[participation.User.Username] = participation.KeyHashedTwice
+		x, _ := strconv.Atoi(participation.KeyHashedOnce)
+		s, _ := new(big.Int).SetString("1234567890abcdef1234567890abcdef", 62)
+		s = s.Add(s, big.NewInt(int64(x+2*x*x)))
+		s = s.Mod(s, PRIME)
+		expectedUsersY[participation.User.Username] = s.String()
 	}
 	type getSynchronizationDataTestCase struct {
 		user                   auth.User
@@ -1178,6 +1187,7 @@ func TestGetSynchronizationData(t *testing.T) {
 		expectedQuestionLength int
 		expectedUserLength     int
 		expectedUsersKey       map[string]string
+		expectedUsersY         map[string]string
 		expectedError          helios.Error
 	}
 	testCases := []getSynchronizationDataTestCase{{
@@ -1208,6 +1218,7 @@ func TestGetSynchronizationData(t *testing.T) {
 		expectedQuestionLength: 2,
 		expectedUserLength:     3,
 		expectedUsersKey:       expectedUsersKey,
+		expectedUsersY:         expectedUsersY,
 	}}
 	for i, testCase := range testCases {
 		t.Logf("Test GetSynchronizationData testcase: %d", i)
@@ -1216,8 +1227,9 @@ func TestGetSynchronizationData(t *testing.T) {
 		var questions []Question
 		var users []auth.User
 		var usersKey map[string]string
+		var usersY map[string]string
 		var err helios.Error
-		event, venue, questions, users, usersKey, err = GetSynchronizationData(testCase.user, testCase.eventSlug)
+		event, venue, questions, users, usersKey, usersY, err = GetSynchronizationData(testCase.user, testCase.eventSlug)
 		if testCase.expectedError == nil {
 			assert.Nil(t, err)
 			assert.Equal(t, testCase.expectedEvent.Title, event.Title)
@@ -1225,6 +1237,7 @@ func TestGetSynchronizationData(t *testing.T) {
 			assert.Equal(t, testCase.expectedQuestionLength, len(questions))
 			assert.Equal(t, testCase.expectedUserLength, len(users))
 			assert.Equal(t, testCase.expectedUsersKey, usersKey)
+			assert.Equal(t, testCase.expectedUsersY, usersY)
 		} else {
 			assert.Equal(t, testCase.expectedError, err)
 		}
@@ -1266,6 +1279,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		questions                  []Question
 		users                      []auth.User
 		usersKey                   map[string]string
+		usersY                     map[string]string
 		expectedError              helios.Error
 		expectedEventCount         int
 		expectedVenueCount         int
@@ -1281,6 +1295,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		questions:                  []Question{},
 		users:                      []auth.User{},
 		usersKey:                   make(map[string]string),
+		usersY:                     make(map[string]string),
 		expectedError:              errSynchronizationNotAuthorized,
 		expectedUserCount:          userCountBefore,
 		expectedVenueCount:         venueCountBefore,
@@ -1295,6 +1310,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		questions:                  []Question{QuestionFactory(Question{})},
 		users:                      []auth.User{auth.UserFactory(auth.User{Username: "user1", Role: auth.UserRoleParticipant})},
 		usersKey:                   map[string]string{"user1": "key_user_1"},
+		usersY:                     map[string]string{"user1": "2"},
 		expectedUserCount:          userCountBefore + 1,
 		expectedEventCount:         eventCountBefore + 1,
 		expectedVenueCount:         venueCountBefore + 1,
@@ -1308,6 +1324,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		questions:                  []Question{QuestionFactory(Question{})},
 		users:                      []auth.User{auth.UserFactory(auth.User{Username: "user2", Role: auth.UserRoleParticipant}), userParticipant1},
 		usersKey:                   map[string]string{"user2": "key_user_2"},
+		usersY:                     map[string]string{"user2": "3"},
 		expectedUserCount:          userCountBefore + 2,
 		expectedVenueCount:         venueCountBefore + 2,
 		expectedEventCount:         eventCountBefore + 1,
@@ -1319,7 +1336,7 @@ func TestPutSynchronizationData(t *testing.T) {
 		t.Logf("Test PutSynchronizationData testcase: %d", i)
 		var err helios.Error
 		var userCount, eventCount, venueCount, questionCount, participationCount, userQuestionCount int
-		err = PutSynchronizationData(testCase.user, testCase.event, testCase.venue, testCase.questions, testCase.users, testCase.usersKey)
+		err = PutSynchronizationData(testCase.user, testCase.event, testCase.venue, testCase.questions, testCase.users, testCase.usersKey, testCase.usersY)
 		helios.DB.Model(&auth.User{}).Count(&userCount)
 		helios.DB.Model(&Event{}).Count(&eventCount)
 		helios.DB.Model(&Venue{}).Count(&venueCount)

@@ -398,7 +398,7 @@ func TestParticipationVerifyView(t *testing.T) {
 	var event1User1Key = "event_1_user1"
 	var keyHashedOnce = fmt.Sprintf("%x", sha256.Sum256([]byte(event1User1Key)))
 	var keyHashedTwice = fmt.Sprintf("%x", sha256.Sum256([]byte(keyHashedOnce)))
-	ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyHashedTwice: keyHashedTwice})
+	ParticipationFactorySaved(Participation{Event: &event1, User: &userParticipant1, KeyPlain: event1User1Key, KeyHashedTwice: keyHashedTwice})
 	type participationVerifyTestCase struct {
 		user               interface{}
 		eventSlug          string
@@ -432,7 +432,7 @@ func TestParticipationVerifyView(t *testing.T) {
 	}}
 
 	for i, testCase := range testCases {
-		t.Logf("Test ParticipationVerify testcase: %d", i)
+		t.Logf("Test ParticipationVerifyView testcase: %d", i)
 		var req helios.MockRequest
 		req = helios.NewMockRequest()
 		req.SetContextData(auth.UserContextKey, testCase.user)

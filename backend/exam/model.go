@@ -41,13 +41,14 @@ type Venue struct {
 // Participation is many to many indicating an user is participating
 // in a local event.
 type Participation struct {
-	ID              uint `gorm:"primary_key"`
-	EventID         uint
-	UserID          uint
-	VenueID         uint
-	KeyPlain        string
-	KeyHashedOnce string
+	ID             uint `gorm:"primary_key"`
+	EventID        uint
+	UserID         uint
+	VenueID        uint
+	KeyPlain       string
+	KeyHashedOnce  string
 	KeyHashedTwice string
+	SecretShareY   string
 
 	Event *Event     `gorm:"foreignkey:EventID;association_autoupdate:false"`
 	User  *auth.User `gorm:"foreignkey:UserID;association_autoupdate:false"`
@@ -91,10 +92,27 @@ type UserQuestion struct {
 	DeletedAt *time.Time
 }
 
+// SecretShare is coefficient polynoms for decrypting SimKey
+// by using all KeyHashedOnce
+type SecretShare struct {
+	ID            uint
+	EventID       uint
+	VenueID       uint
+	PolynomCoeffs string `gorm:"type:text"`
+
+	Event *Event `gorm:"foreignkey:EventID;association_autoupdate:false"`
+	Venue *Venue `gorm:"foreignkey:VenueID;association_autoupdate:false"`
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+}
+
 func init() {
 	helios.App.RegisterModel(Event{})
 	helios.App.RegisterModel(Venue{})
 	helios.App.RegisterModel(Participation{})
 	helios.App.RegisterModel(Question{})
 	helios.App.RegisterModel(UserQuestion{})
+	helios.App.RegisterModel(SecretShare{})
 }

@@ -1,10 +1,14 @@
 package exam
 
 import (
+	"math/big"
 	"net/http"
 
 	"github.com/yonasadiel/helios"
 )
+
+// PRIME is 12th Mersenne prime
+var PRIME *big.Int = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 127), big.NewInt(1)) // 2 ** 127 - 1
 
 var errVenueAccessNotAuthorized = helios.ErrorAPI{
 	StatusCode: http.StatusForbidden,
