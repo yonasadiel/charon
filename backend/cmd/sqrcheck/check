@@ -1,0 +1,8 @@
+#!/bin/sh
+
+./sqrc
+./sqrcpp
+./sqrcpp2
+./sqrgo
+./sqrgo2
+java -ea Sqr
